@@ -41,7 +41,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.unit.dp
-import io.github.taalaydev.doodleverse.core.DrawPainter
+import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 
@@ -177,7 +177,7 @@ fun BrushPreview(
                 }
 
                 if (brush.brush != null) {
-                    DrawPainter.drawBrushStampsBetweenPoints(
+                    DrawRenderer.drawBrushStampsBetweenPoints(
                         imageCanvas!!,
                         Offset(0f, 0f),
                         Offset(size.width, size.height),
@@ -191,7 +191,7 @@ fun BrushPreview(
                         initialPath,
                     )
                 } else {
-                    DrawPainter.drawPath(
+                    DrawRenderer.drawPath(
                         canvas = imageCanvas!!,
                         drawingPath = initialPath,
                         brush = brush,

@@ -5,13 +5,18 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PathMeasure
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 
-object DrawPainter {
+enum class BrushModifier {
+    Stroke,
+    Fill,
+    Mirror,
+}
+
+object DrawRenderer {
     internal fun drawPath(
         canvas: Canvas,
         drawingPath: DrawingPath,

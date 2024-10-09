@@ -21,7 +21,6 @@ import doodleverse.composeapp.generated.resources.stamp_airbrush
 import doodleverse.composeapp.generated.resources.watercolor_splash
 import io.github.taalaydev.doodleverse.core.getDensityOffsetBetweenPoints
 import io.github.taalaydev.doodleverse.ui.components.calcOpacity
-import org.jetbrains.skia.Point
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -963,11 +962,12 @@ data class BrushData(
             colors: List<Color>,
             stops: List<Float>
         ): Shader {
-            return Shader.makeRadialGradient(
-                center = Point(center.x, center.y),
-                r = radius,
-                colors = colors.map { it.toArgb() }.toIntArray(),
-                positions = stops.toFloatArray(),
+            return RadialGradientShader(
+                center = center,
+                radius = radius,
+                colors = colors,
+                colorStops = stops,
+                tileMode = TileMode.Clamp,
             )
         }
 
@@ -1073,15 +1073,15 @@ data class BrushData(
                     val flameHeight = drawingPath.size * (1.0f + randomSize)
                     val flameWidth = drawingPath.size * (0.5f + randomSize * 0.5f)
 
-                    val shader = Shader.makeLinearGradient(
-                        Point(point.x, point.y),
-                        Point(point.x, point.y - flameHeight),
-                        colors = intArrayOf(
-                            drawingPath.color.copy(alpha = 0.5f + randomOpacity * 0.5f).toArgb(),
-                            drawingPath.color.copy(alpha = 0.3f + randomOpacity * 0.7f).toArgb(),
-                            drawingPath.color.copy(alpha = 0.1f).toArgb(),
+                    val shader = LinearGradientShader(
+                        point,
+                        Offset(point.x, point.y - flameHeight),
+                        colors = listOf(
+                            drawingPath.color.copy(alpha = 0.5f + randomOpacity * 0.5f),
+                            drawingPath.color.copy(alpha = 0.3f + randomOpacity * 0.7f),
+                            drawingPath.color.copy(alpha = 0.1f),
                         ),
-                        positions = floatArrayOf(0f, 0.5f, 1f),
+                        colorStops = listOf(0f, 0.5f, 1f),
                     )
 
                     val paint = Paint().apply {
@@ -1380,15 +1380,15 @@ data class BrushData(
                         }
 
                         // Simulate glass texture
-                        val glassShader = Shader.makeRadialGradient(
-                            Point(0f, 0f),
-                            r = shapeSize / 2f,
-                            colors = intArrayOf(
-                                baseColor.copy(alpha = 0.8f).toArgb(),
-                                baseColor.copy(alpha = 0.4f).toArgb(),
-                                baseColor.copy(alpha = 0.1f).toArgb()
+                        val glassShader = RadialGradientShader(
+                            Offset(0f, 0f),
+                            radius = shapeSize / 2f,
+                            colors = listOf(
+                                baseColor.copy(alpha = 0.8f),
+                                baseColor.copy(alpha = 0.4f),
+                                baseColor.copy(alpha = 0.1f)
                             ),
-                            positions = floatArrayOf(0f, 0.7f, 1f),
+                            colorStops = listOf(0f, 0.7f, 1f),
                         )
 
                         val glassPaint = Paint().apply {

@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
-import io.github.taalaydev.doodleverse.core.DrawPainter
+import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.core.handleDrawing
@@ -106,18 +106,6 @@ fun DrawCanvas(
         }
     }
 
-    if (currentPosition != Offset.Zero) {
-        Box(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            contentAlignment = Alignment.TopStart
-        ) {
-            Text(
-                text = "${currentPosition.x} x ${currentPosition.y}",
-                color = Color.Black
-            )
-        }
-    }
-
     Canvas(
         modifier = modifier
             .pointerInput(Unit) {
@@ -173,7 +161,7 @@ fun DrawCanvas(
                     shapeBitmap = ImageBitmap(canvasWidth, canvasHeight)
                     shapeCanvas = Canvas(shapeBitmap!!)
 
-                    DrawPainter.drawPath(
+                    DrawRenderer.drawPath(
                         shapeCanvas!!,
                         drawingPath!!,
                         currentBrush,
@@ -181,7 +169,7 @@ fun DrawCanvas(
                         size
                     )
                 } else if (currentBrush.brush != null) {
-                    DrawPainter.drawBrushStampsBetweenPoints(
+                    DrawRenderer.drawBrushStampsBetweenPoints(
                         imageCanvas!!,
                         prevPosition,
                         currentPosition,
@@ -189,7 +177,7 @@ fun DrawCanvas(
                         drawingPath!!
                     )
                 } else {
-                    DrawPainter.drawPath(imageCanvas!!, drawingPath!!, currentBrush, paint, size)
+                    DrawRenderer.drawPath(imageCanvas!!, drawingPath!!, currentBrush, paint, size)
                 }
             }
 
@@ -213,7 +201,7 @@ fun DrawCanvas(
                             blendMode = BlendMode.Clear
                         }
                     )
-                    DrawPainter.drawPath(
+                    DrawRenderer.drawPath(
                         shapeCanvas!!,
                         drawingPath!!,
                         currentBrush,
@@ -221,7 +209,7 @@ fun DrawCanvas(
                         size
                     )
                 } else if (currentBrush.brush != null) {
-                    DrawPainter.drawBrushStampsBetweenPoints(
+                    DrawRenderer.drawBrushStampsBetweenPoints(
                         imageCanvas!!,
                         prevPosition,
                         currentPosition,
@@ -229,7 +217,7 @@ fun DrawCanvas(
                         drawingPath!!
                     )
                 } else {
-                    DrawPainter.drawPath(
+                    DrawRenderer.drawPath(
                         imageCanvas!!,
                         drawingPath!!,
                         currentBrush,
