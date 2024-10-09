@@ -26,7 +26,7 @@ DoodleVerse is a versatile, cross-platform drawing application built with Kotlin
 
 1. Clone the repository:
    ```
-   git clone https://github.com/TaalayDev/DoodleVerse.git
+   git clone https://github.com/TaalayDev/DoodleVerse-ComposeMultiplatform.git
    ```
 
 2. Open the project in Android Studio or your preferred IDE.
