@@ -194,7 +194,6 @@ fun BrushPreview(
                     DrawRenderer.drawPath(
                         canvas = imageCanvas!!,
                         drawingPath = initialPath,
-                        brush = brush,
                         paint = Paint().apply {
                             color = Color.Black
                             style = PaintingStyle.Stroke

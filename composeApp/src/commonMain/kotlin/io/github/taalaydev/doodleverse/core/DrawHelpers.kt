@@ -99,12 +99,14 @@ suspend fun PointerInputScope.handleDragAndZoomGestures(
 }
 
 internal suspend fun PointerInputScope.handleDrawing(
+    isActive: Boolean,
     onStart: (Offset) -> Unit = {},
     onDrag: (Offset, Offset) -> Unit = { _, _ -> },
     onEnd: () -> Unit = {},
     fingersCount: Int = 1,
     touchAccuracy: Float = 1.0f,
 ) {
+    if (!isActive) return
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
         onStart(down.position)

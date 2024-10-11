@@ -79,8 +79,10 @@ fun LayersPanel(
                     index = index,
                     isActive = index == activeLayerIndex,
                     onLayerSelected = { drawViewModel.selectLayer(it) },
-                    onLayerVisibilityChanged = { drawViewModel.layerVisibilityChanged(it, !layer.isVisible) },
-                    onLayerDeleted = { drawViewModel.deleteLayer(it) }
+                    onLayerVisibilityChanged = if (layers.size > 1) {
+                        { drawViewModel.layerVisibilityChanged(it, !layer.isVisible) }
+                    } else null,
+                    onLayerDeleted = if (layers.size > 1) { drawViewModel::deleteLayer } else null
                 )
             }
         }
@@ -120,8 +122,8 @@ fun LayerTile(
     index: Int,
     isActive: Boolean,
     onLayerSelected: (Int) -> Unit,
-    onLayerVisibilityChanged: (Int) -> Unit,
-    onLayerDeleted: (Int) -> Unit
+    onLayerVisibilityChanged: ((Int) -> Unit)? = null,
+    onLayerDeleted: ((Int) -> Unit)? = null
 ) {
     val backgroundColor = if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
     val contentColor = if (isActive) Color.White else Color.Black
@@ -148,23 +150,27 @@ fun LayerTile(
                 modifier = Modifier.weight(1f)
             )
             IconButton(
-                onClick = { onLayerVisibilityChanged(index) }
+                onClick = { onLayerVisibilityChanged?.invoke(index) },
+                enabled = onLayerVisibilityChanged != null,
+                modifier = Modifier.size(24.dp)
             ) {
                 Icon(
                     imageVector = if (layer.isVisible) Lucide.Eye else Lucide.EyeOff,
                     contentDescription = "Toggle visibility",
                     tint = contentColor,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(15.dp)
                 )
             }
             IconButton(
-                onClick = { onLayerDeleted(index) }
+                onClick = { onLayerDeleted?.invoke(index) },
+                enabled = onLayerDeleted != null,
+                modifier = Modifier.size(24.dp)
             ) {
                 Icon(
                     imageVector = Lucide.Trash,
                     contentDescription = "Delete layer",
                     tint = contentColor,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(15.dp)
                 )
             }
         }

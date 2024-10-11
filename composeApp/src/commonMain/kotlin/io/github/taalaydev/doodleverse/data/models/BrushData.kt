@@ -6,10 +6,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.isUnspecified
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import doodleverse.composeapp.generated.resources.Res
-import doodleverse.composeapp.generated.resources.pencil
-import doodleverse.composeapp.generated.resources.stamp_marker
 import doodleverse.composeapp.generated.resources.stamp_pencil
 import io.github.taalaydev.doodleverse.core.PathEffects
 import org.jetbrains.compose.resources.imageResource
@@ -17,8 +14,6 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.ui.util.lerp
-import doodleverse.composeapp.generated.resources.stamp_airbrush
-import doodleverse.composeapp.generated.resources.watercolor_splash
 import io.github.taalaydev.doodleverse.core.getDensityOffsetBetweenPoints
 import io.github.taalaydev.doodleverse.ui.components.calcOpacity
 import kotlin.math.ceil
@@ -85,6 +80,7 @@ data class BrushData(
             id = 2,
             name = "Marker",
             stroke = "marker",
+            opacityDiff = 0.3f,
             pathEffect = { width ->
                 PathEffects.markerPathEffect(width)
             }
@@ -202,7 +198,7 @@ data class BrushData(
             id = 10,
             name = "Sketchy Pencil",
             stroke = "sketchy_pencil",
-            opacityDiff = 0.3f,
+            opacityDiff = 0.4f,
             customPainter = { canvas, size, drawingPath ->
                 val paint = Paint().apply {
                     color = drawingPath.color.copy(alpha = 0.4f)

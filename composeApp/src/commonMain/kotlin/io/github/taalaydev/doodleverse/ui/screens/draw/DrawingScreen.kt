@@ -1,10 +1,13 @@
 package io.github.taalaydev.doodleverse.ui.screens.draw
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,6 +25,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import com.composables.icons.lucide.*
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
@@ -42,12 +48,14 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -65,8 +73,10 @@ import io.github.taalaydev.doodleverse.data.models.Shape
 import io.github.taalaydev.doodleverse.ui.components.BrushPicker
 import io.github.taalaydev.doodleverse.ui.components.ColorPalettePanel
 import io.github.taalaydev.doodleverse.ui.components.ColorPicker
+import io.github.taalaydev.doodleverse.ui.components.DraggableSlider
 import io.github.taalaydev.doodleverse.ui.components.DrawCanvas
 import io.github.taalaydev.doodleverse.ui.components.LayersPanel
+import io.github.taalaydev.doodleverse.ui.components.VerticalSlider
 import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -79,6 +89,7 @@ fun DrawingScreen(
     navController: NavHostController = rememberNavController(),
 ) {
     val projectModel = remember { ProjectModel.currentProject }
+
     DrawScreenBody(
         projectModel = projectModel ?: ProjectModel(
             id = 1L,
@@ -111,6 +122,7 @@ private fun DrawScreenBody(
     val brushSize by viewModel.brushSize.collectAsStateWithLifecycle()
     val currentColor by viewModel.currentColor.collectAsStateWithLifecycle()
     val currentBrush by viewModel.currentBrush.collectAsStateWithLifecycle()
+    var fillToolSelected by remember { mutableStateOf(false) }
 
     val canUndo by viewModel.canUndo.collectAsStateWithLifecycle()
     val canRedo by viewModel.canRedo.collectAsStateWithLifecycle()
@@ -118,11 +130,12 @@ private fun DrawScreenBody(
     var dragState by remember { mutableStateOf(DragState()) }
 
     val density = LocalDensity.current
-    var canvasSize by remember { mutableStateOf(DpSize(500.dp, 500.dp)) }
 
     val pxToDp: (Int) -> Dp = { px ->
         with(density) { px.toDp() }
     }
+
+    var brushSliderPosition by remember { mutableStateOf(IntOffset(10, 10)) }
 
     val size = calculateWindowSizeClass()
     val isMobile = when (size.widthSizeClass) {
@@ -140,10 +153,14 @@ private fun DrawScreenBody(
                     IconButton(onClick = {
                         navController.popBackStack()
                     }) {
-                        Icon(Lucide.ArrowLeft, contentDescription = "Back", modifier = Modifier.size(18.dp))
+                        Icon(
+                            Lucide.ArrowLeft,
+                            contentDescription = "Back",
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 },
-                title = {  },
+                title = {},
                 actions = {
                     IconButton(onClick = {
                         viewModel.undo()
@@ -170,26 +187,66 @@ private fun DrawScreenBody(
 
                         }
                     ) {
-                        Icon(Lucide.Save, contentDescription = "Save", modifier = Modifier.size(18.dp))
+                        Icon(
+                            Lucide.Save,
+                            contentDescription = "Save",
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(paddingValues),
-            verticalArrangement = Arrangement.SpaceBetween,
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(paddingValues),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                horizontalArrangement = Arrangement.SpaceEvenly
+            Box(
+                modifier = Modifier
+                    .weight(1f).fillMaxSize(),
             ) {
-                if (!isMobile) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .pointerInput(Unit) {
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+
+                                handleDragAndZoomGestures(dragState) {
+                                    dragState = it
+                                }
+                            }
+                            .graphicsLayer {
+                                scaleX = dragState.zoom
+                                scaleY = dragState.zoom
+                                translationX = dragState.draggedTo.x
+                                translationY = dragState.draggedTo.y
+                            }
+                            .padding(10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        DrawCanvas(
+                            currentBrush = currentBrush,
+                            currentColor = currentColor,
+                            brushSize = brushSize,
+                            fill = fillToolSelected,
+                            controller = viewModel.drawingController,
+                            modifier = Modifier
+                                .aspectRatio(projectModel.aspectRatioValue),
+                        )
+                    }
+
                     DrawControls(
                         brushSize = brushSize,
                         brush = currentBrush,
                         color = currentColor,
-                        isHorizontal = false,
+                        isFloating = !isMobile,
                         onBrushSelected = {
                             viewModel.setBrush(it)
                         },
@@ -199,82 +256,41 @@ private fun DrawScreenBody(
                         onSizeSelected = {
                             viewModel.setBrushSize(it)
                         },
+                        onFillSelected = {
+                            fillToolSelected = !fillToolSelected
+                        },
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .onGloballyPositioned { layoutCoordinates ->
-                            val size = layoutCoordinates.size
-                            canvasSize = DpSize(
-                                width = pxToDp(size.width),
-                                height = pxToDp(size.height)
-                            )
-                        }
-                        .pointerInput(Unit) {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
 
-                            handleDragAndZoomGestures(dragState) {
-                                dragState = it
-                            }
-                        }
-                        .graphicsLayer {
-                            scaleX = dragState.zoom
-                            scaleY = dragState.zoom
-                            translationX = dragState.draggedTo.x
-                            translationY = dragState.draggedTo.y
-                        }
-                        .padding(10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    DrawCanvas(
-                        currentBrush = currentBrush,
-                        currentColor = currentColor,
-                        brushSize = brushSize,
-                        controller = viewModel.drawingController,
-                        modifier = Modifier
-                            .aspectRatio(projectModel.aspectRatioValue),
-                    )
-                }
                 if (!isMobile) {
-                    Column(
-                        modifier = Modifier.fillMaxHeight()
-                            .width(250.dp)
-                            .background(MaterialTheme.colorScheme.surface),
-                        verticalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        LayersPanel(
-                            drawViewModel = viewModel,
-                            modifier = Modifier.weight(1f),
-                        )
-                        HorizontalDivider()
-                        ColorPalettePanel(
-                            currentColor = currentColor,
-                            onColorSelected = { color ->
-                                viewModel.setColor(color)
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+                    DraggableSlider(
+                        value = brushSize,
+                        onValueChange = {
+                            viewModel.setBrushSize(it)
+                        },
+                    )
                 }
             }
-            if (isMobile) {
-                DrawControls(
-                    brushSize = brushSize,
-                    brush = currentBrush,
-                    color = currentColor,
-                    onBrushSelected = {
-                        viewModel.setBrush(it)
-                    },
-                    onColorSelected = {
-                        viewModel.setColor(it)
-                    },
-                    onSizeSelected = {
-                        viewModel.setBrushSize(it)
-                    },
-                )
+            if (!isMobile) {
+                Column(
+                    modifier = Modifier.fillMaxHeight()
+                        .width(250.dp)
+                        .background(MaterialTheme.colorScheme.surface),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    LayersPanel(
+                        drawViewModel = viewModel,
+                        modifier = Modifier.weight(1f),
+                    )
+                    HorizontalDivider()
+                    ColorPalettePanel(
+                        currentColor = currentColor,
+                        onColorSelected = { color ->
+                            viewModel.setColor(color)
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }
@@ -286,10 +302,11 @@ fun DrawControls(
     brushSize: Float = 10f,
     brush: BrushData,
     color: Color = Color(0xFF333333),
-    isHorizontal: Boolean = true,
+    isFloating: Boolean = false,
     onBrushSelected: (BrushData) -> Unit = {},
     onColorSelected: (Color) -> Unit = {},
     onSizeSelected: (Float) -> Unit = {},
+    onFillSelected: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -392,7 +409,7 @@ fun DrawControls(
         }
     }
 
-    if (isHorizontal) {
+    if (!isFloating) {
         BottomAppBar(
             modifier = modifier.fillMaxWidth(),
         ) {
@@ -428,10 +445,16 @@ fun DrawControls(
             }
         }
     } else {
-        Column(
-            modifier = modifier.fillMaxHeight().width(60.dp).background(MaterialTheme.colorScheme.surface),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Row(
+            modifier = modifier
+                .padding(bottom = 5.dp)
+                .widthIn(max = 450.dp)
+                .fillMaxWidth()
+                .height(60.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surface),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(
                 onClick = {
@@ -446,14 +469,14 @@ fun DrawControls(
                 Icon(Lucide.Eraser, contentDescription = "Eraser")
             }
             IconButton(onClick = {
-                showSizeSelector = true
-            }) {
-                Icon(Lucide.SlidersHorizontal, contentDescription = "Brush Settings")
-            }
-            IconButton(onClick = {
                 showShapePicker = true
             }) {
                 Icon(Lucide.Shapes, contentDescription = "Shapes")
+            }
+            IconButton(onClick = {
+                onFillSelected()
+            }) {
+                Icon(Lucide.PaintBucket, contentDescription = "Fill")
             }
         }
     }
@@ -537,14 +560,30 @@ fun SizeSelector(
             Column(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             ) {
-                Slider(
-                    value = value,
-                    onValueChange = { values ->
-                        value = values
-                    },
-                    valueRange = 10f..80f,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Lucide.Brush,
+                        contentDescription = "Brush Size",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "${value.toInt()}px",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Slider(
+                        value = value,
+                        onValueChange = { values ->
+                            value = values
+                        },
+                        valueRange = 10f..80f,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 Spacer(modifier = Modifier.height(20.dp))
             }
         }

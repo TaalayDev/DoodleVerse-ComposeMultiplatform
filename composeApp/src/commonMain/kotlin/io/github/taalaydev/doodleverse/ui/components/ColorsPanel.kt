@@ -114,7 +114,11 @@ fun ColorPalettePanel(
             modifier = Modifier.fillMaxWidth().heightIn(max = 100.dp)
         ) {
             itemsIndexed(predefinedColors + customColors) { index, color ->
-                ColorItem(color = color, onColorSelected = onColorSelected)
+                ColorItem(color = color, onColorSelected = {
+                    onColorSelected(it)
+                    controller.selectByColor(it, false)
+                    controller.setAlpha(it.alpha, false)
+                })
             }
             item {
                 AddColorButton(onColorAdd = {

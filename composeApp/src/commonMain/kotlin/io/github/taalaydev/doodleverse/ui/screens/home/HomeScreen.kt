@@ -126,10 +126,15 @@ fun HomeScreen(
         when {
             isLoading -> LoadingScreen()
             error != null -> ErrorScreen(error!!) { /* Implement retry logic */ }
-            projects.isEmpty() -> EmptyProjectsScreen { /* Implement create new project */ }
+            projects.isEmpty() -> EmptyProjectsScreen {
+                showNewProjectDialog = true
+            }
             else -> ProjectGrid(
                 projects = projects,
-                onProjectClick = { /* Implement open project */ },
+                onProjectClick = {
+                    ProjectModel.currentProject = it
+                    navController.navigate(Destination.Drawing(it.id))
+                },
                 onDeleteProject = { /* Implement delete project */ },
                 onEditProject = { p, n -> /* Implement edit project */ },
                 modifier = Modifier.padding(padding)
@@ -216,9 +221,11 @@ fun ProjectCard(
             .fillMaxWidth()
             .clickable { onProjectClick(project) }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(
+                    start = 16.dp,
+                ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -227,20 +234,29 @@ fun ProjectCard(
                     Icon(ComposeIcons.MoreVert, contentDescription = "More options")
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(MaterialTheme.colorScheme.surface),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Lucide.Image, contentDescription = null, modifier = Modifier.size(48.dp))
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                InfoChip(icon = Lucide.Grid3x3, label = "${project.aspectRatio.width}x${project.aspectRatio.height}")
-                InfoChip(icon = Lucide.Clock1, label = formatLastEdited(project.lastModified))
+            Column(modifier = Modifier.padding(
+                horizontal = 16.dp,
+            )) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Lucide.Image, contentDescription = null, modifier = Modifier.size(48.dp))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    InfoChip(
+                        icon = Lucide.Grid3x3,
+                        label = "${project.aspectRatio.width}x${project.aspectRatio.height}"
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    InfoChip(icon = Lucide.Clock1, label = formatLastEdited(project.lastModified))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }

@@ -2,6 +2,7 @@ package io.github.taalaydev.doodleverse.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -28,12 +29,16 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.asSkiaBitmap
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import io.github.taalaydev.doodleverse.core.DrawRenderer
+import io.github.taalaydev.doodleverse.core.copy
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.core.handleDrawing
@@ -63,6 +68,7 @@ fun DrawCanvas(
     currentBrush: BrushData,
     currentColor: Color,
     brushSize: Float,
+    fill: Boolean = false,
     initialPath: DrawingPath? = null,
     controller: DrawingController,
     modifier: Modifier = Modifier,
@@ -108,32 +114,40 @@ fun DrawCanvas(
 
     Canvas(
         modifier = modifier
-            .pointerInput(Unit) {
-                handleDrawing(
-                    onStart = { offset ->
+            .pointerInput(currentBrush) {
+                if (fill) {
+                    detectTapGestures { offset ->
                         currentPosition = offset
                         drawState.value = DrawState.Started
-                        prevPosition = currentPosition
-                        drawingPath = DrawingPath(
-                            path = Path().apply {
-                                moveTo(currentPosition.x, currentPosition.y)
-                            },
-                            brush = currentBrush,
-                            color = currentColor,
-                            size = brushSize,
-                            startPoint = currentPosition,
-                            endPoint = currentPosition
-                        )
-                        println("DrawingPath: $drawingPath")
-                    },
-                    onDrag = { _, new ->
-                        currentPosition = new
-                        drawState.value = DrawState.Drag
-                    },
-                    onEnd = {
-                        drawState.value = DrawState.End
                     }
-                )
+                } else {
+                    handleDrawing(
+                        isActive = !fill,
+                        onStart = { offset ->
+                            currentPosition = offset
+                            drawState.value = DrawState.Started
+                            prevPosition = currentPosition
+
+                            drawingPath = DrawingPath(
+                                path = Path().apply {
+                                    moveTo(currentPosition.x, currentPosition.y)
+                                },
+                                brush = currentBrush,
+                                color = paint.color,
+                                size = paint.strokeWidth,
+                                startPoint = currentPosition,
+                                endPoint = currentPosition
+                            )
+                        },
+                        onDrag = { _, new ->
+                            currentPosition = new
+                            drawState.value = DrawState.Drag
+                        },
+                        onEnd = {
+                            drawState.value = DrawState.End
+                        }
+                    )
+                }
             }
             .background(Color.White)
     ) {
@@ -153,10 +167,24 @@ fun DrawCanvas(
             restoreImage = null
         }
 
+        if (fill && drawState.value == DrawState.Started) {
+            val x = currentPosition.x.toInt()
+            val y = currentPosition.y.toInt()
+            val replacementColor = currentColor.toArgb()
+
+            DrawRenderer.floodFill(
+                imageCanvas!!,
+                bitmap!!,
+                x,
+                y,
+                replacementColor,
+            )
+            drawState.value = DrawState.Idle
+        }
+
         when (drawState.value) {
             DrawState.Started -> {
                 // prevPosition = currentPosition
-
                 if (currentBrush.isShape) {
                     shapeBitmap = ImageBitmap(canvasWidth, canvasHeight)
                     shapeCanvas = Canvas(shapeBitmap!!)
@@ -164,7 +192,6 @@ fun DrawCanvas(
                     DrawRenderer.drawPath(
                         shapeCanvas!!,
                         drawingPath!!,
-                        currentBrush,
                         paint,
                         size
                     )
@@ -177,7 +204,7 @@ fun DrawCanvas(
                         drawingPath!!
                     )
                 } else {
-                    DrawRenderer.drawPath(imageCanvas!!, drawingPath!!, currentBrush, paint, size)
+                    DrawRenderer.drawPath(imageCanvas!!, drawingPath!!, paint, size)
                 }
             }
 
@@ -204,7 +231,6 @@ fun DrawCanvas(
                     DrawRenderer.drawPath(
                         shapeCanvas!!,
                         drawingPath!!,
-                        currentBrush,
                         paint,
                         size
                     )
@@ -220,7 +246,6 @@ fun DrawCanvas(
                     DrawRenderer.drawPath(
                         imageCanvas!!,
                         drawingPath!!,
-                        currentBrush,
                         paint,
                         size
                     )
