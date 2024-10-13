@@ -1,9 +1,16 @@
 package io.github.taalaydev.doodleverse.ui.screens.draw
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateRotation
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,12 +52,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -62,10 +82,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import doodleverse.composeapp.generated.resources.Res
-import doodleverse.composeapp.generated.resources.pencil
 import io.github.taalaydev.doodleverse.core.DragState
-import io.github.taalaydev.doodleverse.core.handleDragAndZoomGestures
+import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
@@ -81,6 +99,47 @@ import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import kotlin.math.min
+
+suspend fun PointerInputScope.detectMultitouchGestures(
+    onDrag: (PointerInputChange, Offset) -> Unit,
+    onTransform: (centroid: Offset, pan: Offset, zoom: Float, rotation: Float) -> Unit
+) {
+    forEachGesture {
+        awaitPointerEventScope {
+            val touchSlop = viewConfiguration.touchSlop
+            var zoom = 1f
+            var pan = Offset.Zero
+            var rotation = 0f
+            var pastTouchSlop = false
+
+            do {
+                val event = awaitPointerEvent()
+                val canceled = event.changes.any { it.isConsumed }
+                if (canceled) {
+                    break
+                }
+
+                if (event.changes.size > 1) {
+                    if (!pastTouchSlop) {
+                        pastTouchSlop = event.calculatePan().getDistance() > touchSlop
+                    }
+                    if (pastTouchSlop) {
+                        event.changes.forEach { it.consumeAllChanges() }
+                        val centroid = event.calculateCentroid(useCurrent = true)
+                        val zoomChange = event.calculateZoom()
+                        val panChange = event.calculatePan()
+                        val rotationChange = event.calculateRotation()
+                        zoom *= zoomChange
+                        pan += panChange
+                        rotation += rotationChange
+
+                        onTransform(centroid, panChange, zoomChange, rotationChange)
+                    }
+                }
+            } while (event.changes.any { it.pressed })
+        }
+    }
+}
 
 data class DpSize(val width: Dp, val height: Dp)
 
@@ -119,10 +178,12 @@ private fun DrawScreenBody(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
+    val focusRequester = remember { FocusRequester() }
+
     val brushSize by viewModel.brushSize.collectAsStateWithLifecycle()
     val currentColor by viewModel.currentColor.collectAsStateWithLifecycle()
-    val currentBrush by viewModel.currentBrush.collectAsStateWithLifecycle()
-    var fillToolSelected by remember { mutableStateOf(false) }
+    val currentTool by viewModel.currentTool.collectAsStateWithLifecycle()
+    val currentBrush by viewModel.currentBrush.collectAsStateWithLifecycle(BrushData.solid)
 
     val canUndo by viewModel.canUndo.collectAsStateWithLifecycle()
     val canRedo by viewModel.canRedo.collectAsStateWithLifecycle()
@@ -135,12 +196,14 @@ private fun DrawScreenBody(
         with(density) { px.toDp() }
     }
 
-    var brushSliderPosition by remember { mutableStateOf(IntOffset(10, 10)) }
-
     val size = calculateWindowSizeClass()
     val isMobile = when (size.widthSizeClass) {
         WindowWidthSizeClass.Compact -> true
         else -> false
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
     }
 
     Scaffold(
@@ -214,28 +277,81 @@ private fun DrawScreenBody(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .pointerInput(Unit) {
-                                focusManager.clearFocus()
-                                keyboardController?.hide()
-
-                                handleDragAndZoomGestures(dragState) {
-                                    dragState = it
-                                }
-                            }
                             .graphicsLayer {
                                 scaleX = dragState.zoom
                                 scaleY = dragState.zoom
                                 translationX = dragState.draggedTo.x
                                 translationY = dragState.draggedTo.y
                             }
-                            .padding(10.dp),
+                            .padding(10.dp)
+                            .focusRequester(focusRequester)
+                            .focusable()
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown) {
+                                    val isControlPressed = event.isCtrlPressed || event.isMetaPressed
+                                    val isShiftPressed = event.isShiftPressed
+
+                                    when {
+                                        isControlPressed && !isShiftPressed && event.key == Key.Z -> {
+                                            viewModel.undo()
+                                            true
+                                        }
+                                        isControlPressed && isShiftPressed && event.key == Key.Z -> {
+                                            viewModel.redo()
+                                            true
+                                        }
+                                        isControlPressed && event.key == Key.B -> {
+                                            true
+                                        }
+                                        isControlPressed && event.key == Key.Equals -> {
+                                            dragState = dragState.copy(
+                                                zoom = (dragState.zoom * 1.1f).coerceAtMost(5f)
+                                            )
+                                            true
+                                        }
+                                        isControlPressed && event.key == Key.Minus -> {
+                                            dragState = dragState.copy(
+                                                zoom = (dragState.zoom / 1.1f).coerceAtLeast(0.2f)
+                                            )
+                                            true
+                                        }
+                                        else -> false
+                                    }
+                                } else {
+                                    false
+                                }
+                            }
+                            .pointerInput(currentTool) {
+                                if (currentTool == Tool.Zoom || currentTool == Tool.Drag) {
+                                    detectDragGestures { change, dragAmount ->
+                                        dragState = if (currentTool == Tool.Zoom) {
+                                            dragState.copy(
+                                                zoom = (dragState.zoom * (1 + dragAmount.y / 1000)).coerceIn(0.5f, 5f),
+                                                draggedTo = dragState.draggedTo + dragAmount
+                                            )
+                                        } else {
+                                            dragState.copy(
+                                                draggedTo = dragState.draggedTo + dragAmount
+                                            )
+                                        }
+                                    }
+                                    return@pointerInput
+                                }
+                                detectTransformGestures { _, pan, zoom, _ ->
+                                    dragState = dragState.copy(
+                                        zoom = (dragState.zoom * zoom).coerceIn(0.5f, 5f),
+                                        draggedTo = dragState.draggedTo + pan
+                                    )
+                                }
+                            },
                         contentAlignment = Alignment.Center,
                     ) {
                         DrawCanvas(
                             currentBrush = currentBrush,
                             currentColor = currentColor,
                             brushSize = brushSize,
-                            fill = fillToolSelected,
+                            tool = currentTool,
+                            gestureEnabled = currentTool != Tool.Zoom && currentTool != Tool.Drag,
                             controller = viewModel.drawingController,
                             modifier = Modifier
                                 .aspectRatio(projectModel.aspectRatioValue),
@@ -243,6 +359,7 @@ private fun DrawScreenBody(
                     }
 
                     DrawControls(
+                        tool = currentTool,
                         brushSize = brushSize,
                         brush = currentBrush,
                         color = currentColor,
@@ -257,7 +374,13 @@ private fun DrawScreenBody(
                             viewModel.setBrushSize(it)
                         },
                         onFillSelected = {
-                            fillToolSelected = !fillToolSelected
+                            viewModel.setTool(Tool.Fill)
+                        },
+                        onZoomSelected = {
+                            viewModel.setTool(Tool.Zoom)
+                        },
+                        onGrabSelected = {
+                            viewModel.setTool(Tool.Drag)
                         },
                     )
                 }
@@ -301,12 +424,15 @@ private fun DrawScreenBody(
 fun DrawControls(
     brushSize: Float = 10f,
     brush: BrushData,
+    tool: Tool,
     color: Color = Color(0xFF333333),
     isFloating: Boolean = false,
     onBrushSelected: (BrushData) -> Unit = {},
     onColorSelected: (Color) -> Unit = {},
     onSizeSelected: (Float) -> Unit = {},
     onFillSelected: () -> Unit = {},
+    onZoomSelected: () -> Unit = {},
+    onGrabSelected: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -418,29 +544,57 @@ fun DrawControls(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 IconButton(onClick = { showColorPicker = true }) {
-                    Icon(Lucide.Palette, contentDescription = "Color")
+                    Icon(
+                        Lucide.Palette,
+                        contentDescription = "Color",
+                        tint = color
+                    )
                 }
                 IconButton(
                     onClick = {
                         showBrushPicker = true
                     }
                 ) {
-                    Icon(Lucide.Brush, contentDescription = "Brush")
+                    Icon(
+                        Lucide.Brush,
+                        contentDescription = "Brush",
+                        tint = if (tool.isBrush) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
                 }
                 IconButton(onClick = {
                     onBrushSelected(BrushData.eraser)
                 }) {
-                    Icon(Lucide.Eraser, contentDescription = "Eraser")
+                    Icon(
+                        Lucide.Eraser,
+                        contentDescription = "Eraser",
+                        tint = if (tool.isEraser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
                 }
                 IconButton(onClick = {
                     showSizeSelector = true
                 }) {
-                    Icon(Lucide.SlidersHorizontal, contentDescription = "Brush Settings")
+                    Icon(
+                        Lucide.SlidersHorizontal,
+                        contentDescription = "Brush Settings",
+                    )
                 }
                 IconButton(onClick = {
                     showShapePicker = true
                 }) {
-                    Icon(Lucide.Shapes, contentDescription = "Shapes")
+                    Icon(
+                        Lucide.Shapes,
+                        contentDescription = "Shapes",
+                        tint = if (tool.isShape) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                IconButton(onClick = {
+                    onFillSelected()
+                }) {
+                    Icon(
+                        Lucide.PaintBucket,
+                        contentDescription = "Fill",
+                        tint = if (tool.isFill) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
@@ -461,22 +615,56 @@ fun DrawControls(
                     showBrushPicker = true
                 }
             ) {
-                Icon(Lucide.Brush, contentDescription = "Brush")
+                Icon(
+                    Lucide.Brush,
+                    contentDescription = "Brush",
+                    tint = if (tool.isBrush) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
             }
             IconButton(onClick = {
                 onBrushSelected(BrushData.eraser)
             }) {
-                Icon(Lucide.Eraser, contentDescription = "Eraser")
+                Icon(
+                    Lucide.Eraser,
+                    contentDescription = "Eraser",
+                    tint = if (tool.isEraser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
             }
             IconButton(onClick = {
                 showShapePicker = true
             }) {
-                Icon(Lucide.Shapes, contentDescription = "Shapes")
+                Icon(
+                    Lucide.Shapes,
+                    contentDescription = "Shapes",
+                    tint = if (tool.isShape) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
             }
             IconButton(onClick = {
                 onFillSelected()
             }) {
-                Icon(Lucide.PaintBucket, contentDescription = "Fill")
+                Icon(
+                    Lucide.PaintBucket,
+                    contentDescription = "Fill",
+                    tint = if (tool.isFill) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+            }
+            IconButton(onClick = {
+                onZoomSelected()
+            }) {
+                Icon(
+                    Lucide.ZoomIn,
+                    contentDescription = "Zoom",
+                    tint = if (tool.isZoom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+            }
+            IconButton(onClick = {
+                onGrabSelected()
+            }) {
+                Icon(
+                    Lucide.Grab,
+                    contentDescription = "Grab",
+                    tint = if (tool.isDrag) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }

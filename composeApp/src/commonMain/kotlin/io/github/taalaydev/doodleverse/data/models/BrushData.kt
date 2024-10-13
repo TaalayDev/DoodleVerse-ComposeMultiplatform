@@ -220,9 +220,10 @@ data class BrushData(
                     val point = metrics.getPosition(i)
 
                     for (j in 0..3) {
-                        val random1 = drawingPath.getRandom(listOf(i, point.x, point.y, j, 1))
-                        val random2 = drawingPath.getRandom(listOf(i, point.x, point.y, j, 2))
-                        val random3 = drawingPath.getRandom(listOf(i, point.x, point.y, j, 3))
+                        val random1 = Random.nextFloat()
+                        val random2 = Random.nextFloat()
+                        val random3 = Random.nextFloat()
+                        val random4 = Random.nextFloat()
 
                         val offset = Offset(
                             (random1 - 0.5f) * drawingPath.size * 0.5f,
@@ -231,10 +232,13 @@ data class BrushData(
 
                         // Create the end point with another randomized offset
                         val controlPoint = point + offset
-                        val endPoint = point + Offset(random3 * 10f, random3 * 10f)
+                        val endPoint = point +
+                                Offset(
+                                (random3 - 0.5f) * 10.0f,
+                                (random4 - 0.5f) * 10.0f,
+                                )
 
                         // Draw sketchy lines between the points
-                        canvas.drawLine(point, controlPoint, paint)
                         canvas.drawLine(controlPoint, endPoint, paint)
                     }
 

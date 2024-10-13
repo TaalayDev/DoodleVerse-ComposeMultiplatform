@@ -8,14 +8,11 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.PathMeasure
-import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
-import org.jetbrains.skia.Point
 
 enum class BrushModifier {
     Stroke,
@@ -109,8 +106,8 @@ object DrawRenderer {
 
         val pixels = pixelMap.buffer
 
-        val stack = ArrayDeque<Point>()
-        stack.add(Point(x.toFloat(), y.toFloat()))
+        val stack = ArrayDeque<Offset>()
+        stack.add(Offset(x.toFloat(), y.toFloat()))
 
         while (stack.isNotEmpty()) {
             val point = stack.removeLast()
@@ -124,10 +121,10 @@ object DrawRenderer {
 
             pixels[index] = replacement
 
-            stack.add(Point((px + 1).toFloat(), py.toFloat()))
-            stack.add(Point((px - 1).toFloat(), py.toFloat()))
-            stack.add(Point(px.toFloat(), (py + 1).toFloat()))
-            stack.add(Point(px.toFloat(), (py - 1).toFloat()))
+            stack.add(Offset((px + 1).toFloat(), py.toFloat()))
+            stack.add(Offset((px - 1).toFloat(), py.toFloat()))
+            stack.add(Offset(px.toFloat(), (py + 1).toFloat()))
+            stack.add(Offset(px.toFloat(), (py - 1).toFloat()))
         }
 
         canvas.drawPoints(

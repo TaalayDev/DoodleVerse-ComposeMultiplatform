@@ -3,19 +3,23 @@ package io.github.taalaydev.doodleverse.ui.screens.draw
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
+import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.core.copy
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.ToolsData
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
 
 data class DrawState(
@@ -182,8 +186,18 @@ class DrawViewModel : ViewModel() {
 
     val drawingController = DrawingController()
 
-    private var _currentBrush = MutableStateFlow(BrushData.solid)
-    val currentBrush: StateFlow<BrushData> = _currentBrush.asStateFlow()
+    private var _currentTool: MutableStateFlow<Tool> = MutableStateFlow(Tool.Brush(BrushData.solid))
+    val currentTool: StateFlow<Tool> = _currentTool.asStateFlow()
+
+    val currentBrush: Flow<BrushData>
+        get() = currentTool.map {
+            when (it) {
+                is Tool.Brush -> it.brush
+                is Tool.Eraser -> it.brush
+                is Tool.Shape -> it.brush
+                else -> BrushData.solid
+            }
+        }
 
     private var _currentColor = MutableStateFlow(Color(0xFF333333))
     val currentColor: StateFlow<Color> = _currentColor.asStateFlow()
@@ -205,7 +219,17 @@ class DrawViewModel : ViewModel() {
     }
 
     fun setBrush(brush: BrushData) {
-        _currentBrush.value = brush
+        if (brush.isShape) {
+            _currentTool.value = Tool.Shape(brush)
+        } else if (brush.blendMode == BlendMode.Clear) {
+            _currentTool.value = Tool.Eraser(brush)
+        } else {
+            _currentTool.value = Tool.Brush(brush)
+        }
+    }
+
+    fun setTool(tool: Tool) {
+        _currentTool.value = tool
     }
 
     fun setColor(color: Color) {

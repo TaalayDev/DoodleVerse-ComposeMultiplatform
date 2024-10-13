@@ -3,11 +3,6 @@ package io.github.taalaydev.doodleverse.ui.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.FabPosition
-import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -15,11 +10,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
@@ -28,29 +21,18 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathMeasure
-import androidx.compose.ui.graphics.asSkiaBitmap
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import io.github.taalaydev.doodleverse.core.DrawRenderer
-import io.github.taalaydev.doodleverse.core.copy
+import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.core.handleDrawing
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawingController
 import io.github.taalaydev.doodleverse.ui.screens.draw.currentLayer
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sin
-import kotlin.random.Random
 
 enum class DrawState {
     Idle,
@@ -68,7 +50,8 @@ fun DrawCanvas(
     currentBrush: BrushData,
     currentColor: Color,
     brushSize: Float,
-    fill: Boolean = false,
+    tool: Tool,
+    gestureEnabled: Boolean = true,
     initialPath: DrawingPath? = null,
     controller: DrawingController,
     modifier: Modifier = Modifier,
@@ -114,15 +97,15 @@ fun DrawCanvas(
 
     Canvas(
         modifier = modifier
-            .pointerInput(currentBrush) {
-                if (fill) {
+            .pointerInput(currentBrush, gestureEnabled, tool) {
+                if (!gestureEnabled) return@pointerInput
+                if (tool.isFill) {
                     detectTapGestures { offset ->
                         currentPosition = offset
                         drawState.value = DrawState.Started
                     }
                 } else {
                     handleDrawing(
-                        isActive = !fill,
                         onStart = { offset ->
                             currentPosition = offset
                             drawState.value = DrawState.Started
@@ -167,7 +150,7 @@ fun DrawCanvas(
             restoreImage = null
         }
 
-        if (fill && drawState.value == DrawState.Started) {
+        if (tool.isFill && drawState.value == DrawState.Started) {
             val x = currentPosition.x.toInt()
             val y = currentPosition.y.toInt()
             val replacementColor = currentColor.toArgb()

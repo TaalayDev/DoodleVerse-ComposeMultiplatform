@@ -9,97 +9,45 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.input.pointer.positionChanged
+import io.github.taalaydev.doodleverse.data.models.BrushData
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-internal fun distanceBetween(a: Offset, b: Offset) = sqrt((a.x - b.x).pow(2) + (a.y - b.y).pow(2))
-internal fun centerOf(a: Offset, b: Offset) = Offset((a.x + b.x) / 2, (a.y + b.y) / 2)
+sealed class Tool {
+    data class Brush(
+        val brush: BrushData
+    ) : Tool()
+    data class Eraser(
+        val brush: BrushData
+    ) : Tool()
+    data class Shape(
+        val brush: BrushData
+    ) : Tool()
+    data class TextTool(
+        val size: Float,
+        val color: Int
+    ) : Tool()
+    data object Zoom : Tool()
+    data object Drag : Tool()
+    data object Fill : Tool()
+
+    val isBrush: Boolean get() = this is Brush
+    val isEraser: Boolean get() = this is Eraser
+    val isShape: Boolean get() = this is Shape
+    val isTextTool: Boolean get() = this is TextTool
+    val isZoom: Boolean get() = this is Zoom
+    val isDrag: Boolean get() = this is Drag
+    val isFill: Boolean get() = this is Fill
+}
 
 data class DragState(
     val zoom: Float = 1f,
     val draggedTo: Offset = Offset.Zero,
 )
 
-suspend fun PointerInputScope.handleDragAndZoomGestures(
-    dragState: DragState,
-    zoomSensitivity: Float = 0.05f,
-    minZoom: Float = 0.8f,
-    maxZoom: Float = 2.5f,
-    onChange: (DragState) -> Unit = {},
-) {
-    awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false)
-        var drag: PointerInputChange?
-        var startDistance: Float? = null
-        var startCenter: Offset? = null
-
-        do {
-            drag = awaitTouchSlopOrCancellation(down.id) { change, _ ->
-                if (currentEvent.changes.size >= 2) {
-                    if (startDistance == null) {
-                        startDistance = distanceBetween(
-                            currentEvent.changes[0].position,
-                            currentEvent.changes[1].position
-                        )
-                    }
-                    if (startCenter == null) {
-                        startCenter = centerOf(
-                            currentEvent.changes[0].position,
-                            currentEvent.changes[1].position
-                        )
-                    }
-                    change.consume()
-                }
-            }
-        } while (drag != null && !drag.isConsumed)
-
-        var prevCenter: Offset? = startCenter
-        if (drag != null) {
-            drag(drag.id) {
-                if (currentEvent.changes.size >= 2) {
-                    /**
-                     * Zoom
-                     */
-                    val currentDistance = distanceBetween(
-                        currentEvent.changes[0].position,
-                        currentEvent.changes[1].position
-                    )
-
-                    if (startDistance != null) {
-                        val rawScaleChange = currentDistance / startDistance!!
-                        val scaleChange = 1 + (rawScaleChange - 1) * zoomSensitivity
-                        val newZoom = dragState.zoom * scaleChange
-                        onChange(dragState.copy(
-                            zoom = newZoom.coerceIn(minZoom, maxZoom)
-                        ))
-                    }
-
-                    /**
-                     * Drag
-                     */
-                    val currentCenter = centerOf(
-                        currentEvent.changes[0].position,
-                        currentEvent.changes[1].position
-                    )
-
-                    if (prevCenter != null) {
-                        val dragChange = currentCenter - prevCenter!!
-                        onChange(dragState.copy(
-                            draggedTo = dragState.draggedTo + dragChange
-                        ))
-                    }
-
-                    prevCenter = currentCenter
-                    it.consume()
-                }
-            }
-        }
-    }
-}
-
 internal suspend fun PointerInputScope.handleDrawing(
-    isActive: Boolean,
+    isActive: Boolean = true,
     onStart: (Offset) -> Unit = {},
     onDrag: (Offset, Offset) -> Unit = { _, _ -> },
     onEnd: () -> Unit = {},
@@ -114,7 +62,13 @@ internal suspend fun PointerInputScope.handleDrawing(
 
         var drag: PointerInputChange?
         do {
-            drag = awaitPointerEvent().changes.firstOrNull { it.id == down.id }
+            val event = awaitPointerEvent()
+            if (event.changes.size != fingersCount) {
+                // If finger count changes, end the gesture
+                onEnd()
+                break
+            }
+            drag = event.changes.firstOrNull { it.id == down.id }
             drag?.let {
                 if (it.positionChanged()) {
                     onDrag(it.previousPosition, it.position)
