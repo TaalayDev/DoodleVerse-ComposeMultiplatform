@@ -83,4 +83,4 @@ For any queries or suggestions, please open an issue in the GitHub repository or
 
 ## Screenshots
 
-[Example](screenshots/Screenshot_1.png)
+![Example](screenshots/Screenshot_1.png)
