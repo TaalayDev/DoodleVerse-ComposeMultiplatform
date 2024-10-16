@@ -18,6 +18,7 @@ data class ProjectModel(
         get() = aspectRatio.width / aspectRatio.height
 
     companion object {
+        // TODO: Used for demo purposes, remove later
         var currentProject: ProjectModel? = null
     }
 }

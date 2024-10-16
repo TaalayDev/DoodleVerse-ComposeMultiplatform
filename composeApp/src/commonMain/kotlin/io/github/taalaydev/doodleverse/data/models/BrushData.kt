@@ -14,12 +14,30 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.ui.util.lerp
+import doodleverse.composeapp.generated.resources.brush2
+import doodleverse.composeapp.generated.resources.brush3
+import doodleverse.composeapp.generated.resources.brush5
+import doodleverse.composeapp.generated.resources.brush6
+import doodleverse.composeapp.generated.resources.brush_circle
+import doodleverse.composeapp.generated.resources.bubbles
+import doodleverse.composeapp.generated.resources.heart
+import doodleverse.composeapp.generated.resources.marker
+import doodleverse.composeapp.generated.resources.marker_2
+import doodleverse.composeapp.generated.resources.pencil
+import doodleverse.composeapp.generated.resources.stamp_airbrush
+import doodleverse.composeapp.generated.resources.stamp_marker
+import doodleverse.composeapp.generated.resources.watercolor
+import doodleverse.composeapp.generated.resources.watercolor_splash
+import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.core.getDensityOffsetBetweenPoints
-import io.github.taalaydev.doodleverse.ui.components.calcOpacity
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.sqrt
 import kotlin.random.Random
+
+private fun calcOpacity(alpha: Float, brushOpacity: Float): Float {
+    return DrawRenderer.calcOpacity(alpha, brushOpacity)
+}
 
 data class BrushData(
     val id: Int,
@@ -51,10 +69,6 @@ data class BrushData(
         }
     }
 
-    internal fun calcOpacity(alpha: Float, brushOpacity: Float): Float {
-        return kotlin.math.max(alpha, brushOpacity) - min(alpha, brushOpacity)
-    }
-
     companion object {
         val solid = BrushData(
             id = 0,
@@ -80,7 +94,7 @@ data class BrushData(
             id = 2,
             name = "Marker",
             stroke = "marker",
-            opacityDiff = 0.3f,
+            opacityDiff = 0.5f,
             pathEffect = { width ->
                 PathEffects.markerPathEffect(width)
             }

@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
@@ -13,6 +14,8 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
+import kotlin.math.max
+import kotlin.math.min
 
 enum class BrushModifier {
     Stroke,
@@ -21,6 +24,56 @@ enum class BrushModifier {
 }
 
 object DrawRenderer {
+    internal fun calcOpacity(alpha: Float, brushOpacity: Float): Float {
+        return max(alpha, brushOpacity) - min(alpha, brushOpacity)
+    }
+
+    internal fun pathPaint(
+        path: DrawingPath,
+    ): Paint {
+        val brush = path.brush
+        return Paint().apply {
+            style = PaintingStyle.Stroke
+            color = path.color
+            strokeWidth = path.size
+            strokeCap = brush.strokeCap
+            strokeJoin = brush.strokeJoin
+            pathEffect = brush.pathEffect?.invoke(path.size)
+            blendMode = brush.blendMode
+            colorFilter = if (brush.brush != null) {
+                ColorFilter.tint(path.color)
+            } else {
+                null
+            }
+            alpha = calcOpacity(path.color.alpha, brush.opacityDiff)
+        }
+    }
+
+    internal fun pathsToBitmap(
+        paths: List<DrawingPath>,
+        size: Size,
+    ): ImageBitmap {
+        val bitmap = ImageBitmap(size.width.toInt(), size.height.toInt())
+        val canvas = Canvas(bitmap)
+
+        paths.forEach { drawingPath ->
+            val paint = pathPaint(drawingPath)
+
+            drawPath(canvas, drawingPath, paint, size)
+        }
+
+        return bitmap
+    }
+
+    private fun calculateTaperFactor(progress: Float): Float {
+        // This function creates a tapered effect at the start and end of the stroke
+        return when {
+            progress < 0.1f -> progress * 10 // Taper at the start
+            progress > 0.9f -> (1 - progress) * 10 // Taper at the end
+            else -> 1f // Full size in the middle
+        }
+    }
+
     internal fun drawPath(
         canvas: Canvas,
         drawingPath: DrawingPath,
@@ -67,12 +120,16 @@ object DrawRenderer {
         val length = measure.length
         val delta = Offset(end.x - start.x, end.y - start.y)
 
-        val halfSize = brushSize / 8
+        val halfSize = brushSize / 8f
         var i = 0f
         var currentPoint = start
 
         while (i < length) {
             val point = measure.getPosition(i)
+            val progress = i / length
+            val taperFactor = calculateTaperFactor(progress)
+            val currentBrushSize = brushSize * taperFactor
+
             canvas.drawImageRect(
                 brushImage,
                 dstOffset = IntOffset(

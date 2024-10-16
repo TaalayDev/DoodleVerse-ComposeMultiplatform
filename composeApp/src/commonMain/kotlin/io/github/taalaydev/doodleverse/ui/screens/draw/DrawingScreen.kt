@@ -1,21 +1,17 @@
 package io.github.taalaydev.doodleverse.ui.screens.draw
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.calculateCentroid
-import androidx.compose.foundation.gestures.calculatePan
-import androidx.compose.foundation.gestures.calculateRotation
-import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.gestures.forEachGesture
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -23,17 +19,12 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import com.composables.icons.lucide.*
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
@@ -42,7 +33,6 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,10 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -64,19 +52,19 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.PointerInputScope
-import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -88,58 +76,17 @@ import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.Shape
+import io.github.taalaydev.doodleverse.navigation.Destination
+import io.github.taalaydev.doodleverse.ui.components.BrushGrid
 import io.github.taalaydev.doodleverse.ui.components.BrushPicker
 import io.github.taalaydev.doodleverse.ui.components.ColorPalettePanel
 import io.github.taalaydev.doodleverse.ui.components.ColorPicker
 import io.github.taalaydev.doodleverse.ui.components.DraggableSlider
 import io.github.taalaydev.doodleverse.ui.components.DrawCanvas
 import io.github.taalaydev.doodleverse.ui.components.LayersPanel
-import io.github.taalaydev.doodleverse.ui.components.VerticalSlider
+import io.github.taalaydev.doodleverse.ui.components.NewProjectDialog
 import kotlinx.datetime.Clock
-import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import kotlin.math.min
-
-suspend fun PointerInputScope.detectMultitouchGestures(
-    onDrag: (PointerInputChange, Offset) -> Unit,
-    onTransform: (centroid: Offset, pan: Offset, zoom: Float, rotation: Float) -> Unit
-) {
-    forEachGesture {
-        awaitPointerEventScope {
-            val touchSlop = viewConfiguration.touchSlop
-            var zoom = 1f
-            var pan = Offset.Zero
-            var rotation = 0f
-            var pastTouchSlop = false
-
-            do {
-                val event = awaitPointerEvent()
-                val canceled = event.changes.any { it.isConsumed }
-                if (canceled) {
-                    break
-                }
-
-                if (event.changes.size > 1) {
-                    if (!pastTouchSlop) {
-                        pastTouchSlop = event.calculatePan().getDistance() > touchSlop
-                    }
-                    if (pastTouchSlop) {
-                        event.changes.forEach { it.consumeAllChanges() }
-                        val centroid = event.calculateCentroid(useCurrent = true)
-                        val zoomChange = event.calculateZoom()
-                        val panChange = event.calculatePan()
-                        val rotationChange = event.calculateRotation()
-                        zoom *= zoomChange
-                        pan += panChange
-                        rotation += rotationChange
-
-                        onTransform(centroid, panChange, zoomChange, rotationChange)
-                    }
-                }
-            } while (event.changes.any { it.pressed })
-        }
-    }
-}
 
 data class DpSize(val width: Dp, val height: Dp)
 
@@ -147,24 +94,42 @@ data class DpSize(val width: Dp, val height: Dp)
 fun DrawingScreen(
     navController: NavHostController = rememberNavController(),
 ) {
-    val projectModel = remember { ProjectModel.currentProject }
+    var projectModel by remember { mutableStateOf(ProjectModel.currentProject) }
 
-    DrawScreenBody(
-        projectModel = projectModel ?: ProjectModel(
-            id = 1L,
-            name = "Untitled",
-            layers = listOf(
-                LayerModel(
-                    id = 1L,
-                    name = "Layer 1",
+    if (projectModel == null) {
+        NewProjectDialog(
+            onDismissRequest = {  },
+            onConfirm = { name, width, height ->
+                projectModel = ProjectModel(
+                    1,
+                    name,
+                    listOf(
+                        LayerModel(
+                            1,
+                            "Layer 1",
+                        ),
+                    ),
+                    createdAt = Clock.System.now().toEpochMilliseconds(),
+                    lastModified = Clock.System.now().toEpochMilliseconds(),
+                    aspectRatio = Size(width, height),
                 )
-            ),
-            createdAt = Clock.System.now().toEpochMilliseconds(),
-            lastModified = Clock.System.now().toEpochMilliseconds(),
-        ),
-        navController = navController,
-        modifier = Modifier.fillMaxSize(),
-    )
+            },
+            showCancelButton = false,
+            properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false),
+        )
+    }
+
+    if (projectModel != null) {
+        DrawScreenBody(
+            projectModel = projectModel!!,
+            navController = navController,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+inline fun toDp(value: Float, density: Density): Dp {
+    return with(density) { value.toDp() }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
@@ -195,6 +160,8 @@ private fun DrawScreenBody(
     val pxToDp: (Int) -> Dp = { px ->
         with(density) { px.toDp() }
     }
+
+    var contentSize by remember { mutableStateOf(IntSize(0, 0)) }
 
     val size = calculateWindowSizeClass()
     val isMobile = when (size.widthSizeClass) {
@@ -247,7 +214,7 @@ private fun DrawScreenBody(
                     }
                     IconButton(
                         onClick = {
-
+                            viewModel.saveAsPng()
                         }
                     ) {
                         Icon(
@@ -266,13 +233,18 @@ private fun DrawScreenBody(
         ) {
             Box(
                 modifier = Modifier
-                    .weight(1f).fillMaxSize(),
+                    .weight(1f)
+                    .fillMaxSize()
+                    .onGloballyPositioned {
+                        contentSize = it.size
+                    },
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.SpaceBetween,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    var oldTool by remember { mutableStateOf<Tool?>(null) }
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -282,6 +254,7 @@ private fun DrawScreenBody(
                                 scaleY = dragState.zoom
                                 translationX = dragState.draggedTo.x
                                 translationY = dragState.draggedTo.y
+                                rotationZ = dragState.rotation
                             }
                             .padding(10.dp)
                             .focusRequester(focusRequester)
@@ -290,6 +263,7 @@ private fun DrawScreenBody(
                                 if (event.type == KeyEventType.KeyDown) {
                                     val isControlPressed = event.isCtrlPressed || event.isMetaPressed
                                     val isShiftPressed = event.isShiftPressed
+                                    val isSpacePressed = event.key == Key.Spacebar
 
                                     when {
                                         isControlPressed && !isShiftPressed && event.key == Key.Z -> {
@@ -315,7 +289,20 @@ private fun DrawScreenBody(
                                             )
                                             true
                                         }
-                                        else -> false
+                                        isSpacePressed -> {
+                                            if (oldTool == null) {
+                                                oldTool = currentTool
+                                                viewModel.setTool(Tool.Drag)
+                                            }
+                                            true
+                                        }
+                                        else -> {
+                                            if (oldTool != null) {
+                                                viewModel.setTool(oldTool!!)
+                                                oldTool = null
+                                            }
+                                            false
+                                        }
                                     }
                                 } else {
                                     false
@@ -324,23 +311,24 @@ private fun DrawScreenBody(
                             .pointerInput(currentTool) {
                                 if (currentTool == Tool.Zoom || currentTool == Tool.Drag) {
                                     detectDragGestures { change, dragAmount ->
-                                        dragState = if (currentTool == Tool.Zoom) {
-                                            dragState.copy(
-                                                zoom = (dragState.zoom * (1 + dragAmount.y / 1000)).coerceIn(0.5f, 5f),
-                                                draggedTo = dragState.draggedTo + dragAmount
+                                        if (currentTool == Tool.Zoom) {
+                                            dragState = dragState.copy(
+                                                zoom = (dragState.zoom * (1 + dragAmount.y / 1000)).coerceIn(0.5f, 5f)
                                             )
                                         } else {
-                                            dragState.copy(
+                                            dragState = dragState.copy(
                                                 draggedTo = dragState.draggedTo + dragAmount
                                             )
                                         }
                                     }
+
                                     return@pointerInput
                                 }
-                                detectTransformGestures { _, pan, zoom, _ ->
+                                detectTransformGestures { _, pan, zoom, rotation ->
                                     dragState = dragState.copy(
                                         zoom = (dragState.zoom * zoom).coerceIn(0.5f, 5f),
-                                        draggedTo = dragState.draggedTo + pan
+                                        draggedTo = dragState.draggedTo + pan,
+                                        rotation = dragState.rotation + rotation
                                     )
                                 }
                             },
@@ -351,8 +339,11 @@ private fun DrawScreenBody(
                             currentColor = currentColor,
                             brushSize = brushSize,
                             tool = currentTool,
-                            gestureEnabled = currentTool != Tool.Zoom && currentTool != Tool.Drag,
+                            gestureEnabled = !currentTool.isZoom && !currentTool.isDrag,
                             controller = viewModel.drawingController,
+                            onColorPicked = { color ->
+                                viewModel.setColor(color)
+                            },
                             modifier = Modifier
                                 .aspectRatio(projectModel.aspectRatioValue),
                         )
@@ -373,14 +364,8 @@ private fun DrawScreenBody(
                         onSizeSelected = {
                             viewModel.setBrushSize(it)
                         },
-                        onFillSelected = {
-                            viewModel.setTool(Tool.Fill)
-                        },
-                        onZoomSelected = {
-                            viewModel.setTool(Tool.Zoom)
-                        },
-                        onGrabSelected = {
-                            viewModel.setTool(Tool.Drag)
+                        onToolSelected = {
+                            viewModel.setTool(it)
                         },
                     )
                 }
@@ -391,7 +376,69 @@ private fun DrawScreenBody(
                         onValueChange = {
                             viewModel.setBrushSize(it)
                         },
-                    )
+                    ) {
+                        Text(
+                            text = "${brushSize.toInt()}px",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray.copy(alpha = 0.9f),
+                        )
+                    }
+                }
+
+                if (!isMobile && currentTool.isZoom) {
+                    var sliderHeightPx by remember { mutableStateOf(0f) }
+
+                    val minZoom = 0.5f
+                    val maxZoom = 5f
+
+                    val thumbHeightDp = 30.dp
+                    val thumbHeightPx = with(LocalDensity.current) { thumbHeightDp.toPx() }
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(vertical = 10.dp, horizontal = 5.dp)
+                            .width(10.dp)
+                            .fillMaxHeight()
+                            .border(1.dp, Color.White, RoundedCornerShape(5.dp))
+                            .clip(RoundedCornerShape(5.dp))
+                            .onGloballyPositioned { layoutCoordinates ->
+                                sliderHeightPx = layoutCoordinates.size.height.toFloat()
+                            }
+                            .pointerInput(Unit) {
+                                detectTapGestures { offset ->
+                                    val y = offset.y.coerceIn(0f, sliderHeightPx - thumbHeightPx)
+                                    val normalizedPosition = 1f - y / (sliderHeightPx - thumbHeightPx)
+                                    val newZoom = minZoom + normalizedPosition * (maxZoom - minZoom)
+                                    dragState = dragState.copy(zoom = newZoom)
+                                }
+                            }
+                    ) {
+                        // Map zoom to slider position
+                        val sliderPosition = remember(dragState.zoom, sliderHeightPx) {
+                            val normalizedZoom = (dragState.zoom - minZoom) / (maxZoom - minZoom)
+                            (sliderHeightPx - thumbHeightPx) * (1 - normalizedZoom)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(thumbHeightDp)
+                                .offset { IntOffset(0, sliderPosition.toInt()) }
+                                .background(Color.Gray.copy(alpha = 0.5f))
+                                .clip(RoundedCornerShape(5.dp))
+                                .draggable(
+                                    orientation = Orientation.Vertical,
+                                    state = rememberDraggableState { deltaY ->
+                                        val newSliderPosition = (sliderPosition + deltaY)
+                                            .coerceIn(0f, sliderHeightPx - thumbHeightPx)
+                                        val normalizedPosition = 1f - newSliderPosition / (sliderHeightPx - thumbHeightPx)
+                                        val newZoom = minZoom + normalizedPosition * (maxZoom - minZoom)
+                                        dragState = dragState.copy(zoom = newZoom)
+                                    }
+                                )
+                        )
+                    }
                 }
             }
             if (!isMobile) {
@@ -430,9 +477,7 @@ fun DrawControls(
     onBrushSelected: (BrushData) -> Unit = {},
     onColorSelected: (Color) -> Unit = {},
     onSizeSelected: (Float) -> Unit = {},
-    onFillSelected: () -> Unit = {},
-    onZoomSelected: () -> Unit = {},
-    onGrabSelected: () -> Unit = {},
+    onToolSelected: (Tool) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -519,6 +564,7 @@ fun DrawControls(
     if (showShapePicker) {
         ShapePickerSheet(
             bottomSheetState = shapePickerBottomSheetState,
+            brush = brush,
             onSelected = { brush ->
                 onBrushSelected(brush)
                 showShapePicker = false
@@ -588,7 +634,7 @@ fun DrawControls(
                     )
                 }
                 IconButton(onClick = {
-                    onFillSelected()
+                    onToolSelected(Tool.Fill)
                 }) {
                     Icon(
                         Lucide.PaintBucket,
@@ -640,7 +686,7 @@ fun DrawControls(
                 )
             }
             IconButton(onClick = {
-                onFillSelected()
+                onToolSelected(Tool.Fill)
             }) {
                 Icon(
                     Lucide.PaintBucket,
@@ -649,7 +695,16 @@ fun DrawControls(
                 )
             }
             IconButton(onClick = {
-                onZoomSelected()
+                onToolSelected(Tool.Eyedropper)
+            }) {
+                Icon(
+                    Lucide.Pipette,
+                    contentDescription = "Eyedropper",
+                    tint = if (tool.isEyedropper) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+            }
+            IconButton(onClick = {
+                onToolSelected(Tool.Zoom)
             }) {
                 Icon(
                     Lucide.ZoomIn,
@@ -658,7 +713,7 @@ fun DrawControls(
                 )
             }
             IconButton(onClick = {
-                onGrabSelected()
+                onToolSelected(Tool.Drag)
             }) {
                 Icon(
                     Lucide.Grab,
@@ -674,6 +729,7 @@ fun DrawControls(
 @Composable
 fun ShapePickerSheet(
     bottomSheetState: SheetState,
+    brush: BrushData? = null,
     onSelected: (BrushData) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
@@ -688,33 +744,11 @@ fun ShapePickerSheet(
             modifier = Modifier.fillMaxWidth(),
             color = MaterialTheme.colorScheme.surface,
         ) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(shapes.size) { index ->
-                    val shape = shapes[index]
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .shadow(4.dp, RoundedCornerShape(8.dp))
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surface)
-                            .clickable {
-                                onSelected(shape)
-                            }
-                    ) {
-                        Text(
-                            text = shape.name,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-            }
+            BrushGrid(
+                brushes = shapes,
+                selectedBrush = brush,
+                onSelected = onSelected,
+            )
         }
     }
 }

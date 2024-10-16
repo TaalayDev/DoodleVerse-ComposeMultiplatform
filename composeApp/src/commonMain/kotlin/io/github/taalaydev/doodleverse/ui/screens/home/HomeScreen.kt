@@ -41,46 +41,10 @@ fun HomeScreen(
     navController: NavController = rememberNavController(),
 ) {
     var projects by remember { mutableStateOf<List<ProjectModel>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
+    var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
     var showNewProjectDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        try {
-            delay(1000) // Simulating network delay
-            projects = listOf(
-                ProjectModel(
-                    1,
-                    "Project 1",
-                    listOf(
-                        LayerModel(
-                            1,
-                            "Layer 1",
-                        ),
-                    ),
-                    createdAt = Clock.System.now().toEpochMilliseconds(),
-                    lastModified = Clock.System.now().toEpochMilliseconds(),
-                ),
-                ProjectModel(
-                    2,
-                    "Project 2",
-                    listOf(
-                        LayerModel(
-                            1,
-                            "Layer 1",
-                        ),
-                    ),
-                    createdAt = Clock.System.now().toEpochMilliseconds(),
-                    lastModified = Clock.System.now().toEpochMilliseconds(),
-                )
-            )
-            isLoading = false
-        } catch (e: Exception) {
-            error = e.message
-            isLoading = false
-        }
-    }
 
     if (showNewProjectDialog) {
         NewProjectDialog(

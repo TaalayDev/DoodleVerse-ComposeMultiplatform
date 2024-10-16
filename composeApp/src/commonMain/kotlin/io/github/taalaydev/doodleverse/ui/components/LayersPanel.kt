@@ -34,6 +34,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -46,6 +47,7 @@ import com.composables.icons.lucide.Image
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Plus
 import com.composables.icons.lucide.Trash
+import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawViewModel
 import kotlinx.coroutines.delay
@@ -60,6 +62,7 @@ fun LayersPanel(
 ) {
     val state by drawViewModel.state
     val layers = state.layers
+    val caches = state.caches
     val activeLayerIndex = state.currentLayerIndex
 
     Column(
@@ -76,6 +79,7 @@ fun LayersPanel(
             ) { index, layer ->
                 LayerTile(
                     layer = layer,
+                    preview = caches[layer.id],
                     index = index,
                     isActive = index == activeLayerIndex,
                     onLayerSelected = { drawViewModel.selectLayer(it) },
@@ -119,6 +123,7 @@ fun LayersPanelHeader(onLayerAdded: (String) -> Unit) {
 @Composable
 fun LayerTile(
     layer: LayerModel,
+    preview: ImageBitmap? = null,
     index: Int,
     isActive: Boolean,
     onLayerSelected: (Int) -> Unit,
@@ -141,7 +146,7 @@ fun LayerTile(
                 .height(40.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            LayerPreview(layer)
+            LayerPreview(preview)
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = layer.name,
@@ -178,36 +183,22 @@ fun LayerTile(
 }
 
 @Composable
-fun LayerPreview(layer: LayerModel) {
-    var previewImage by remember { mutableStateOf<ImageBitmap?>(null) }
-    val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(layer) {
-        coroutineScope.launch {
-            delay(500) // Debounce
-
-        }
-    }
-
+fun LayerPreview(image: ImageBitmap?) {
     Box(
         modifier = Modifier
             .size(40.dp)
             .background(Color.White.copy(alpha = 0.8f))
             .border(1.dp, Color.White)
     ) {
-        if (previewImage != null) {
+        if (image != null) {
             Image(
-                bitmap = previewImage!!,
+                bitmap = image,
                 contentDescription = "Layer preview",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            Icon(
-                imageVector = Lucide.Image,
-                contentDescription = "Layer preview placeholder",
-                modifier = Modifier.align(Alignment.Center)
-            )
+
         }
     }
 }

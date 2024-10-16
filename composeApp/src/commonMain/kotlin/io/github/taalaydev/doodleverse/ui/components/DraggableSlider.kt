@@ -3,6 +3,7 @@ package io.github.taalaydev.doodleverse.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -14,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,23 +32,30 @@ import com.composables.icons.lucide.GripHorizontal
 import com.composables.icons.lucide.Lucide
 
 @Composable
-fun DraggableSlider(
+fun BoxScope.DraggableSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
     initialPosition: IntOffset = IntOffset(10, 10),
     focusManager: androidx.compose.ui.focus.FocusManager? = null,
     keyboardController: SoftwareKeyboardController? = null,
+    content: @Composable () -> Unit
 ) {
     var position by remember { mutableStateOf(initialPosition) }
 
+    LaunchedEffect(initialPosition) {
+        position = initialPosition
+    }
+
+    val boxModifier = Modifier
+        .offset { position }
+        .background(
+            Color.White.copy(alpha = 0.4f),
+            shape = RoundedCornerShape(8.dp)
+        )
+        .clip(RoundedCornerShape(8.dp))
+
     Box(
-        modifier = Modifier
-            .offset { position }
-            .background(
-                Color.White.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clip(RoundedCornerShape(8.dp)),
+        modifier = boxModifier,
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -76,11 +85,7 @@ fun DraggableSlider(
                 valueRange = 5f..80f,
                 modifier = Modifier.height(20.dp).width(200.dp),
             )
-            Text(
-                text = "${value.toInt()}px",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray.copy(alpha = 0.9f),
-            )
+            content()
             Spacer(modifier = Modifier.height(4.dp))
         }
     }

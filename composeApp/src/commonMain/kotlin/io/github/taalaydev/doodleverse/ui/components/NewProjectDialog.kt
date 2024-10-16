@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.composables.icons.lucide.ArrowDownUp
 import com.composables.icons.lucide.ArrowRightLeft
 import com.composables.icons.lucide.Lucide
@@ -27,7 +28,9 @@ data class ProjectTemplate(
 @Composable
 fun NewProjectDialog(
     onDismissRequest: () -> Unit,
-    onConfirm: (String, Float, Float) -> Unit
+    onConfirm: (String, Float, Float) -> Unit,
+    properties: DialogProperties = DialogProperties(),
+    showCancelButton: Boolean = true
 ) {
     var projectName by remember { mutableStateOf("") }
     var width by remember { mutableStateOf(1f) }
@@ -47,7 +50,10 @@ fun NewProjectDialog(
         ProjectTemplate("Custom", 0f, 0f, ""),
     )
 
-    Dialog(onDismissRequest = onDismissRequest) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = properties,
+    ) {
         Surface(
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surface
@@ -137,10 +143,12 @@ fun NewProjectDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismissRequest) {
-                        Text("Cancel")
+                    if (showCancelButton) {
+                        TextButton(onClick = onDismissRequest) {
+                            Text("Cancel")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
                             if (projectName.isNotBlank() && width > 0 && height > 0) {

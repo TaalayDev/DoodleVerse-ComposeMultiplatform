@@ -7,7 +7,12 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.asSkiaBitmap
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import io.github.taalaydev.doodleverse.ImageFormat
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.core.copy
 import io.github.taalaydev.doodleverse.data.models.BrushData
@@ -15,11 +20,14 @@ import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.ToolsData
+import io.github.taalaydev.doodleverse.imageBitmapBytArray
+import io.github.vinceglb.filekit.core.FileKit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
 data class DrawState(
@@ -61,6 +69,27 @@ class DrawingController {
     val canvasSize = mutableStateOf(Size.Zero)
     val restoreImage = mutableStateOf<ImageBitmap?>(null)
     val isDirty = mutableStateOf(false)
+
+    fun getCombinedImageBitmap(): ImageBitmap? {
+        val canvasWidth = canvasSize.value.width.toInt()
+        val canvasHeight = canvasSize.value.height.toInt()
+
+        if (canvasWidth <= 0 || canvasHeight <= 0) return null
+
+        val combinedBitmap = ImageBitmap(canvasWidth, canvasHeight)
+        val canvas = Canvas(combinedBitmap)
+
+        // Draw all visible layers onto the combined bitmap
+        for (layer in state.value.layers) {
+            if (!layer.isVisible || layer.opacity == 0.0) continue
+            val image = state.value.caches[layer.id]
+            if (image != null) {
+                canvas.drawImageRect(image, paint = Paint())
+            }
+        }
+
+        return combinedBitmap
+    }
 
     fun addState(path: DrawingPath, image: ImageBitmap) {
         val newState = state.value.copy(
@@ -262,5 +291,18 @@ class DrawViewModel : ViewModel() {
 
     fun layerVisibilityChanged(index: Int, isVisible: Boolean) {
         drawingController.layerVisibilityChanged(index, isVisible)
+    }
+
+    fun saveAsPng() {
+        val image = drawingController.getCombinedImageBitmap() ?: return
+        val bytes = imageBitmapBytArray(image, ImageFormat.PNG)
+
+        viewModelScope.launch {
+            FileKit.saveFile(
+                bytes,
+                "doodleverse-${Clock.System.now().toEpochMilliseconds()}",
+                "png"
+            )
+        }
     }
 }

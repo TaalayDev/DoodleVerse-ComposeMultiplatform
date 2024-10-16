@@ -14,7 +14,7 @@ fun MainNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Destination.Home.route
+        startDestination = Destination.Drawing.route
     ) {
         composable(Destination.Home.route) {
             HomeScreen(navController = navController)

@@ -73,6 +73,8 @@ kotlin {
             implementation(libs.material3.window.size.multiplatform)
             implementation(libs.lifecycle.viewmodel.compose)
             implementation(libs.kotlinx.datetime)
+
+            implementation("io.github.vinceglb:filekit-compose:0.8.7")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -117,6 +119,7 @@ android {
         debugImplementation(compose.uiTooling)
     }
 }
+
 dependencies {
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.ui.graphics.android)
@@ -130,6 +133,10 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "io.github.taalaydev.doodleverse"
             packageVersion = "1.0.0"
+
+            linux {
+                modules("jdk.security.auth")
+            }
         }
     }
 }

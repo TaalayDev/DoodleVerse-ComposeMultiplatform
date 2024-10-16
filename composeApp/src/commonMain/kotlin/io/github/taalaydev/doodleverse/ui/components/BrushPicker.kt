@@ -45,6 +45,41 @@ import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 
+private fun createPreviewBrushPath(width: Float, height: Float): Path {
+    val midWidth = width / 2
+    val midHeight = height / 2
+    val quarterWidth = width / 4
+    val quarterHeight = height / 4
+    val eighthWidth = width / 8
+
+    return Path().apply {
+        moveTo(15f, midHeight)
+        cubicTo(
+            15f, midHeight - quarterHeight,
+            midWidth - eighthWidth, midHeight - quarterHeight,
+            midWidth, midHeight
+        )
+        cubicTo(
+            midWidth + eighthWidth, midHeight + quarterHeight,
+            width - 15f, midHeight + quarterHeight,
+            width - 15f, midHeight
+        )
+
+        moveTo(width - 15f, midHeight)
+
+        close()
+    }
+}
+
+private fun createPreviewShapePath(width: Float, height: Float): Path {
+    return Path().apply {
+        moveTo(15f, 15f)
+        lineTo(width - 15f, 15f)
+        lineTo(width - 15f, height - 15f)
+        lineTo(15f, height - 15f)
+        close()
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +123,7 @@ fun BrushGrid(
     onSelected: (BrushData) -> Unit = {},
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(4),
+        columns = GridCells.Fixed(3),
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(bottom = 16.dp, top = 16.dp, start = 16.dp, end = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -119,33 +154,18 @@ fun BrushPreview(
     val initialPath = remember(canvasSize) {
         val width = canvasSize.width.coerceAtLeast(1f)
         val height = canvasSize.height.coerceAtLeast(1f)
-        val midWidth = width / 2
-        val midHeight = height / 2
-        val quarterWidth = width / 4
-        val quarterHeight = height / 4
-        val eighthWidth = width / 8
 
         DrawingPath(
             brush = brush,
-            color = Color.Black,
+            color = Color(0xFF333333),
             size = 10f,
-            path = Path().apply {
-                moveTo(15f, midHeight)
-                cubicTo(
-                    15f, midHeight - quarterHeight,
-                    midWidth - eighthWidth, midHeight - quarterHeight,
-                    midWidth, midHeight
-                )
-                cubicTo(
-                    midWidth + eighthWidth, midHeight + quarterHeight,
-                    width - 15f, midHeight + quarterHeight,
-                    width - 15f, midHeight
-                )
-
-                moveTo(width - 15f, midHeight)
-
-                close()
-            }
+            startPoint = Offset(10f, 10f),
+            endPoint = Offset(width - 10f, height - 10f),
+            path = if (brush.isShape) {
+                createPreviewShapePath(width, height)
+            } else {
+                createPreviewBrushPath(width, height)
+            },
         )
     }
 
@@ -181,27 +201,14 @@ fun BrushPreview(
                         imageCanvas!!,
                         Offset(0f, 0f),
                         Offset(size.width, size.height),
-                        Paint().apply {
-                            color = Color.Black
-                            style = PaintingStyle.Stroke
-                            strokeWidth = 10f
-                            strokeCap = StrokeCap.Round
-                            strokeJoin = StrokeJoin.Round
-                        },
+                        DrawRenderer.pathPaint(initialPath),
                         initialPath,
                     )
                 } else {
                     DrawRenderer.drawPath(
                         canvas = imageCanvas!!,
                         drawingPath = initialPath,
-                        paint = Paint().apply {
-                            color = Color.Black
-                            style = PaintingStyle.Stroke
-                            strokeWidth = 10f
-                            strokeCap = brush.strokeCap
-                            strokeJoin = brush.strokeJoin
-                            alpha = 1f - brush.opacityDiff
-                        },
+                        paint = DrawRenderer.pathPaint(initialPath),
                         size = size,
                     )
                 }
