@@ -83,4 +83,4 @@ For any queries or suggestions, please open an issue in the GitHub repository or
 
 ## Screenshots
 
-[Example](screenshots/Screenshot 2024-10-17 at 02.54.34.png)
+[Example](screenshots/Screenshot_1.png)
