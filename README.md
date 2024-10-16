@@ -80,3 +80,7 @@ This project is licensed under the MIT License - You can search for the license 
 ## Contact
 
 For any queries or suggestions, please open an issue in the GitHub repository or contact TaalayDev at a.u.taalay@gmail.com.
+
+## Screenshots
+
+(screenshots/Screenshot 2024-10-17 at 02.54.34.png)
