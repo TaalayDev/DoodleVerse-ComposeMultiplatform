@@ -19,12 +19,6 @@ import java.io.FileOutputStream
 import java.util.Locale
 import kotlin.coroutines.resume
 
-class AndroidPlatform : Platform {
-    override val name: String = "Android ${Build.VERSION.SDK_INT}"
-}
-
-actual fun getPlatform(): Platform = AndroidPlatform()
-
 @Composable
 actual fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
     val bitmap = bitmap.asAndroidBitmap()

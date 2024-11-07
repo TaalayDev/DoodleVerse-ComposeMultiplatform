@@ -3,6 +3,7 @@ package io.github.taalaydev.doodleverse
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
+import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.jetbrains.skia.Bitmap
@@ -14,9 +15,12 @@ import org.w3c.files.BlobPropertyBag
 
 class WasmPlatform: Platform {
     override val name: String = "Web with Kotlin/Wasm"
+    override val isWeb: Boolean = true
+    override val isDesktop: Boolean = false
+    override val isAndroid: Boolean = false
+    override val isIos: Boolean = false
+    override val projectRepo: ProjectRepository = DemoProjectRepo()
 }
-
-actual fun getPlatform(): Platform = WasmPlatform()
 
 @Composable
 actual fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {

@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
@@ -203,8 +202,8 @@ fun DrawCanvas(
 
                 val x = currentPosition.x.toInt()
                 val y = currentPosition.y.toInt()
-                val colorArgb = bitmap?.asSkiaBitmap()?.getColor(x, y) ?: return@Canvas
-                val color = Color(colorArgb)
+                // val colorArgb = bitmap?.asSkiaBitmap()?.getColor(x, y) ?: return@Canvas
+                val color = Color(0xFF000000)
 
                 if (eyedropperColor != color) {
                     eyedropperColor = if (color.alpha > 0) color else Color.White

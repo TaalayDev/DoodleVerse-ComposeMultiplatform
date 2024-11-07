@@ -2,7 +2,10 @@ package io.github.taalaydev.doodleverse
 
 import androidx.compose.runtime.remember
 import androidx.compose.ui.window.ComposeUIViewController
+import io.github.taalaydev.doodleverse.database.getRepository
 
 fun MainViewController() = ComposeUIViewController {
-    App()
+    val platformInfo = remember { IOSPlatform() }
+
+    App(platformInfo)
 }

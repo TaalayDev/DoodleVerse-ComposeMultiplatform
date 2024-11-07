@@ -10,19 +10,19 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ProjectDao {
     @Query("SELECT * FROM projects")
-    fun getAllProjects(): Flow<ProjectEntity>
+    fun getAllProjects(): Flow<List<ProjectEntity>>
 
     @Query("SELECT * FROM projects WHERE id = :id")
     suspend fun getProjectById(id: Long): ProjectEntity
 
     @Insert
-    suspend fun insertProject(project: ProjectEntity)
+    suspend fun insertProject(project: ProjectEntity): Long
 
     @Update
     suspend fun updateProject(project: ProjectEntity)
 
     @Insert
-    suspend fun insertProjects(projects: List<ProjectEntity>)
+    suspend fun insertProjects(projects: List<ProjectEntity>): List<Long>
 
     @Query("DELETE FROM projects WHERE id = :id")
     suspend fun deleteProjectById(id: Long)

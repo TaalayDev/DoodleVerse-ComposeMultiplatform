@@ -9,7 +9,9 @@ import io.github.taalaydev.doodleverse.data.database.dao.DrawingPathDao
 import io.github.taalaydev.doodleverse.data.database.dao.LayerDao
 import io.github.taalaydev.doodleverse.data.database.dao.PointDao
 import io.github.taalaydev.doodleverse.data.database.dao.ProjectDao
+import io.github.taalaydev.doodleverse.database.dao.FrameDao
 import io.github.taalaydev.doodleverse.database.entities.DrawingPathEntity
+import io.github.taalaydev.doodleverse.database.entities.FrameEntity
 import io.github.taalaydev.doodleverse.database.entities.LayerEntity
 import io.github.taalaydev.doodleverse.database.entities.PointEntity
 import io.github.taalaydev.doodleverse.database.entities.ProjectEntity
@@ -18,13 +20,19 @@ import kotlinx.coroutines.IO
 
 @Database(
     entities = [
-        ProjectEntity::class
+        ProjectEntity::class,
+        FrameEntity::class,
+        LayerEntity::class,
+        DrawingPathEntity::class,
+        PointEntity::class
     ],
     version = 1
 )
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class DoodleVerseDatabase : RoomDatabase() {
     abstract fun projectDao(): ProjectDao
+
+    abstract fun frameDao(): FrameDao
 
     abstract fun layerDao(): LayerDao
 

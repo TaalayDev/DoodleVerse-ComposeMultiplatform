@@ -2,7 +2,10 @@ package io.github.taalaydev.doodleverse.database
 
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
@@ -12,6 +15,19 @@ fun getDatabaseBuilder(): RoomDatabase.Builder<DoodleVerseDatabase> {
     val dbFilePath = documentDirectory() + "/my_room.db"
     return Room.databaseBuilder<DoodleVerseDatabase>(
         name = dbFilePath,
+    )
+}
+
+fun getRepository(): ProjectRepository {
+    val room = getDatabaseBuilder()
+        .fallbackToDestructiveMigrationOnDowngrade(true)
+        .setQueryCoroutineContext(Dispatchers.IO)
+        .build()
+
+    return ProjectRepositoryImpl(
+        projectDao = room.projectDao(),
+        frameDao = room.frameDao(),
+        layerDao = room.layerDao(),
     )
 }
 

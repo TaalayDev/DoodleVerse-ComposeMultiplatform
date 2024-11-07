@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
+import io.github.taalaydev.doodleverse.database.getRepository
+import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import org.jetbrains.skiko.toBufferedImage
 import java.io.File
 import javax.imageio.ImageIO
@@ -12,9 +14,13 @@ import javax.swing.filechooser.FileNameExtensionFilter
 
 class JVMPlatform: Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"
+    override val isWeb: Boolean = false
+    override val isDesktop: Boolean = true
+    override val isAndroid: Boolean = false
+    override val isIos: Boolean = false
+    override val projectRepo: ProjectRepository = getRepository()
 }
 
-actual fun getPlatform(): Platform = JVMPlatform()
 
 @Composable
 actual fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {

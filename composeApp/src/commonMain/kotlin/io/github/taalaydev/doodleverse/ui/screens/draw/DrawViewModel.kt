@@ -8,7 +8,6 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,7 +19,9 @@ import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.ToolsData
+import io.github.taalaydev.doodleverse.data.models.toModel
 import io.github.taalaydev.doodleverse.imageBitmapBytArray
+import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import io.github.vinceglb.filekit.core.FileKit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,6 +51,7 @@ class DrawingController {
         layers = listOf(
             LayerModel(
                 id = 1L,
+                frameId = 0,
                 name = "Layer 1",
                 paths = emptyList()
             )
@@ -147,6 +149,7 @@ class DrawingController {
     fun addLayer(name: String) {
         val newLayer = LayerModel(
             id = Clock.System.now().toEpochMilliseconds(),
+            frameId = 0,
             name = name,
             paths = emptyList()
         )
@@ -206,7 +209,9 @@ class DrawingController {
 }
 
 // ViewModel for the drawing screen
-class DrawViewModel : ViewModel() {
+class DrawViewModel(
+    private val projectRepo: ProjectRepository
+) : ViewModel() {
     private val _project = MutableStateFlow<ProjectModel?>(null)
     val project: StateFlow<ProjectModel?> = _project.asStateFlow()
 
@@ -239,8 +244,12 @@ class DrawViewModel : ViewModel() {
 
     val state: MutableState<DrawState> get() = drawingController.state
 
-    fun loadProject() {
-
+    fun loadProject(id: Long) {
+        viewModelScope.launch {
+            val project = projectRepo.getProjectById(id)
+            _project.value = project.toModel()
+            drawingController.loadProject(project.toModel())
+        }
     }
 
     fun saveProject() {

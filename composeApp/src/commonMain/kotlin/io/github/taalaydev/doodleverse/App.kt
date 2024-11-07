@@ -6,15 +6,16 @@ import androidx.navigation.compose.rememberNavController
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 import io.github.taalaydev.doodleverse.navigation.MainNavHost
+import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import io.github.taalaydev.doodleverse.ui.theme.AppTheme
 
 @Composable
 @Preview
-fun App() {
+fun App(platform: Platform) {
     AppTheme {
         val navController = rememberNavController()
 
-        MainNavHost(navController = navController)
+        MainNavHost(navController = navController, platform = platform)
     }
 }
 

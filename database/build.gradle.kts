@@ -38,6 +38,8 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
+
+            implementation(project(":shared"))
         }
     }
 }

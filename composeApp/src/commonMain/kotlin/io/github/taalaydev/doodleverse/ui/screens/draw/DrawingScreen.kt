@@ -70,6 +70,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.core.DragState
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.data.models.BrushData
@@ -92,31 +93,15 @@ data class DpSize(val width: Dp, val height: Dp)
 
 @Composable
 fun DrawingScreen(
+    projectId: Long,
     navController: NavHostController = rememberNavController(),
+    platform: Platform,
+    viewModel: DrawViewModel = viewModel { DrawViewModel(platform.projectRepo) },
 ) {
-    var projectModel by remember { mutableStateOf(ProjectModel.currentProject) }
+    val projectModel by viewModel.project.collectAsStateWithLifecycle()
 
-    if (projectModel == null) {
-        NewProjectDialog(
-            onDismissRequest = {  },
-            onConfirm = { name, width, height ->
-                projectModel = ProjectModel(
-                    1,
-                    name,
-                    listOf(
-                        LayerModel(
-                            1,
-                            "Layer 1",
-                        ),
-                    ),
-                    createdAt = Clock.System.now().toEpochMilliseconds(),
-                    lastModified = Clock.System.now().toEpochMilliseconds(),
-                    aspectRatio = Size(width, height),
-                )
-            },
-            showCancelButton = false,
-            properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false),
-        )
+    LaunchedEffect(Unit) {
+        viewModel.loadProject(projectId)
     }
 
     if (projectModel != null) {
@@ -124,7 +109,23 @@ fun DrawingScreen(
             projectModel = projectModel!!,
             navController = navController,
             modifier = Modifier.fillMaxSize(),
+            viewModel = viewModel,
         )
+    } else {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .align(Alignment.Center)
+                )
+            }
+        }
     }
 }
 
@@ -137,7 +138,7 @@ inline fun toDp(value: Float, density: Density): Dp {
 private fun DrawScreenBody(
     projectModel: ProjectModel,
     navController: NavController = rememberNavController(),
-    viewModel: DrawViewModel = viewModel { DrawViewModel() },
+    viewModel: DrawViewModel,
     modifier: Modifier = Modifier,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -809,13 +810,5 @@ fun SizeSelector(
                 Spacer(modifier = Modifier.height(20.dp))
             }
         }
-    }
-}
-
-@Preview
-@Composable
-private fun DrawingScreenPreview() {
-    MaterialTheme {
-        DrawingScreen()
     }
 }

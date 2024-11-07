@@ -2,6 +2,8 @@ package io.github.taalaydev.doodleverse
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.ImageBitmap
+import io.github.taalaydev.doodleverse.database.getRepository
+import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.refTo
@@ -20,9 +22,13 @@ import platform.posix.memcpy
 
 class IOSPlatform: Platform {
     override val name: String = UIDevice.currentDevice.systemName() + " " + UIDevice.currentDevice.systemVersion
+    override val isWeb: Boolean = false
+    override val isDesktop: Boolean = false
+    override val isAndroid: Boolean = false
+    override val isIos: Boolean = true
+    override val projectRepo: ProjectRepository = getRepository()
 }
 
-actual fun getPlatform(): Platform = IOSPlatform()
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable

@@ -5,13 +5,18 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import kotlin.reflect.KClass
 
 interface Platform {
     val name: String
-}
+    val isWeb: Boolean
+    val isDesktop: Boolean
+    val isAndroid: Boolean
+    val isIos: Boolean
 
-expect fun getPlatform(): Platform
+    val projectRepo: ProjectRepository
+}
 
 enum class ImageFormat {
     PNG, JPG

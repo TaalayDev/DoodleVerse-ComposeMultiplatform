@@ -6,10 +6,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.*
@@ -20,52 +18,51 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.composables.icons.lucide.*
-import io.github.taalaydev.doodleverse.data.models.LayerModel
+import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.navigation.Destination
 import io.github.taalaydev.doodleverse.ui.components.ComposeIcons
 import io.github.taalaydev.doodleverse.ui.components.NewProjectDialog
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController = rememberNavController(),
+    platform: Platform,
+    viewModel: HomeViewModel = viewModel { HomeViewModel(platform.projectRepo) },
 ) {
-    var projects by remember { mutableStateOf<List<ProjectModel>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val projects by viewModel.projects.collectAsStateWithLifecycle()
+    val isLoading by remember { mutableStateOf(false) }
+    val error by remember { mutableStateOf<String?>(null) }
 
     var showNewProjectDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadProjects()
+    }
 
     if (showNewProjectDialog) {
         NewProjectDialog(
             onDismissRequest = { showNewProjectDialog = false },
             onConfirm = { name, width, height ->
-                // Handle new project creation
                 showNewProjectDialog = false
-                ProjectModel.currentProject = ProjectModel(
-                    1,
-                    name,
-                    listOf(
-                        LayerModel(
-                            1,
-                            "Layer 1",
-                        ),
-                    ),
-                    createdAt = Clock.System.now().toEpochMilliseconds(),
-                    lastModified = Clock.System.now().toEpochMilliseconds(),
-                    aspectRatio = Size(width, height),
-                )
-                navController.navigate(Destination.Drawing(1))
+
+                scope.launch {
+                    val project = viewModel.createProject(name, width, height)
+                    navController.navigate(Destination.Drawing(project.id))
+                }
             }
         )
     }
@@ -96,7 +93,6 @@ fun HomeScreen(
             else -> ProjectGrid(
                 projects = projects,
                 onProjectClick = {
-                    ProjectModel.currentProject = it
                     navController.navigate(Destination.Drawing(it.id))
                 },
                 onDeleteProject = { /* Implement delete project */ },

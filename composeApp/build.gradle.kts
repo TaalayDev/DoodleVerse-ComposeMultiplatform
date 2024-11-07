@@ -56,6 +56,8 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+
+            implementation(project(":database"))
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -74,11 +76,18 @@ kotlin {
             implementation(libs.lifecycle.viewmodel.compose)
             implementation(libs.kotlinx.datetime)
 
-            implementation("io.github.vinceglb:filekit-compose:0.8.7")
+            implementation(libs.filekit.compose)
+
+            implementation(project(":shared"))
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
+
+            implementation(project(":database"))
+        }
+        iosMain.dependencies {
+            implementation(project(":database"))
         }
     }
 }
