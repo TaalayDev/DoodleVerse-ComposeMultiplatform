@@ -75,7 +75,6 @@ This project is licensed under the MIT License - You can search for the license 
 
 - Jetpack Compose for the UI framework.
 - Kotlin Multiplatform for enabling cross-platform development.
-- [Insert any other libraries or resources used]
 
 ## Contact
 
