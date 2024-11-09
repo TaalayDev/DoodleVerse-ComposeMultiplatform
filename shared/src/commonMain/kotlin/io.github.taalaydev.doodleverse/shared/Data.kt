@@ -11,7 +11,7 @@ abstract class ProjectRepository {
     abstract suspend fun deleteProjectById(id: Long)
     abstract suspend fun deleteAllProjects()
 
-    abstract fun getAllFrames(projectId: Long): Flow<List<FrameModel>>
+    abstract suspend fun getAllFrames(projectId: Long): List<FrameModel>
     abstract suspend fun getFrameById(id: Long): FrameModel
     abstract suspend fun insertFrame(frame: FrameModel): Long
     abstract suspend fun updateFrame(frame: FrameModel)
@@ -20,11 +20,27 @@ abstract class ProjectRepository {
     abstract suspend fun deleteAllFrames()
     abstract suspend fun updateFrameOrder(id: Long, order: Int)
 
-    abstract fun getAllLayers(frameId: Long): Flow<List<LayerModel>>
+    abstract suspend fun getAllLayers(frameId: Long): List<LayerModel>
     abstract suspend fun getLayerById(id: Long): LayerModel
     abstract suspend fun insertLayer(layer: LayerModel): Long
     abstract suspend fun updateLayer(layer: LayerModel)
     abstract suspend fun insertLayers(layers: List<LayerModel>): List<Long>
     abstract suspend fun deleteLayerById(id: Long)
     abstract suspend fun deleteAllLayers()
+
+    abstract suspend fun getAllDrawingPaths(layerId: Long): List<DrawingPathModel>
+    abstract suspend fun getDrawingPathById(id: Long): DrawingPathModel
+    abstract suspend fun insertDrawingPath(drawingPath: DrawingPathModel): Long
+    abstract suspend fun updateDrawingPath(drawingPath: DrawingPathModel)
+    abstract suspend fun insertDrawingPaths(drawingPaths: List<DrawingPathModel>): List<Long>
+    abstract suspend fun deleteDrawingPathById(id: Long)
+    abstract suspend fun deleteAllDrawingPaths()
+
+    abstract suspend fun getAllPoints(drawingPathId: Long): List<PointModel>
+    abstract suspend fun getPointById(id: Long): PointModel
+    abstract suspend fun insertPoint(point: PointModel): Long
+    abstract suspend fun updatePoint(point: PointModel)
+    abstract suspend fun insertPoints(points: List<PointModel>): List<Long>
+    abstract suspend fun deletePointById(id: Long)
+    abstract suspend fun deleteAllPoints()
 }

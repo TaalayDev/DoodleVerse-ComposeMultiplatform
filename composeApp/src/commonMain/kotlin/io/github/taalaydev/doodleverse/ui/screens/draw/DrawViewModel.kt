@@ -8,21 +8,27 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.taalaydev.doodleverse.ImageFormat
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.core.copy
+import io.github.taalaydev.doodleverse.core.withBackground
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
+import io.github.taalaydev.doodleverse.data.models.FrameModel
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.ToolsData
+import io.github.taalaydev.doodleverse.data.models.toEntity
 import io.github.taalaydev.doodleverse.data.models.toModel
-import io.github.taalaydev.doodleverse.imageBitmapBytArray
+import io.github.taalaydev.doodleverse.imageBitmapByteArray
+import io.github.taalaydev.doodleverse.imageBitmapFromByteArray
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import io.github.vinceglb.filekit.core.FileKit
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,34 +38,51 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
 data class DrawState(
-    val layers: List<LayerModel> = emptyList(),
+    // val layers: List<LayerModel> = emptyList(),
     val dirtyLayers: List<Int> = emptyList(),
     val caches: Map<Long, ImageBitmap> = emptyMap(),
     val currentLayerIndex: Int = 0,
+    val frames: List<FrameModel> = emptyList(),
+    val currentFrameIndex: Int = 0
 )
 
 val DrawState.currentLayer: LayerModel get() = layers[currentLayerIndex]
 fun DrawState.currentLayerImage(): ImageBitmap? = caches[currentLayer.id]
+val DrawState.layers: List<LayerModel> get() = frames[currentFrameIndex].layers
+val DrawState.currentFrame: FrameModel get() = frames[currentFrameIndex]
 
-class DrawingController {
+class DrawingController(
+    private val projectRepo: ProjectRepository,
+    private val scope: CoroutineScope,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.Default
+) {
     val currentPath = mutableStateOf<DrawingPath?>(null)
 
     private val _undoStack = mutableListOf<DrawState>()
     private val _redoStack = mutableListOf<DrawState>()
 
     var state = mutableStateOf(DrawState(
-        layers = listOf(
-            LayerModel(
+        frames = listOf(
+            FrameModel(
                 id = 1L,
-                frameId = 0,
-                name = "Layer 1",
-                paths = emptyList()
+                projectId = 0,
+                name = "Frame 1",
+                layers = listOf(
+                    LayerModel(
+                        id = 1L,
+                        frameId = 1L,
+                        name = "Layer 1",
+                        paths = emptyList()
+                    )
+                )
             )
         )
     ))
     private val layers: List<LayerModel> get() = state.value.layers
     private val currentLayer: LayerModel get() = layers[state.value.currentLayerIndex]
     private val caches: Map<Long, ImageBitmap> get() = state.value.caches
+    private val frames: List<FrameModel> get() = state.value.frames
+    private val currentFrame: FrameModel get() = frames[state.value.currentFrameIndex]
 
     private val _canUndo = MutableStateFlow(false)
     val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
@@ -95,13 +118,21 @@ class DrawingController {
 
     fun addState(path: DrawingPath, image: ImageBitmap) {
         val newState = state.value.copy(
-            layers = layers.mapIndexed { index, layer ->
-                if (index == state.value.currentLayerIndex) {
-                    layer.copy(
-                        paths = layer.paths + path
+            frames = state.value.frames.mapIndexed { index, frame ->
+                if (index == state.value.currentFrameIndex) {
+                    frame.copy(
+                        layers = layers.mapIndexed { index, layer ->
+                            if (index == state.value.currentLayerIndex) {
+                                layer.copy(
+                                    paths = layer.paths + path
+                                )
+                            } else {
+                                layer
+                            }
+                        }
                     )
                 } else {
-                    layer
+                    frame
                 }
             },
             caches = caches + (currentLayer.id to image.copy())
@@ -111,6 +142,8 @@ class DrawingController {
         state.value = newState
 
         updateUndoRedo()
+
+        updateLayer(currentLayer, image)
     }
 
     fun undo() {
@@ -142,35 +175,85 @@ class DrawingController {
         _canRedo.value = _redoStack.isNotEmpty()
     }
 
-    fun loadProject(project: ProjectModel) {
+    fun loadFrames(frames: List<FrameModel>) {
+        val newState = state.value.copy(
+            frames = frames.map { frame ->
+                frame.copy(
+                    layers = if (frame.layers.isNotEmpty()) {
+                        frame.layers
+                    } else {
+                        listOf(
+                            LayerModel(
+                                id = 1L,
+                                frameId = 0,
+                                name = "Layer 1",
+                                paths = emptyList()
+                            )
+                        )
+                    }
+                )
+            },
+        )
+        state.value = newState.copy(
+            currentFrameIndex = 0,
+            currentLayerIndex = newState.frames[0].layers.size - 1
+        )
+    }
 
+    fun loadLayers(layers: Map<Long, ImageBitmap>) {
+        val newState = state.value.copy(
+            dirtyLayers = state.value.layers.map { it.id.toInt() },
+            caches = layers
+        )
+        state.value = newState
     }
 
     fun addLayer(name: String) {
         val newLayer = LayerModel(
-            id = Clock.System.now().toEpochMilliseconds(),
-            frameId = 0,
+            id = 0,
+            frameId = currentFrame.id,
             name = name,
             paths = emptyList()
         )
-        val newState = state.value.copy(
-            layers = layers + newLayer,
-            currentLayerIndex = layers.size
-        )
-        _undoStack.add(state.value)
-        _redoStack.clear()
-        state.value = newState
-        restoreImage.value = null
-        isDirty.value = true
 
-        updateUndoRedo()
+        scope.launch {
+            val id = projectRepo.insertLayer(newLayer.toEntity())
+
+            scope.launch(Dispatchers.Main) {
+                val newState = state.value.copy(
+                    frames = state.value.frames.mapIndexed { index, frame ->
+                        if (index == state.value.currentFrameIndex) {
+                            frame.copy(layers = layers + newLayer.copy(id = id))
+                        } else {
+                            frame
+                        }
+                    },
+                    currentLayerIndex = layers.size
+                )
+                _undoStack.add(state.value)
+                _redoStack.clear()
+                state.value = newState
+                restoreImage.value = null
+                isDirty.value = true
+
+                updateUndoRedo()
+            }
+        }
+
+
     }
 
     fun deleteLayer(index: Int) {
         val newLayers = layers.toMutableList()
-        newLayers.removeAt(index)
+        val deletedLayer = newLayers.removeAt(index)
         val newState = state.value.copy(
-            layers = newLayers,
+            frames = state.value.frames.mapIndexed { index, frame ->
+                if (index == state.value.currentFrameIndex) {
+                    frame.copy(layers = newLayers)
+                } else {
+                    frame
+                }
+            },
             caches = caches.filterKeys { it != layers[index].id },
             currentLayerIndex = state.value.currentLayerIndex.coerceAtMost(newLayers.size - 1)
         )
@@ -179,6 +262,10 @@ class DrawingController {
         state.value = newState
 
         updateUndoRedo()
+
+        scope.launch {
+            projectRepo.deleteLayerById(deletedLayer.id)
+        }
     }
 
     fun selectLayer(index: Int) {
@@ -198,19 +285,50 @@ class DrawingController {
         val newLayers = layers.toMutableList()
         newLayers[index] = newLayers[index].copy(isVisible = isVisible)
         val newState = state.value.copy(
-            layers = newLayers
+            frames = state.value.frames.mapIndexed { index, frame ->
+                if (index == state.value.currentFrameIndex) {
+                    frame.copy(
+                        layers = newLayers
+                    )
+                } else {
+                    frame
+                }
+            }
         )
         _undoStack.add(state.value)
         _redoStack.clear()
         state.value = newState
 
         updateUndoRedo()
+
+        updateLayer(newLayers[index], caches[newLayers[index].id])
+    }
+
+    private fun updateLayer(layer: LayerModel, cache: ImageBitmap?) {
+        scope.launch(dispatcher) {
+            projectRepo.updateLayer(layer.toEntity().copy(
+                pixels = imageBitmapByteArray(cache ?: return@launch, ImageFormat.PNG),
+                width = cache.width,
+                height = cache.height
+            ))
+
+            projectRepo.updateProject(
+                projectRepo.getProjectById(currentFrame.projectId).copy(
+                    lastModified = Clock.System.now().toEpochMilliseconds(),
+                    thumb = imageBitmapByteArray(
+                        getCombinedImageBitmap() ?:
+                        return@launch, ImageFormat.PNG
+                    )
+                )
+            )
+        }
     }
 }
 
 // ViewModel for the drawing screen
 class DrawViewModel(
-    private val projectRepo: ProjectRepository
+    private val projectRepo: ProjectRepository,
+    private val dispatcher: CoroutineDispatcher
 ) : ViewModel() {
     private val _project = MutableStateFlow<ProjectModel?>(null)
     val project: StateFlow<ProjectModel?> = _project.asStateFlow()
@@ -218,7 +336,11 @@ class DrawViewModel(
     private val _tools = MutableStateFlow<ToolsData?>(null)
     val tools: StateFlow<ToolsData?> = _tools.asStateFlow()
 
-    val drawingController = DrawingController()
+    val drawingController = DrawingController(
+        projectRepo,
+        viewModelScope,
+        dispatcher
+    )
 
     private var _currentTool: MutableStateFlow<Tool> = MutableStateFlow(Tool.Brush(BrushData.solid))
     val currentTool: StateFlow<Tool> = _currentTool.asStateFlow()
@@ -248,12 +370,25 @@ class DrawViewModel(
         viewModelScope.launch {
             val project = projectRepo.getProjectById(id)
             _project.value = project.toModel()
-            drawingController.loadProject(project.toModel())
+
+            val frames = projectRepo.getAllFrames(id)
+            drawingController.loadFrames(frames.map { it.toModel() })
+
+            val layers = mutableMapOf<Long, ImageBitmap>()
+            for (frame in frames) {
+                for (layer in frame.layers) {
+                    if (layer.pixels.isEmpty()) continue
+                    if (layer.width <= 0 || layer.height <= 0) continue
+                    val image = imageBitmapFromByteArray(layer.pixels, layer.width, layer.height)
+                    layers[layer.id] = image
+                }
+            }
+            drawingController.loadLayers(layers)
         }
     }
 
     fun saveProject() {
-
+        val project = _project.value ?: return
     }
 
     fun setBrush(brush: BrushData) {
@@ -304,14 +439,10 @@ class DrawViewModel(
 
     fun saveAsPng() {
         val image = drawingController.getCombinedImageBitmap() ?: return
-        val bytes = imageBitmapBytArray(image, ImageFormat.PNG)
+        val bytes = imageBitmapByteArray(image.withBackground(Color.White), ImageFormat.PNG)
 
         viewModelScope.launch {
-            FileKit.saveFile(
-                bytes,
-                "doodleverse-${Clock.System.now().toEpochMilliseconds()}",
-                "png"
-            )
+            FileKit.saveFile(bytes, "${project.value?.name}", "png")
         }
     }
 }

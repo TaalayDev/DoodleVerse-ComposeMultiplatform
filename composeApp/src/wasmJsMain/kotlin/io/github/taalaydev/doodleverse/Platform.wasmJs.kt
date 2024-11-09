@@ -3,6 +3,7 @@ package io.github.taalaydev.doodleverse
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -20,10 +21,14 @@ class WasmPlatform: Platform {
     override val isAndroid: Boolean = false
     override val isIos: Boolean = false
     override val projectRepo: ProjectRepository = DemoProjectRepo()
+    override val dispatcherIO = kotlinx.coroutines.Dispatchers.Default
+
+    override fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
+        saveBitmap(bitmap, filename, format)
+    }
 }
 
-@Composable
-actual fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
+fun saveBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
     val skiaBitmap = bitmap.asSkiaBitmap()
     val skiaImage = Image.makeFromBitmap(skiaBitmap)
 
@@ -36,7 +41,7 @@ actual fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageF
     val uint8Array = Uint8Array(bytes.size)
 }
 
-actual fun imageBitmapBytArray(bitmap: ImageBitmap, format: ImageFormat): ByteArray {
+actual fun imageBitmapByteArray(bitmap: ImageBitmap, format: ImageFormat): ByteArray {
     val skiaBitmap = bitmap.asSkiaBitmap()
     val skiaImage = Image.makeFromBitmap(skiaBitmap)
 
@@ -46,4 +51,21 @@ actual fun imageBitmapBytArray(bitmap: ImageBitmap, format: ImageFormat): ByteAr
     } ?: return byteArrayOf()
 
     return encodedData.bytes
+}
+
+actual fun imageBitmapFromByteArray(bytes: ByteArray, width: Int, height: Int): ImageBitmap {
+    return try {
+        // Use Skia's Image.makeFromEncoded to decode the bytes into a Skia Image
+        val skiaImage = Image.makeFromEncoded(bytes)
+
+        // Convert the Skia Image to a Compose ImageBitmap
+        skiaImage.toComposeImageBitmap()
+    } catch (e: Exception) {
+        throw IllegalArgumentException("Failed to create ImageBitmap from bytes", e)
+    }
+}
+
+actual fun getColorFromBitmap(bitmap: ImageBitmap, x: Int, y: Int): Int? {
+    val skiaBitmap = bitmap.asSkiaBitmap()
+    return skiaBitmap.getColor(x, y)
 }

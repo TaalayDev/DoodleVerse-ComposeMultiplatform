@@ -50,6 +50,7 @@ import com.composables.icons.lucide.Trash
 import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawViewModel
+import io.github.taalaydev.doodleverse.ui.screens.draw.layers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -65,11 +66,9 @@ fun LayersPanel(
     val caches = state.caches
     val activeLayerIndex = state.currentLayerIndex
 
-    Column(
-        modifier = modifier,
-    ) {
+    Column(modifier = modifier) {
         Divider()
-        LayersPanelHeader { name -> drawViewModel.addLayer(name) }
+        LayersPanelHeader { drawViewModel.addLayer("Layer ${layers.size}") }
         LazyColumn(
             modifier = Modifier.weight(1f)
         ) {
@@ -100,7 +99,7 @@ fun randomString(): String {
 }
 
 @Composable
-fun LayersPanelHeader(onLayerAdded: (String) -> Unit) {
+fun LayersPanelHeader(onLayerAdded: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -113,7 +112,7 @@ fun LayersPanelHeader(onLayerAdded: (String) -> Unit) {
             fontWeight = FontWeight.Bold
         )
         IconButton(
-            onClick = { onLayerAdded("Layer ${randomString()}") }
+            onClick = { onLayerAdded() }
         ) {
             Icon(Lucide.Plus, contentDescription = "Add new layer", modifier = Modifier.size(18.dp))
         }

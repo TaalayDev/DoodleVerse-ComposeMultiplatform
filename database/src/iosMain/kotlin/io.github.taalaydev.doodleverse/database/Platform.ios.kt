@@ -2,6 +2,7 @@ package io.github.taalaydev.doodleverse.database
 
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ fun getDatabaseBuilder(): RoomDatabase.Builder<DoodleVerseDatabase> {
 
 fun getRepository(): ProjectRepository {
     val room = getDatabaseBuilder()
+        .setDriver(BundledSQLiteDriver())
         .fallbackToDestructiveMigrationOnDowngrade(true)
         .setQueryCoroutineContext(Dispatchers.IO)
         .build()
@@ -28,6 +30,8 @@ fun getRepository(): ProjectRepository {
         projectDao = room.projectDao(),
         frameDao = room.frameDao(),
         layerDao = room.layerDao(),
+        drawingPathDao = room.drawingPathDao(),
+        pointDao = room.pointDao()
     )
 }
 

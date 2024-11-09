@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface LayerDao {
     @Query("SELECT * FROM layers WHERE frame_id = :frameId")
-    fun getAllLayers(frameId: Long): Flow<List<LayerEntity>>
+    suspend fun getAllLayers(frameId: Long): List<LayerEntity>
 
     @Query("SELECT * FROM layers WHERE id = :id")
     suspend fun getLayerById(id: Long): LayerEntity

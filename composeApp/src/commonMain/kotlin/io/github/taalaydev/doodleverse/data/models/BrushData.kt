@@ -9,27 +9,13 @@ import androidx.compose.ui.graphics.*
 import doodleverse.composeapp.generated.resources.Res
 import doodleverse.composeapp.generated.resources.stamp_pencil
 import io.github.taalaydev.doodleverse.core.PathEffects
-import org.jetbrains.compose.resources.imageResource
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.ui.util.lerp
-import doodleverse.composeapp.generated.resources.brush2
-import doodleverse.composeapp.generated.resources.brush3
-import doodleverse.composeapp.generated.resources.brush5
-import doodleverse.composeapp.generated.resources.brush6
-import doodleverse.composeapp.generated.resources.brush_circle
-import doodleverse.composeapp.generated.resources.bubbles
-import doodleverse.composeapp.generated.resources.heart
-import doodleverse.composeapp.generated.resources.marker
-import doodleverse.composeapp.generated.resources.marker_2
-import doodleverse.composeapp.generated.resources.pencil
-import doodleverse.composeapp.generated.resources.stamp_airbrush
-import doodleverse.composeapp.generated.resources.stamp_marker
-import doodleverse.composeapp.generated.resources.watercolor
-import doodleverse.composeapp.generated.resources.watercolor_splash
 import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.core.getDensityOffsetBetweenPoints
+import org.jetbrains.compose.resources.DrawableResource
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -43,8 +29,8 @@ data class BrushData(
     val id: Int,
     val name: String,
     val stroke: String,
-    val brush: ImageBitmap? = null,
-    val texture: ImageBitmap? = null,
+    val brush:  DrawableResource? = null,
+    val texture:  DrawableResource? = null,
     val isLocked: Boolean = false,
     val isNew: Boolean = false,
     val opacityDiff: Float = 0f,
@@ -78,12 +64,11 @@ data class BrushData(
             strokeJoin = StrokeJoin.Round,
         )
 
-        @Composable
-        fun pencil(): BrushData = BrushData(
+        val pencil = BrushData(
             id = 1,
             name = "Pencil",
             stroke = "pencil",
-            brush = imageResource(Res.drawable.stamp_pencil),
+            brush = Res.drawable.stamp_pencil,
             opacityDiff = 0.5f,
             densityOffset = 10.0,
             rotationRandomness = 15f,
@@ -1429,10 +1414,9 @@ data class BrushData(
             }
         )
 
-        @Composable
         fun all(): List<BrushData> = listOf(
             solid,
-            pencil(),
+            pencil,
             star,
             marker,
             zigzag,

@@ -1,5 +1,6 @@
 package io.github.taalaydev.doodleverse.ui.screens.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
@@ -205,7 +206,15 @@ fun ProjectCard(
                         .background(MaterialTheme.colorScheme.surface),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Lucide.Image, contentDescription = null, modifier = Modifier.size(48.dp))
+                    if (project.cachedBitmap != null) {
+                        Image(
+                            bitmap = project.cachedBitmap,
+                            contentDescription = project.name,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(Lucide.Image, contentDescription = null, modifier = Modifier.size(48.dp))
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {

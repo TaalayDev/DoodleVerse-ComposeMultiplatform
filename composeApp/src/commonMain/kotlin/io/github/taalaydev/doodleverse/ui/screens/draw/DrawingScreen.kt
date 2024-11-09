@@ -96,12 +96,20 @@ fun DrawingScreen(
     projectId: Long,
     navController: NavHostController = rememberNavController(),
     platform: Platform,
-    viewModel: DrawViewModel = viewModel { DrawViewModel(platform.projectRepo) },
+    viewModel: DrawViewModel = viewModel {
+        DrawViewModel(platform.projectRepo, platform.dispatcherIO)
+    },
 ) {
     val projectModel by viewModel.project.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.loadProject(projectId)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.saveProject()
+        }
     }
 
     if (projectModel != null) {

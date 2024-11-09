@@ -1,6 +1,7 @@
 package io.github.taalaydev.doodleverse
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -10,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -19,16 +21,14 @@ import java.io.FileOutputStream
 import java.util.Locale
 import kotlin.coroutines.resume
 
-@Composable
-actual fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
+fun saveImageBitmap(context: Context, bitmap: ImageBitmap, filename: String, format: ImageFormat) {
     val bitmap = bitmap.asAndroidBitmap()
     val compressFormat = when (format) {
         ImageFormat.PNG -> Bitmap.CompressFormat.PNG
         ImageFormat.JPG -> Bitmap.CompressFormat.JPEG
     }
 
-    val context = LocalContext.current
-    getSaveFileUri(format.name.lowercase()) { uri ->
+    getSaveFileUri(context, format.name.lowercase()) { uri ->
         if (uri == null) {
             return@getSaveFileUri
         }
@@ -44,9 +44,8 @@ actual fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageF
     }
 }
 
-@Composable
-fun getSaveFileUri(extension: String, callback: (String?) -> Unit) {
-    val activity = LocalContext.current as? ComponentActivity
+private fun getSaveFileUri(context: Context, extension: String, callback: (String?) -> Unit) {
+    val activity = context as? ComponentActivity
 
     if (activity == null) {
         callback(null)
@@ -81,7 +80,7 @@ fun getSaveFileUri(extension: String, callback: (String?) -> Unit) {
     launcher.launch(intent)
 }
 
-actual fun imageBitmapBytArray(bitmap: ImageBitmap, format: ImageFormat): ByteArray {
+actual fun imageBitmapByteArray(bitmap: ImageBitmap, format: ImageFormat): ByteArray {
     val bitmap = bitmap.asAndroidBitmap()
     val compressFormat = when (format) {
         ImageFormat.PNG -> Bitmap.CompressFormat.PNG
@@ -91,4 +90,19 @@ actual fun imageBitmapBytArray(bitmap: ImageBitmap, format: ImageFormat): ByteAr
     val stream = ByteArrayOutputStream()
     bitmap.compress(compressFormat, 100, stream)
     return stream.toByteArray()
+}
+
+actual fun imageBitmapFromByteArray(bytes: ByteArray, width: Int, height: Int): ImageBitmap {
+    return try {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        bitmap.copyPixelsFromBuffer(java.nio.ByteBuffer.wrap(bytes))
+        bitmap.asImageBitmap()
+    } catch (e: Exception) {
+        throw IllegalArgumentException("Failed to create ImageBitmap from bytes", e)
+    }
+}
+
+actual fun getColorFromBitmap(bitmap: ImageBitmap, x: Int, y: Int): Int? {
+    val skiaBitmap = bitmap.asAndroidBitmap()
+    return skiaBitmap.getPixel(x, y)
 }

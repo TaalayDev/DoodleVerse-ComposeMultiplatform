@@ -1,13 +1,19 @@
 package io.github.taalaydev.doodleverse.database
 
+import io.github.taalaydev.doodleverse.data.database.dao.DrawingPathDao
 import io.github.taalaydev.doodleverse.data.database.dao.LayerDao
+import io.github.taalaydev.doodleverse.data.database.dao.PointDao
 import io.github.taalaydev.doodleverse.data.database.dao.ProjectDao
 import io.github.taalaydev.doodleverse.database.dao.FrameDao
+import io.github.taalaydev.doodleverse.database.entities.DrawingPathEntity
 import io.github.taalaydev.doodleverse.database.entities.LayerEntity
 import io.github.taalaydev.doodleverse.database.entities.ProjectEntity
 import io.github.taalaydev.doodleverse.database.entities.FrameEntity
+import io.github.taalaydev.doodleverse.database.entities.PointEntity
+import io.github.taalaydev.doodleverse.shared.DrawingPathModel
 import io.github.taalaydev.doodleverse.shared.FrameModel
 import io.github.taalaydev.doodleverse.shared.LayerModel
+import io.github.taalaydev.doodleverse.shared.PointModel
 import io.github.taalaydev.doodleverse.shared.ProjectModel
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +23,8 @@ internal class ProjectRepositoryImpl(
     private val projectDao: ProjectDao,
     private val frameDao: FrameDao,
     private val layerDao: LayerDao,
+    private val drawingPathDao: DrawingPathDao,
+    private val pointDao: PointDao,
 ): ProjectRepository() {
     // Projects
 
@@ -50,8 +58,12 @@ internal class ProjectRepositoryImpl(
 
     // Frames
 
-    override fun getAllFrames(projectId: Long): Flow<List<FrameModel>> {
-        return frameDao.getAllFrames(projectId).map { it.map { it.toModel() } }
+    override suspend fun getAllFrames(projectId: Long): List<FrameModel> {
+        return frameDao.getAllFrames(projectId).map {
+            it.toModel().copy(
+                layers = layerDao.getAllLayers(it.id).map { it.toModel() }
+            )
+        }
     }
 
     override suspend fun getFrameById(id: Long): FrameModel {
@@ -84,8 +96,8 @@ internal class ProjectRepositoryImpl(
 
     // Layers
 
-    override fun getAllLayers(frameId: Long): Flow<List<LayerModel>> {
-        return layerDao.getAllLayers(frameId).map { it.map { it.toModel() } }
+    override suspend fun getAllLayers(frameId: Long): List<LayerModel> {
+        return layerDao.getAllLayers(frameId).map { it.toModel() }
     }
 
     override suspend fun getLayerById(id: Long): LayerModel {
@@ -111,6 +123,74 @@ internal class ProjectRepositoryImpl(
     override suspend fun deleteAllLayers() {
         layerDao.deleteAllLayers()
     }
+
+    // Drawing Paths
+
+    override suspend fun getAllDrawingPaths(layerId: Long): List<DrawingPathModel> {
+        val paths = drawingPathDao.getDrawingPathsByLayerId(layerId).map { it.toModel() }
+        return paths.map { path ->
+            path.copy(points = getAllPoints(path.id))
+        }
+    }
+
+    override suspend fun getDrawingPathById(id: Long): DrawingPathModel {
+        return drawingPathDao.getDrawingPathById(id).toModel()
+    }
+
+    override suspend fun insertDrawingPath(drawingPath: DrawingPathModel): Long {
+        val id = drawingPathDao.insertDrawingPath(drawingPath.toEntity())
+
+        val points = drawingPath.points.map { it.copy(drawingPathId = id).toEntity() }
+        pointDao.insertPoints(points)
+
+        return id
+    }
+
+    override suspend fun updateDrawingPath(drawingPath: DrawingPathModel) {
+        drawingPathDao.updateDrawingPath(drawingPath.toEntity())
+    }
+
+    override suspend fun insertDrawingPaths(drawingPaths: List<DrawingPathModel>): List<Long> {
+        return drawingPathDao.insertDrawingPaths(drawingPaths.map { it.toEntity() })
+    }
+
+    override suspend fun deleteDrawingPathById(id: Long) {
+        drawingPathDao.deleteDrawingPathById(id)
+    }
+
+    override suspend fun deleteAllDrawingPaths() {
+        drawingPathDao.deleteAllDrawingPaths()
+    }
+
+    // Points
+
+    override suspend fun getAllPoints(drawingPathId: Long): List<PointModel> {
+        return pointDao.getPointsByPathId(drawingPathId).map { it.toModel() }
+    }
+
+    override suspend fun getPointById(id: Long): PointModel {
+        return pointDao.getPointById(id).toModel()
+    }
+
+    override suspend fun insertPoint(point: PointModel): Long {
+        return pointDao.insertPoint(point.toEntity())
+    }
+
+    override suspend fun updatePoint(point: PointModel) {
+        pointDao.updatePoint(point.toEntity())
+    }
+
+    override suspend fun insertPoints(points: List<PointModel>): List<Long> {
+        return pointDao.insertPoints(points.map { it.toEntity() })
+    }
+
+    override suspend fun deletePointById(id: Long) {
+        pointDao.deletePointById(id)
+    }
+
+    override suspend fun deleteAllPoints() {
+        pointDao.deleteAllPoints()
+    }
 }
 
 fun ProjectEntity.toModel(): ProjectModel {
@@ -123,6 +203,7 @@ fun ProjectEntity.toModel(): ProjectModel {
         frames = emptyList(),
         width = width,
         height = height,
+        thumb = thumb,
     )
 }
 
@@ -135,6 +216,7 @@ fun ProjectModel.toEntity(): ProjectEntity {
         lastModified = lastModified,
         width = width,
         height = height,
+        thumb = thumb,
     )
 }
 
@@ -169,6 +251,9 @@ fun LayerEntity.toModel(): LayerModel {
         cachedBitmap = cachedBitmap,
         order = order,
         drawingPaths = emptyList(),
+        pixels = pixels,
+        width = width,
+        height = height,
     )
 }
 
@@ -183,5 +268,57 @@ fun LayerModel.toEntity(): LayerEntity {
         opacity = opacity,
         cachedBitmap = cachedBitmap,
         order = order,
+        pixels = pixels,
+        width = width,
+        height = height,
+    )
+}
+
+fun DrawingPathModel.toEntity(): DrawingPathEntity {
+    return DrawingPathEntity(
+        id = id,
+        layerId = layerId,
+        brushId = brushId,
+        color = color,
+        strokeWidth = strokeWidth,
+        randoms = randoms,
+        startPointX = startPointX,
+        startPointY = startPointY,
+        endPointX = endPointX,
+        endPointY = endPointY,
+    )
+}
+
+fun DrawingPathEntity.toModel(): DrawingPathModel {
+    return DrawingPathModel(
+        id = id,
+        layerId = layerId,
+        brushId = brushId,
+        color = color,
+        strokeWidth = strokeWidth,
+        points = emptyList(),
+        randoms = randoms,
+        startPointX = startPointX,
+        startPointY = startPointY,
+        endPointX = endPointX,
+        endPointY = endPointY,
+    )
+}
+
+fun PointModel.toEntity(): PointEntity {
+    return PointEntity(
+        id = id,
+        drawingPathId = drawingPathId,
+        x = x,
+        y = y,
+    )
+}
+
+fun PointEntity.toModel(): PointModel {
+    return PointModel(
+        id = id,
+        drawingPathId = drawingPathId,
+        x = x,
+        y = y,
     )
 }

@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
+import org.jetbrains.compose.resources.imageResource
 
 private fun createPreviewBrushPath(width: Float, height: Float): Path {
     val midWidth = width / 2
@@ -169,6 +170,12 @@ fun BrushPreview(
         )
     }
 
+    val brushImage = if (brush.brush != null) {
+        imageResource(brush.brush)
+    } else {
+        null
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -196,13 +203,14 @@ fun BrushPreview(
                     canvasSize = size
                 }
 
-                if (brush.brush != null) {
+                if (brushImage != null) {
                     DrawRenderer.drawBrushStampsBetweenPoints(
                         imageCanvas!!,
                         Offset(0f, 0f),
                         Offset(size.width, size.height),
                         DrawRenderer.pathPaint(initialPath),
                         initialPath,
+                        brushImage
                     )
                 } else {
                     DrawRenderer.drawPath(

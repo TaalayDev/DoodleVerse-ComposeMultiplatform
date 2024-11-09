@@ -1,7 +1,9 @@
 package io.github.taalaydev.doodleverse
 
+import io.github.taalaydev.doodleverse.shared.DrawingPathModel
 import io.github.taalaydev.doodleverse.shared.FrameModel
 import io.github.taalaydev.doodleverse.shared.LayerModel
+import io.github.taalaydev.doodleverse.shared.PointModel
 import io.github.taalaydev.doodleverse.shared.ProjectModel
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import kotlinx.coroutines.flow.Flow
@@ -43,8 +45,8 @@ class DemoProjectRepo : ProjectRepository() {
         projects.clear()
     }
 
-    override fun getAllFrames(projectId: Long): Flow<List<FrameModel>> {
-        return MutableStateFlow(frames.filter { it.projectId == projectId })
+    override suspend fun getAllFrames(projectId: Long): List<FrameModel> {
+        return frames.filter { it.projectId == projectId }
     }
 
     override suspend fun getFrameById(id: Long): FrameModel {
@@ -76,12 +78,12 @@ class DemoProjectRepo : ProjectRepository() {
         frames.clear()
     }
 
-    override suspend fun updateFrameOrder(id: Long, order: Int) {
+    override  suspend fun updateFrameOrder(id: Long, order: Int) {
         frames[frames.indexOfFirst { it.id == id }] = frames.first { it.id == id }.copy(order = order)
     }
 
-    override fun getAllLayers(frameId: Long): Flow<List<LayerModel>> {
-        return MutableStateFlow(layers.filter { it.frameId == frameId })
+    override suspend fun getAllLayers(frameId: Long): List<LayerModel> {
+        return layers.filter { it.frameId == frameId }
     }
 
     override suspend fun getLayerById(id: Long): LayerModel {
@@ -112,5 +114,61 @@ class DemoProjectRepo : ProjectRepository() {
 
     override suspend fun deleteAllLayers() {
         layers.clear()
+    }
+
+    override suspend fun getAllDrawingPaths(layerId: Long): List<DrawingPathModel> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getDrawingPathById(id: Long): DrawingPathModel {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun insertDrawingPath(drawingPath: DrawingPathModel): Long {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun updateDrawingPath(drawingPath: DrawingPathModel) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun insertDrawingPaths(drawingPaths: List<DrawingPathModel>): List<Long> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteDrawingPathById(id: Long) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteAllDrawingPaths() {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getAllPoints(drawingPathId: Long): List<PointModel> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getPointById(id: Long): PointModel {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun insertPoint(point: PointModel): Long {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun updatePoint(point: PointModel) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun insertPoints(points: List<PointModel>): List<Long> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deletePointById(id: Long) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteAllPoints() {
+        TODO("Not yet implemented")
     }
 }

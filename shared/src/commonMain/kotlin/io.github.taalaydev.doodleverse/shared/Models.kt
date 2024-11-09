@@ -9,6 +9,7 @@ data class ProjectModel(
     val frames: List<FrameModel>,
     val width: Float,
     val height: Float,
+    val thumb: ByteArray?,
 )
 
 data class FrameModel(
@@ -30,18 +31,39 @@ data class LayerModel(
     val cachedBitmap: String,
     val order: Int = 0,
     val drawingPaths: List<DrawingPathModel>,
-)
+    val pixels: ByteArray,
+    val width: Int,
+    val height: Int,
+) {
+    override fun equals(other: Any?): Boolean {
+        return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
+}
 
 data class DrawingPathModel(
     val id: Long,
     val layerId: Long,
+    val brushId: Int,
     val color: Int,
     val strokeWidth: Float,
+    val startPointX: Float,
+    val startPointY: Float,
+    val endPointX: Float,
+    val endPointY: Float,
     val points: List<PointModel>,
-)
+    val randoms: String
+) {
+    fun randomsList(): Map<String, Float> {
+        return mutableMapOf()
+    }
+}
 
 data class PointModel(
-    val id: String,
+    val id: Long,
     val drawingPathId: Long,
     val x: Float,
     val y: Float,

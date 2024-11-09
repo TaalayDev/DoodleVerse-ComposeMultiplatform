@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "3e7c1ba7daf9ec7b47cdfe5b6fc88b19",
+    "identityHash": "1c6b0f871865dc10d9ea8774607028c0",
     "entities": [
       {
         "tableName": "projects",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `thumbnail` TEXT NOT NULL, `created` INTEGER NOT NULL, `last_modified` INTEGER NOT NULL, `width` REAL NOT NULL, `height` REAL NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `thumbnail` TEXT NOT NULL, `created` INTEGER NOT NULL, `last_modified` INTEGER NOT NULL, `width` REAL NOT NULL, `height` REAL NOT NULL, `thumb` BLOB)",
         "fields": [
           {
             "fieldPath": "id",
@@ -49,6 +49,11 @@
             "columnName": "height",
             "affinity": "REAL",
             "notNull": true
+          },
+          {
+            "fieldPath": "thumb",
+            "columnName": "thumb",
+            "affinity": "BLOB"
           }
         ],
         "primaryKey": {
@@ -96,7 +101,7 @@
       },
       {
         "tableName": "layers",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `frame_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `is_visible` INTEGER NOT NULL, `is_locked` INTEGER NOT NULL, `is_background` INTEGER NOT NULL, `opacity` REAL NOT NULL, `cached_bitmap` TEXT NOT NULL, `order` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `frame_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `is_visible` INTEGER NOT NULL, `is_locked` INTEGER NOT NULL, `is_background` INTEGER NOT NULL, `opacity` REAL NOT NULL, `cached_bitmap` TEXT NOT NULL, `order` INTEGER NOT NULL, `pixels` BLOB NOT NULL, `width` INTEGER NOT NULL, `height` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -151,6 +156,24 @@
             "columnName": "order",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "pixels",
+            "columnName": "pixels",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "width",
+            "columnName": "width",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "height",
+            "columnName": "height",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -162,7 +185,7 @@
       },
       {
         "tableName": "drawing_paths",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `layer_id` INTEGER NOT NULL, `color` INTEGER NOT NULL, `stroke_width` REAL NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `layer_id` INTEGER NOT NULL, `brush_id` INTEGER NOT NULL, `color` INTEGER NOT NULL, `stroke_width` REAL NOT NULL, `start_point_x` REAL NOT NULL, `start_point_y` REAL NOT NULL, `end_point_x` REAL NOT NULL, `end_point_y` REAL NOT NULL, `randoms` TEXT NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -177,6 +200,12 @@
             "notNull": true
           },
           {
+            "fieldPath": "brushId",
+            "columnName": "brush_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
             "fieldPath": "color",
             "columnName": "color",
             "affinity": "INTEGER",
@@ -186,6 +215,36 @@
             "fieldPath": "strokeWidth",
             "columnName": "stroke_width",
             "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startPointX",
+            "columnName": "start_point_x",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startPointY",
+            "columnName": "start_point_y",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endPointX",
+            "columnName": "end_point_x",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endPointY",
+            "columnName": "end_point_y",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "randoms",
+            "columnName": "randoms",
+            "affinity": "TEXT",
             "notNull": true
           }
         ],
@@ -235,7 +294,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3e7c1ba7daf9ec7b47cdfe5b6fc88b19')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1c6b0f871865dc10d9ea8774607028c0')"
     ]
   }
 }

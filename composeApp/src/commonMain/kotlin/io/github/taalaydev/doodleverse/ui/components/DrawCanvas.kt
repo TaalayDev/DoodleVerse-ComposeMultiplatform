@@ -5,9 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -16,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -31,17 +27,18 @@ import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.core.handleDrawing
+import io.github.taalaydev.doodleverse.data.models.PointModel
+import io.github.taalaydev.doodleverse.getColorFromBitmap
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawingController
 import io.github.taalaydev.doodleverse.ui.screens.draw.currentLayer
+import io.github.taalaydev.doodleverse.ui.screens.draw.layers
+import org.jetbrains.compose.resources.imageResource
 import kotlin.math.max
 import kotlin.math.min
 
@@ -73,6 +70,12 @@ fun DrawCanvas(
     var savedSize by remember { mutableStateOf(Size.Zero) }
 
     var eyedropperColor by remember { mutableStateOf<Color?>(null) }
+
+    val brushImage = if (currentBrush.brush != null) {
+        imageResource(currentBrush.brush)
+    } else {
+        null
+    }
 
     val state = controller.state.value
     var bitmap by controller.bitmap
@@ -106,9 +109,7 @@ fun DrawCanvas(
         }
     }
 
-    Box(
-        modifier = modifier
-    ) {
+    Box(modifier = modifier) {
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
@@ -135,7 +136,13 @@ fun DrawCanvas(
                                     color = paint.color,
                                     size = paint.strokeWidth,
                                     startPoint = currentPosition,
-                                    endPoint = currentPosition
+                                    endPoint = currentPosition,
+                                    points = mutableListOf(
+                                        PointModel(
+                                            x = currentPosition.x,
+                                            y = currentPosition.y
+                                        )
+                                    ),
                                 )
                             },
                             onDrag = { _, new, pressure ->
@@ -202,8 +209,8 @@ fun DrawCanvas(
 
                 val x = currentPosition.x.toInt()
                 val y = currentPosition.y.toInt()
-                // val colorArgb = bitmap?.asSkiaBitmap()?.getColor(x, y) ?: return@Canvas
-                val color = Color(0xFF000000)
+                val colorArgb = if (bitmap != null) getColorFromBitmap(bitmap!!, x, y) ?: return@Canvas else 0
+                val color = Color(colorArgb)
 
                 if (eyedropperColor != color) {
                     eyedropperColor = if (color.alpha > 0) color else Color.White
@@ -247,13 +254,14 @@ fun DrawCanvas(
                                 paint,
                                 size
                             )
-                        } else if (currentBrush.brush != null) {
+                        } else if (brushImage != null) {
                             DrawRenderer.drawBrushStampsBetweenPoints(
                                 imageCanvas!!,
                                 prevPosition,
                                 currentPosition,
                                 paint,
-                                drawingPath!!
+                                drawingPath!!,
+                                brushImage
                             )
                         } else {
                             DrawRenderer.drawPath(imageCanvas!!, drawingPath!!, paint, size)
@@ -265,6 +273,12 @@ fun DrawCanvas(
                         val lerpY = lerp(prevPosition.y, currentPosition.y, 0.5f)
 
                         drawingPath?.endPoint = Offset(lerpX, lerpY)
+                        drawingPath?.points?.add(
+                            PointModel(
+                                x = lerpX,
+                                y = lerpY
+                            )
+                        )
 
                         drawingPath?.path?.quadraticBezierTo(
                             prevPosition.x,
@@ -286,13 +300,14 @@ fun DrawCanvas(
                                 paint,
                                 size
                             )
-                        } else if (currentBrush.brush != null) {
+                        } else if (brushImage != null) {
                             DrawRenderer.drawBrushStampsBetweenPoints(
                                 imageCanvas!!,
                                 prevPosition,
                                 currentPosition,
                                 paint,
-                                drawingPath!!
+                                drawingPath!!,
+                                brushImage
                             )
                         } else {
                             DrawRenderer.drawPath(

@@ -12,21 +12,20 @@ import kotlinx.coroutines.Dispatchers
 import java.io.File
 
 fun getDatabaseBuilder(): RoomDatabase.Builder<DoodleVerseDatabase> {
-    val dbFile = File(System.getProperty("java.io.tmpdir"), "my_room.db")
+    val dbFile = File(System.getProperty("java.io.tmpdir"), "database_5.db")
     return Room.databaseBuilder<DoodleVerseDatabase>(
         name = dbFile.absolutePath,
     )
 }
 
 fun getRepository(): ProjectRepository {
-    val room = getDatabaseBuilder()
-        .setDriver(BundledSQLiteDriver())
-        .setQueryCoroutineContext(Dispatchers.IO)
-        .build()
+    val room = getRoomDatabase(getDatabaseBuilder())
 
     return ProjectRepositoryImpl(
         projectDao = room.projectDao(),
         frameDao = room.frameDao(),
-        layerDao = room.layerDao()
+        layerDao = room.layerDao(),
+        drawingPathDao = room.drawingPathDao(),
+        pointDao = room.pointDao()
     )
 }

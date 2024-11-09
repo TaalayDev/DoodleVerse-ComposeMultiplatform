@@ -87,14 +87,6 @@ object DrawRenderer {
                 size,
                 drawingPath,
             )
-        } else if (brush.brush != null) {
-            drawBrushStampsBetweenPoints(
-                canvas,
-                drawingPath.startPoint,
-                drawingPath.endPoint,
-                paint,
-                drawingPath,
-            )
         } else {
             canvas.drawPath(
                 drawingPath.path,
@@ -109,8 +101,8 @@ object DrawRenderer {
         end: Offset,
         paint: Paint,
         drawingPath: DrawingPath,
+        brushImage: ImageBitmap,
     ) {
-        val brushImage = drawingPath.brush.brush ?: return
         val brushSize = drawingPath.size
         val densityOffset = drawingPath.brush.densityOffset.toFloat()
         val useBrushWidthDensity = drawingPath.brush.useBrushWidthDensity
