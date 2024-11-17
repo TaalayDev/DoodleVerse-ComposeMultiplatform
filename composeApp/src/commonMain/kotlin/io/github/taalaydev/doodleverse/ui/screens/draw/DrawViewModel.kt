@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Path
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.taalaydev.doodleverse.ImageFormat
@@ -29,6 +30,7 @@ import io.github.vinceglb.filekit.core.FileKit
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -442,6 +444,41 @@ class DrawViewModel(
 
         viewModelScope.launch {
             FileKit.saveFile(bytes, "${project.value?.name}", "png")
+        }
+    }
+
+    fun importImage(bytes: ByteArray, width: Int, height: Int) {
+        val bitmap = imageBitmapFromByteArray(bytes, width, height)
+
+        // Create a new layer for the imported image
+        val layerName = "Imported Image ${state.value.layers.size + 1}"
+
+        viewModelScope.launch {
+            drawingController.addLayer(layerName)
+
+            // Need to wait for layer to be added before we can draw on it
+            delay(100)
+
+            // Create paint for drawing the image
+            val paint = Paint().apply {
+                alpha = 1f
+                blendMode = BlendMode.SrcOver
+            }
+
+            // Draw imported image on the new layer's bitmap
+            val canvas = drawingController.imageCanvas.value
+            canvas?.drawImageRect(bitmap, paint = paint)
+
+            // Save the state with the imported image
+            drawingController.addState(
+                DrawingPath(
+                    brush = BrushData.solid,
+                    color = Color.Black,
+                    size = 1f,
+                    path = Path()
+                ),
+                drawingController.bitmap.value ?: return@launch
+            )
         }
     }
 }

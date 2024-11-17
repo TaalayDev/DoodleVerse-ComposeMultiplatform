@@ -82,6 +82,7 @@ import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.Shape
+import io.github.taalaydev.doodleverse.imageBitmapFromByteArray
 import io.github.taalaydev.doodleverse.navigation.Destination
 import io.github.taalaydev.doodleverse.ui.components.BrushGrid
 import io.github.taalaydev.doodleverse.ui.components.BrushPicker
@@ -92,6 +93,10 @@ import io.github.taalaydev.doodleverse.ui.components.DraggableSlider
 import io.github.taalaydev.doodleverse.ui.components.DrawCanvas
 import io.github.taalaydev.doodleverse.ui.components.LayersPanel
 import io.github.taalaydev.doodleverse.ui.components.NewProjectDialog
+import io.github.vinceglb.filekit.core.FileKit
+import io.github.vinceglb.filekit.core.PickerMode
+import io.github.vinceglb.filekit.core.PickerType
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -155,6 +160,7 @@ private fun DrawScreenBody(
     viewModel: DrawViewModel,
     modifier: Modifier = Modifier,
 ) {
+    val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
@@ -207,6 +213,25 @@ private fun DrawScreenBody(
                 },
                 title = {},
                 actions = {
+                    IconButton(
+                        onClick = {
+                            // Use FileKit to open image picker
+                            scope.launch {
+                                val result = FileKit.pickFile(PickerType.Image, mode = PickerMode.Single)
+                                if (result != null) {
+                                    val bytes = result.readBytes()
+                                    val bitmap = imageBitmapFromByteArray(bytes, 0, 0)
+                                    viewModel.importImage(bytes, bitmap.width, bitmap.height)
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            Lucide.ImagePlus,
+                            contentDescription = "Import Image",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     IconButton(onClick = {
                         viewModel.undo()
                     }) {
