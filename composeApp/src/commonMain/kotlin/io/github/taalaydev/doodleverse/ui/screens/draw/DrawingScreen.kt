@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -54,6 +56,9 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.input.pointer.isScrollLockOn
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -80,6 +85,7 @@ import io.github.taalaydev.doodleverse.data.models.Shape
 import io.github.taalaydev.doodleverse.navigation.Destination
 import io.github.taalaydev.doodleverse.ui.components.BrushGrid
 import io.github.taalaydev.doodleverse.ui.components.BrushPicker
+import io.github.taalaydev.doodleverse.ui.components.CircularFloatingActionMenu
 import io.github.taalaydev.doodleverse.ui.components.ColorPalettePanel
 import io.github.taalaydev.doodleverse.ui.components.ColorPicker
 import io.github.taalaydev.doodleverse.ui.components.DraggableSlider
@@ -286,7 +292,7 @@ private fun DrawScreenBody(
                                         isControlPressed && event.key == Key.B -> {
                                             true
                                         }
-                                        isControlPressed && event.key == Key.Equals -> {
+                                        isControlPressed && (event.key == Key.Plus || event.key == Key.Equals) -> {
                                             dragState = dragState.copy(
                                                 zoom = (dragState.zoom * 1.1f).coerceAtMost(5f)
                                             )
@@ -317,17 +323,51 @@ private fun DrawScreenBody(
                                     false
                                 }
                             }
-                            .pointerInput(currentTool) {
+                            .pointerInput(currentTool, isMobile) {
                                 if (currentTool == Tool.Zoom || currentTool == Tool.Drag) {
                                     detectDragGestures { change, dragAmount ->
-                                        if (currentTool == Tool.Zoom) {
-                                            dragState = dragState.copy(
+                                        dragState = if (currentTool == Tool.Zoom) {
+                                            dragState.copy(
                                                 zoom = (dragState.zoom * (1 + dragAmount.y / 1000)).coerceIn(0.5f, 5f)
                                             )
                                         } else {
-                                            dragState = dragState.copy(
+                                            dragState.copy(
                                                 draggedTo = dragState.draggedTo + dragAmount
                                             )
+                                        }
+                                    }
+
+                                    return@pointerInput
+                                }
+                                if (!isMobile) {
+                                    awaitEachGesture {
+                                        val event = awaitPointerEvent()
+                                        if (event.keyboardModifiers.isCtrlPressed || event.keyboardModifiers.isMetaPressed) {
+                                            val scrollY = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                                            val scrollX = event.changes.firstOrNull()?.scrollDelta?.x ?: 0f
+
+                                            if (scrollY != 0f || scrollX != 0f) {
+                                                val sensitivity = 10f
+                                                dragState = dragState.copy(
+                                                    draggedTo = dragState.draggedTo.copy(
+                                                        y = dragState.draggedTo.y - scrollY * sensitivity,
+                                                        x = dragState.draggedTo.x - scrollX * sensitivity
+                                                    )
+                                                )
+                                            }
+                                        } else {
+                                            val scrollDelta =
+                                                event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                                            if (scrollDelta != 0f) {
+                                                val sensitivity = 0.01f
+                                                val zoomChange = 1f + (scrollDelta * sensitivity)
+                                                dragState = dragState.copy(
+                                                    zoom = (dragState.zoom * zoomChange).coerceIn(
+                                                        0.5f,
+                                                        5f
+                                                    )
+                                                )
+                                            }
                                         }
                                     }
 

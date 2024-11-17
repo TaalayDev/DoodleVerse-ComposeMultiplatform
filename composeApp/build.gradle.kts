@@ -76,6 +76,8 @@ kotlin {
             implementation(libs.lifecycle.viewmodel.compose)
             implementation(libs.kotlinx.datetime)
 
+            implementation(libs.constraintlayout.compose.multiplatform)
+
             implementation(libs.filekit.compose)
 
             implementation(project(":shared"))

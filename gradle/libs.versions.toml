@@ -13,6 +13,7 @@ androidx-material = "1.12.0"
 androidx-test-junit = "1.2.1"
 colorpickerCompose = "1.1.2"
 compose-plugin = "1.6.11"
+constraintlayoutComposeMultiplatform = "0.4.0"
 filekitCompose = "0.8.7"
 iconsLucide = "1.0.0"
 junit = "4.13.2"
@@ -32,6 +33,7 @@ constraintlayout = "2.2.0"
 
 [libraries]
 colorpicker-compose = { module = "com.github.skydoves:colorpicker-compose", version.ref = "colorpickerCompose" }
+constraintlayout-compose-multiplatform = { module = "tech.annexflow.compose:constraintlayout-compose-multiplatform", version.ref = "constraintlayoutComposeMultiplatform" }
 filekit-compose = { module = "io.github.vinceglb:filekit-compose", version.ref = "filekitCompose" }
 icons-lucide = { module = "com.composables:icons-lucide", version.ref = "iconsLucide" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }

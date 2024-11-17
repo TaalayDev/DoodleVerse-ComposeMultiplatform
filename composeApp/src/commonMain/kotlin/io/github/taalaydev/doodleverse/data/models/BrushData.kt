@@ -80,8 +80,84 @@ data class BrushData(
             name = "Marker",
             stroke = "marker",
             opacityDiff = 0.5f,
-            pathEffect = { width ->
-                PathEffects.markerPathEffect(width)
+            blendMode = BlendMode.Multiply,
+            customPainter = { canvas, size, drawingPath ->
+                val paint = Paint().apply {
+                    color = drawingPath.color.copy(alpha = 0.4f)
+                    strokeWidth = drawingPath.size * 1.2f
+                    strokeCap = StrokeCap.Round
+                    strokeJoin = StrokeJoin.Round
+                    style = PaintingStyle.Stroke
+                    alpha = calcOpacity(drawingPath.color.alpha, drawingPath.brush.opacityDiff)
+                }
+
+                val path = drawingPath.path
+                val measure = PathMeasure().apply { setPath(path, false) }
+                val length = measure.length
+
+                val brushSize = drawingPath.size
+                val delta = min(brushSize * 0.2f, 8f)
+
+                // Main stroke
+                canvas.drawPath(path, paint)
+
+                // Create marker texture effect
+                var i = 0f
+                while (i < length) {
+                    val point = measure.getPosition(i)
+
+                    // Create parallel strokes for marker texture
+                    for (j in -1..1) {
+                        val texturePoint = point + Offset(
+                            drawingPath.getRandom(listOf(i, point.x, j, 1)) * brushSize * 0.1f,
+                            j * brushSize * 0.15f
+                        )
+
+                        val nextPoint = if (i + delta < length) {
+                            measure.getPosition(i + delta)
+                        } else {
+                            measure.getPosition(length)
+                        }
+
+                        val texturePaint = paint.apply {
+                            strokeWidth = drawingPath.size * 0.3f
+                            alpha = (alpha * 0.5f)
+                        }
+
+                        canvas.drawLine(
+                            texturePoint,
+                            nextPoint + Offset(
+                                drawingPath.getRandom(listOf(i + delta, nextPoint.x, j, 1)) * brushSize * 0.1f,
+                                j * brushSize * 0.15f
+                            ),
+                            texturePaint
+                        )
+                    }
+
+                    i += delta
+                }
+
+                // Add slight variation in pressure
+                var pressureI = 0f
+                val pressureDelta = brushSize * 0.5f
+                while (pressureI < length) {
+                    val point = measure.getPosition(pressureI)
+
+                    val pressurePaint = paint.apply {
+                        strokeWidth = drawingPath.size * 0.8f
+                        alpha = (alpha * 0.3f)
+                    }
+
+                    val pressureOffset = Offset(
+                        drawingPath.getRandom(listOf(pressureI, point.x, 1)) * brushSize * 0.05f,
+                        drawingPath.getRandom(listOf(pressureI, point.y, 2)) * brushSize * 0.05f
+                    )
+
+                    val offset = point + pressureOffset
+                    canvas.nativeCanvas.drawPoint(offset.x, offset.y, pressurePaint.asFrameworkPaint())
+
+                    pressureI += pressureDelta
+                }
             }
         )
 

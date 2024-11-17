@@ -206,6 +206,7 @@ class DrawingController(
             caches = layers
         )
         state.value = newState
+        selectLayer(state.value.currentLayerIndex)
     }
 
     fun addLayer(name: String) {
@@ -239,8 +240,6 @@ class DrawingController(
                 updateUndoRedo()
             }
         }
-
-
     }
 
     fun deleteLayer(index: Int) {

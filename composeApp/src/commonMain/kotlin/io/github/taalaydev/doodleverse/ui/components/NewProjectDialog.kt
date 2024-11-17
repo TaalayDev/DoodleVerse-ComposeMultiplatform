@@ -107,6 +107,8 @@ fun NewProjectDialog(
                                         width = template.aspectRationWidth
                                         height = template.aspectRationHeight
                                     }
+
+                                    templatesMenuExpanded = false
                                 }
                             )
                         }

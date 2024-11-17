@@ -65,9 +65,7 @@ private fun createPreviewBrushPath(width: Float, height: Float): Path {
             width - 15f, midHeight + quarterHeight,
             width - 15f, midHeight
         )
-
         moveTo(width - 15f, midHeight)
-
         close()
     }
 }
@@ -152,21 +150,11 @@ fun BrushPreview(
     var imageCanvas by remember { mutableStateOf<Canvas?>(null) }
     var canvasSize by remember { mutableStateOf(Size.Zero) }
 
-    val initialPath = remember(canvasSize) {
-        val width = canvasSize.width.coerceAtLeast(1f)
-        val height = canvasSize.height.coerceAtLeast(1f)
-
+    var initialPath = remember {
         DrawingPath(
             brush = brush,
             color = Color(0xFF333333),
             size = 10f,
-            startPoint = Offset(10f, 10f),
-            endPoint = Offset(width - 10f, height - 10f),
-            path = if (brush.isShape) {
-                createPreviewShapePath(width, height)
-            } else {
-                createPreviewBrushPath(width, height)
-            },
         )
     }
 
@@ -201,6 +189,19 @@ fun BrushPreview(
                     bitmap = ImageBitmap(canvasWidth, canvasHeight)
                     imageCanvas = Canvas(bitmap!!)
                     canvasSize = size
+
+                    initialPath = DrawingPath(
+                        brush = brush,
+                        color = Color(0xFF333333),
+                        size = 10f,
+                        startPoint = Offset(10f, 10f),
+                        endPoint = Offset(size.width - 10f, size.height - 10f),
+                        path = if (brush.isShape) {
+                            createPreviewShapePath(size.width, size.height)
+                        } else {
+                            createPreviewBrushPath(size.width, size.height)
+                        },
+                    )
                 }
 
                 if (brushImage != null) {
