@@ -10,6 +10,8 @@ DoodleVerse is a versatile, cross-platform drawing application built with Kotlin
 - **Layer support**: Create, manage, and organize your artwork in layers.
 - **Color picker**: Advanced color selection with opacity control.
 - **Undo/Redo functionality**: Easily correct mistakes or revisit previous states.
+- **Export options**: Save your artwork as an image or share it with others.
+- **Import images**: Load images from your device to use as a reference or background.
 - **Project management**: Create, save, and edit multiple projects.
 - **Customizable canvas size**: Choose from preset sizes or create custom dimensions.
 
