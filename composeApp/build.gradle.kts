@@ -63,6 +63,7 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material)
+            implementation(compose.materialIconsExtended)
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.components.resources)
@@ -79,6 +80,8 @@ kotlin {
             implementation(libs.constraintlayout.compose.multiplatform)
 
             implementation(libs.filekit.compose)
+
+            implementation(libs.reorderable)
 
             implementation(project(":shared"))
         }

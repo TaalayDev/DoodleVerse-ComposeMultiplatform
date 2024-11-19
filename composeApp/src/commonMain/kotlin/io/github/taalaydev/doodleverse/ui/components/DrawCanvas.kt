@@ -2,7 +2,9 @@ package io.github.taalaydev.doodleverse.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -25,16 +27,24 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.withSave
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import io.github.taalaydev.doodleverse.core.DrawRenderer
+import io.github.taalaydev.doodleverse.core.SelectionController
+import io.github.taalaydev.doodleverse.core.SelectionHitTestResult
 import io.github.taalaydev.doodleverse.core.Tool
+import io.github.taalaydev.doodleverse.core.getTransformedBounds
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.core.handleDrawing
+import io.github.taalaydev.doodleverse.core.hitTest
 import io.github.taalaydev.doodleverse.data.models.PointModel
 import io.github.taalaydev.doodleverse.getColorFromBitmap
+import io.github.taalaydev.doodleverse.ui.screens.draw.DrawProvider
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawingController
 import io.github.taalaydev.doodleverse.ui.screens.draw.currentLayer
 import io.github.taalaydev.doodleverse.ui.screens.draw.layers
@@ -51,6 +61,7 @@ enum class DrawState {
 
 @Composable
 fun DrawCanvas(
+    provider: DrawProvider,
     currentBrush: BrushData,
     currentColor: Color,
     brushSize: Float,
@@ -91,6 +102,12 @@ fun DrawCanvas(
 
     val paint = remember { Paint() }
 
+    var selectionController = remember {
+        SelectionController { newState ->
+            provider.updateSelection(newState)
+        }
+    }
+
     LaunchedEffect(currentColor, brushSize, currentBrush) {
         paint.apply {
             style = PaintingStyle.Stroke
@@ -121,6 +138,18 @@ fun DrawCanvas(
                             currentPosition = offset
                             drawState.value = DrawState.Started
                         }
+                    } else if (tool.isSelection) {
+                        handleDrawing(
+                            onStart = { offset, _ ->
+                                provider.startSelection(offset)
+                            },
+                            onDrag = { _, new, _ ->
+                                provider.updateSelection(new)
+                            },
+                            onEnd = {
+                                provider.endSelection()
+                            }
+                        )
                     } else {
                         handleDrawing(
                             onStart = { offset, pressure ->
@@ -343,28 +372,65 @@ fun DrawCanvas(
                 }
             }
 
-            with(drawContext.canvas) {
-                for (layer in state.layers) {
-                    if (!layer.isVisible || layer.opacity == 0.0) continue
-                    if (layer.id == state.currentLayer.id) {
-                        bitmap?.let {
-                            drawImage(it)
-                        }
+            for (layer in state.layers) {
+                if (!layer.isVisible || layer.opacity == 0.0) continue
+                if (layer.id == state.currentLayer.id) {
+                    bitmap?.let { drawImage(it, alpha = layer.opacity.toFloat()) }
 
-                        if (currentBrush.isShape) {
-                            shapeBitmap?.let {
-                                drawImage(it)
+                    if (currentBrush.isShape) {
+                        shapeBitmap?.let { drawImage(it, alpha = layer.opacity.toFloat()) }
+                    }
+
+                    if (provider.selectionState.isActive) {
+                        val bounds = provider.selectionState.bounds
+                        val center = bounds.center
+                        val offset = provider.selectionState.offset
+
+                        drawContext.canvas.withSave {
+                            drawContext.canvas.translate(offset.x + center.x, offset.y + center.y)
+                            drawContext.canvas.rotate(provider.selectionState.rotation)
+                            drawContext.canvas.scale(provider.selectionState.scale, provider.selectionState.scale)
+                            drawContext.canvas.translate(-center.x, -center.y)
+
+                            drawRect(
+                                topLeft = bounds.topLeft,
+                                size = bounds.size,
+                                color = Color.Blue.copy(alpha = 0.2f),
+                                style = Stroke(width = 1.dp.toPx()),
+                                alpha = 0.8f
+                            )
+                            if (provider.selectionState.transformedBitmap != null) {
+                                drawImage(
+                                    image = provider.selectionState.transformedBitmap!!,
+                                    topLeft = bounds.topLeft,
+                                    alpha = 0.8f
+                                )
                             }
                         }
-                    } else {
-                        val image = state.caches[layer.id]
-                        if (image != null) {
-                            drawImage(image)
-                        }
                     }
+                } else {
+                    drawImage(state.caches[layer.id] ?: continue, alpha = layer.opacity.toFloat())
                 }
-
             }
+        }
+
+        if (tool is Tool.Selection && provider.selectionState.isActive) {
+            SelectionOverlay(
+                state = provider.selectionState,
+                onTransformStart = { transform, point ->
+                    provider.startTransform(transform, point)
+                },
+                onTransformDelta = { offset ->
+                    provider.updateSelectionTransform(offset)
+                },
+                onTransformEnd = {
+                    // provider.applySelection()
+                },
+                onTapOutside = {
+                    provider.applySelection()
+                },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 

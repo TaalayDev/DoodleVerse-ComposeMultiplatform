@@ -38,7 +38,8 @@ sealed class Tool {
     data object Drag : Tool()
     data object Fill : Tool()
     data object Eyedropper : Tool()
-    data object Selection : Tool()
+    data object Selection: Tool()
+
 
     val isBrush: Boolean get() = this is Brush
     val isEraser: Boolean get() = this is Eraser

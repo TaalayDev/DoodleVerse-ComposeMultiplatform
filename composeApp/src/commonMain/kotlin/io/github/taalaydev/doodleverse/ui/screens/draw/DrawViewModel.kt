@@ -1,7 +1,11 @@
 package io.github.taalaydev.doodleverse.ui.screens.draw
 
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Canvas
@@ -9,11 +13,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.withSave
+import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.taalaydev.doodleverse.ImageFormat
+import io.github.taalaydev.doodleverse.core.SelectionHitTestResult
+import io.github.taalaydev.doodleverse.core.SelectionState
+import io.github.taalaydev.doodleverse.core.SelectionTransform
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.core.copy
+import io.github.taalaydev.doodleverse.core.hitTestSelectionHandles
+import io.github.taalaydev.doodleverse.core.toIntOffset
+import io.github.taalaydev.doodleverse.core.toIntSize
 import io.github.taalaydev.doodleverse.core.withBackground
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
@@ -38,6 +50,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.max
+import kotlin.math.min
 
 data class DrawState(
     // val layers: List<LayerModel> = emptyList(),
@@ -53,8 +69,21 @@ fun DrawState.currentLayerImage(): ImageBitmap? = caches[currentLayer.id]
 val DrawState.layers: List<LayerModel> get() = frames[currentFrameIndex].layers
 val DrawState.currentFrame: FrameModel get() = frames[currentFrameIndex]
 
+interface DrawProvider {
+    val selectionState: SelectionState
+    fun updateCurrentTool(tool: Tool)
+    fun startSelection(offset: Offset)
+    fun updateSelection(offset: Offset)
+    fun updateSelection(state: SelectionState)
+    fun endSelection()
+    fun applySelection()
+    fun startTransform(transform: SelectionTransform, point: Offset)
+    fun updateSelectionTransform(pan: Offset)
+}
+
 class DrawingController(
     private val projectRepo: ProjectRepository,
+    private val provider: DrawProvider,
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
@@ -96,6 +125,9 @@ class DrawingController(
     val canvasSize = mutableStateOf(Size.Zero)
     val restoreImage = mutableStateOf<ImageBitmap?>(null)
     val isDirty = mutableStateOf(false)
+
+    private var moveOffset = Offset.Zero
+    private var tempMoveBitmap: ImageBitmap? = null
 
     fun getCombinedImageBitmap(): ImageBitmap? {
         val canvasWidth = canvasSize.value.width.toInt()
@@ -324,21 +356,209 @@ class DrawingController(
             )
         }
     }
+
+    fun moveLayer(from: Int, to: Int) {
+        val newLayers = state.value.layers.toMutableList()
+        val layer = newLayers.removeAt(from)
+        newLayers.add(to, layer)
+
+        val newState = state.value.copy(
+            frames = state.value.frames.mapIndexed { index, frame ->
+                if (index == state.value.currentFrameIndex) {
+                    frame.copy(layers = newLayers)
+                } else {
+                    frame
+                }
+            },
+            currentLayerIndex = to
+        )
+        state.value = newState
+    }
+
+    fun changeLayerOpacity(index: Int, opacity: Float) {
+        val newLayers = state.value.layers.toMutableList()
+        newLayers[index] = newLayers[index].copy(opacity = opacity.toDouble())
+        val newState = state.value.copy(
+            frames = state.value.frames.mapIndexed { index, frame ->
+                if (index == state.value.currentFrameIndex) {
+                    frame.copy(layers = newLayers)
+                } else {
+                    frame
+                }
+            }
+        )
+        state.value = newState
+        updateLayer(newLayers[index], caches[newLayers[index].id])
+    }
+
+    fun moveCurrentLayer(deltaX: Float, deltaY: Float) {
+        moveOffset = Offset(deltaX, deltaY)
+
+        // Create temporary bitmap for move preview if not exists
+        if (tempMoveBitmap == null) {
+            val currentCache = state.value.caches[currentLayer.id] ?: return
+            tempMoveBitmap = currentCache.copy()
+        }
+
+        // Create new bitmap for moved content
+        val movedBitmap = ImageBitmap(
+            canvasSize.value.width.toInt(),
+            canvasSize.value.height.toInt()
+        )
+        val canvas = Canvas(movedBitmap)
+
+        // Draw moved content
+        tempMoveBitmap?.let {
+            canvas.drawImage(
+                it,
+                Offset(moveOffset.x, moveOffset.y),
+                Paint()
+            )
+        }
+
+        // Update display
+        val newCaches = state.value.caches + (currentLayer.id to movedBitmap)
+        state.value = state.value.copy(caches = newCaches)
+        restoreImage.value = movedBitmap
+        isDirty.value = true
+    }
+
+    fun commitLayerMove() {
+        if (moveOffset != Offset.Zero && tempMoveBitmap != null) {
+            // Create final moved bitmap
+            val finalBitmap = ImageBitmap(
+                canvasSize.value.width.toInt(),
+                canvasSize.value.height.toInt()
+            )
+            val canvas = Canvas(finalBitmap)
+
+            canvas.drawImage(
+                tempMoveBitmap!!,
+                moveOffset,
+                Paint()
+            )
+
+            // Add to undo stack
+            addState(
+                DrawingPath(
+                    brush = BrushData.solid,
+                    color = Color.Black,
+                    size = 1f,
+                    path = Path(),
+                    startPoint = Offset.Zero,
+                    endPoint = moveOffset
+                ),
+                finalBitmap
+            )
+        }
+
+        // Reset move state
+        moveOffset = Offset.Zero
+        tempMoveBitmap = null
+    }
+
+    fun captureSelection(bounds: Rect) {
+        val layerBitmap = state.value.caches[currentLayer.id]?.copy() ?: return
+
+        val selectionBitmap = ImageBitmap(bounds.width.toInt(), bounds.height.toInt())
+        val canvas = Canvas(selectionBitmap)
+
+        // Copy selected region
+        canvas.drawImageRect(
+            image = layerBitmap,
+            srcOffset = bounds.topLeft.toIntOffset(),
+            srcSize = bounds.size.toIntSize(),
+            dstSize = bounds.size.toIntSize(),
+            paint = Paint()
+        )
+
+        // Clear selected region from layer
+        val layerCanvas = Canvas(layerBitmap)
+        layerCanvas.drawImage(
+            selectionBitmap,
+            bounds.topLeft,
+            Paint().apply {
+                blendMode = BlendMode.Clear
+            }
+        )
+
+        // Update layer with cleared content
+        state.value = state.value.copy(
+            caches = caches + (currentLayer.id to layerBitmap),
+            dirtyLayers = state.value.dirtyLayers + currentLayer.id.toInt(),
+        )
+        selectLayer(state.value.currentLayerIndex)
+
+        // Update state with the selection
+        provider.updateSelection(SelectionState(
+            bounds = bounds,
+            originalBitmap = selectionBitmap,
+            transformedBitmap = selectionBitmap,
+            isActive = true
+        ))
+    }
+
+    fun applySelectionTransform(selectionState: SelectionState) {
+        val bounds = selectionState.bounds
+        val bitmap = selectionState.transformedBitmap ?: return
+        val layerBitmap = state.value.caches[currentLayer.id]?.copy() ?: return
+
+        val transformed = ImageBitmap(
+            canvasSize.value.width.toInt(),
+            canvasSize.value.height.toInt()
+        )
+        val canvas = Canvas(transformed)
+
+        canvas.withSave {
+            val offset = selectionState.offset
+            canvas.translate(offset.x + bounds.center.x, offset.y +  bounds.center.y)
+            canvas.rotate(selectionState.rotation)
+            canvas.scale(selectionState.scale)
+            canvas.translate(-bounds.center.x, -bounds.center.y)
+
+            canvas.drawImage(
+                bitmap,
+                bounds.topLeft,
+                Paint()
+            )
+        }
+
+        val layerCanvas = Canvas(layerBitmap)
+        layerCanvas.drawImage(
+            transformed,
+            Offset.Zero,
+            Paint()
+        )
+
+        state.value = state.value.copy(
+            caches = caches + (currentLayer.id to layerBitmap),
+            dirtyLayers = state.value.dirtyLayers + currentLayer.id.toInt(),
+        )
+        selectLayer(state.value.currentLayerIndex)
+        updateLayer(currentLayer, layerBitmap)
+    }
 }
 
 // ViewModel for the drawing screen
 class DrawViewModel(
     private val projectRepo: ProjectRepository,
     private val dispatcher: CoroutineDispatcher
-) : ViewModel() {
+) : ViewModel(), DrawProvider {
     private val _project = MutableStateFlow<ProjectModel?>(null)
     val project: StateFlow<ProjectModel?> = _project.asStateFlow()
 
     private val _tools = MutableStateFlow<ToolsData?>(null)
     val tools: StateFlow<ToolsData?> = _tools.asStateFlow()
 
+    private var _startPoint: MutableStateFlow<Offset> = MutableStateFlow(Offset.Zero)
+    private var _endPoint: MutableStateFlow<Offset> = MutableStateFlow(Offset.Zero)
+
+    private var _selectionState by mutableStateOf(SelectionState())
+    override val selectionState: SelectionState get() = _selectionState
+
     val drawingController = DrawingController(
         projectRepo,
+        this,
         viewModelScope,
         dispatcher
     )
@@ -390,9 +610,21 @@ class DrawViewModel(
 
     fun saveProject() {
         val project = _project.value ?: return
+
+        viewModelScope.launch {
+            projectRepo.updateProject(project.toEntity().copy(
+                lastModified = Clock.System.now().toEpochMilliseconds(),
+                thumb = imageBitmapByteArray(
+                    drawingController.getCombinedImageBitmap() ?:
+                    return@launch, ImageFormat.PNG
+                ),
+                frames = state.value.frames.map { it.toEntity() },
+            ))
+        }
     }
 
     fun setBrush(brush: BrushData) {
+        applySelection()
         if (brush.isShape) {
             _currentTool.value = Tool.Shape(brush)
         } else if (brush.blendMode == BlendMode.Clear) {
@@ -403,40 +635,209 @@ class DrawViewModel(
     }
 
     fun setTool(tool: Tool) {
+        applySelection()
         _currentTool.value = tool
     }
 
     fun setColor(color: Color) {
+        applySelection()
         _currentColor.value = color
     }
 
     fun setBrushSize(size: Float) {
+        endSelection()
         _brushSize.value = size
     }
 
     fun undo() {
+        endSelection()
         drawingController.undo()
     }
 
     fun redo() {
+        applySelection()
         drawingController.redo()
     }
 
     fun addLayer(name: String) {
+        applySelection()
         drawingController.addLayer(name)
     }
 
     fun deleteLayer(index: Int) {
+        applySelection()
         drawingController.deleteLayer(index)
     }
 
     fun selectLayer(index: Int) {
+        applySelection()
         drawingController.selectLayer(index)
     }
 
     fun layerVisibilityChanged(index: Int, isVisible: Boolean) {
+        applySelection()
         drawingController.layerVisibilityChanged(index, isVisible)
     }
+
+    fun reorderLayers(from: Int, to: Int) {
+        applySelection()
+        drawingController.moveLayer(from, to)
+    }
+
+    fun changeLayerOpacity(index: Int, opacity: Float) {
+        applySelection()
+        drawingController.changeLayerOpacity(index, opacity)
+    }
+
+    override fun updateCurrentTool(tool: Tool) {
+        applySelection()
+        _currentTool.value = tool
+    }
+
+    // Layer movement functions
+
+    fun startMove(offset: Offset) {
+        val currentTool = _currentTool.value
+        if (currentTool is Tool.Drag) {
+            _startPoint.value = offset
+        }
+    }
+
+    fun updateMove(offset: Offset) {
+        val currentTool = _currentTool.value
+        if (currentTool is Tool.Drag && _startPoint.value != Offset.Zero) {
+            _endPoint.value = offset
+
+            // Calculate movement delta
+            val deltaX = offset.x - (_startPoint.value.x)
+            val deltaY = offset.y - (_startPoint.value.y)
+
+            drawingController.moveCurrentLayer(deltaX, deltaY)
+        }
+    }
+
+    fun endMove() {
+        val currentTool = _currentTool.value
+        if (currentTool is Tool.Drag) {
+            _startPoint.value = Offset.Zero
+            _endPoint.value = Offset.Zero
+            drawingController.commitLayerMove()
+        }
+    }
+
+    // Selection functions
+
+    private var selectionStartPoint: Offset? = null
+
+    override fun startSelection(offset: Offset) {
+        if (_selectionState.isActive) {
+            applySelection()
+        }
+
+        _selectionState = SelectionState(
+            bounds = Rect(offset, 0f),
+            isActive = true
+        )
+        selectionStartPoint = offset
+    }
+
+    override fun updateSelection(offset: Offset) {
+        if (selectionStartPoint == null) {
+            selectionStartPoint = offset
+            _selectionState = selectionState.copy(bounds = Rect(offset, 0f))
+        }
+
+        val startPoint = selectionStartPoint ?: return
+
+        // Calculate selection rectangle bounds
+        val minX = minOf(startPoint.x, offset.x)
+        val minY = minOf(startPoint.y, offset.y)
+        val maxX = maxOf(startPoint.x, offset.x)
+        val maxY = maxOf(startPoint.y, offset.y)
+
+        val newBounds = Rect(
+            left = minX,
+            top = minY,
+            right = maxX,
+            bottom = maxY
+        )
+
+        // Update selection state with new bounds
+        _selectionState = _selectionState.copy(
+            bounds = newBounds
+        )
+    }
+
+    override fun endSelection() {
+        val bounds = _selectionState.bounds
+
+        // Only capture if we have a valid selection area
+        if (bounds.width > 1 && bounds.height > 1) {
+            // Capture the selection area into a bitmap
+            drawingController.captureSelection(bounds)
+        } else {
+            // Reset selection if area is too small
+            _selectionState = SelectionState()
+        }
+
+        selectionStartPoint = null
+    }
+
+    override fun updateSelection(state: SelectionState) {
+        _selectionState = state
+    }
+
+    override fun startTransform(transform: SelectionTransform, point: Offset) {
+        _selectionState = _selectionState.copy(
+            transform = transform,
+        )
+    }
+
+    override fun updateSelectionTransform(pan: Offset) {
+        val state = _selectionState
+
+        // Apply transformations based on the current transform type
+        _selectionState = when (state.transform) {
+            SelectionTransform.Move -> {
+                state.copy(offset = state.offset + pan)
+            }
+            SelectionTransform.Rotate -> {
+                state.copy(rotation = state.rotation + pan.x)
+            }
+            is SelectionTransform.Resize -> {
+                state.copy(scale = (state.scale * (1 + pan.y / 100)).coerceIn(0.1f, 5f))
+            }
+            SelectionTransform.None -> state
+        }
+    }
+
+    override fun applySelection() {
+        if (_selectionState.isActive && _selectionState.transformedBitmap != null) {
+            // Apply the transformed selection back to the layer
+            drawingController.applySelectionTransform(_selectionState)
+
+            // Reset selection state
+            _selectionState = SelectionState()
+        }
+    }
+
+    fun cancelSelection() {
+        if (_selectionState.isActive) {
+            // Reset selection state without applying changes
+            _selectionState = SelectionState()
+            selectionStartPoint = null
+        }
+    }
+
+    fun hitTestSelection(point: Offset): SelectionHitTestResult {
+        return if (_selectionState.isActive) {
+            hitTestSelectionHandles(point, _selectionState)
+        } else {
+            SelectionHitTestResult.Outside
+        }
+    }
+
+    // Image handling functions
 
     fun saveAsPng() {
         val image = drawingController.getCombinedImageBitmap() ?: return
@@ -448,10 +849,9 @@ class DrawViewModel(
     }
 
     fun importImage(bytes: ByteArray, width: Int, height: Int) {
-        val bitmap = imageBitmapFromByteArray(bytes, width, height)
-
+        var bitmap = imageBitmapFromByteArray(bytes, width, height)
         // Create a new layer for the imported image
-        val layerName = "Imported Image ${state.value.layers.size + 1}"
+        val layerName = "Image ${state.value.layers.size + 1}"
 
         viewModelScope.launch {
             drawingController.addLayer(layerName)
@@ -459,26 +859,21 @@ class DrawViewModel(
             // Need to wait for layer to be added before we can draw on it
             delay(100)
 
-            // Create paint for drawing the image
-            val paint = Paint().apply {
-                alpha = 1f
-                blendMode = BlendMode.SrcOver
-            }
-
-            // Draw imported image on the new layer's bitmap
-            val canvas = drawingController.imageCanvas.value
-            canvas?.drawImageRect(bitmap, paint = paint)
-
-            // Save the state with the imported image
-            drawingController.addState(
-                DrawingPath(
-                    brush = BrushData.solid,
-                    color = Color.Black,
-                    size = 1f,
-                    path = Path()
-                ),
-                drawingController.bitmap.value ?: return@launch
+            _currentTool.value = Tool.Selection
+            _selectionState = SelectionState(
+                bounds = Rect(Offset.Zero, Size(width.toFloat(), height.toFloat())),
+                originalBitmap = bitmap,
+                transformedBitmap = bitmap,
+                isActive = true
             )
+
+            val state = drawingController.state.value
+            drawingController.state.value = state.copy(
+                caches = state.caches + (state.currentLayer.id to ImageBitmap(width, height)),
+                dirtyLayers = state.dirtyLayers + state.currentLayer.id.toInt()
+            )
+            drawingController.isDirty.value = true
+            drawingController.selectLayer(state.currentLayerIndex)
         }
     }
 }

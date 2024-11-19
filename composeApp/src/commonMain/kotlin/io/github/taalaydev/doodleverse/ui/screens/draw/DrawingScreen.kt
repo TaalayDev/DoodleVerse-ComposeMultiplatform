@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -78,6 +79,7 @@ import androidx.navigation.compose.rememberNavController
 import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.core.DragState
 import io.github.taalaydev.doodleverse.core.Tool
+import io.github.taalaydev.doodleverse.core.handleDrawing
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
@@ -93,6 +95,7 @@ import io.github.taalaydev.doodleverse.ui.components.DraggableSlider
 import io.github.taalaydev.doodleverse.ui.components.DrawCanvas
 import io.github.taalaydev.doodleverse.ui.components.LayersPanel
 import io.github.taalaydev.doodleverse.ui.components.NewProjectDialog
+import io.github.taalaydev.doodleverse.ui.components.SelectionOverlay
 import io.github.vinceglb.filekit.core.FileKit
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
@@ -215,12 +218,12 @@ private fun DrawScreenBody(
                 actions = {
                     IconButton(
                         onClick = {
-                            // Use FileKit to open image picker
                             scope.launch {
                                 val result = FileKit.pickFile(PickerType.Image, mode = PickerMode.Single)
                                 if (result != null) {
                                     val bytes = result.readBytes()
                                     val bitmap = imageBitmapFromByteArray(bytes, 0, 0)
+
                                     viewModel.importImage(bytes, bitmap.width, bitmap.height)
                                 }
                             }
@@ -349,23 +352,21 @@ private fun DrawScreenBody(
                                 }
                             }
                             .pointerInput(currentTool, isMobile) {
-                                if (currentTool == Tool.Zoom || currentTool == Tool.Drag) {
-                                    detectDragGestures { change, dragAmount ->
-                                        dragState = if (currentTool == Tool.Zoom) {
-                                            dragState.copy(
-                                                zoom = (dragState.zoom * (1 + dragAmount.y / 1000)).coerceIn(0.5f, 5f)
-                                            )
-                                        } else {
-                                            dragState.copy(
-                                                draggedTo = dragState.draggedTo + dragAmount
-                                            )
+                                if (currentTool == Tool.Drag) {
+                                    return@pointerInput detectDragGestures(
+                                        onDragStart = { offset ->
+                                            viewModel.startMove(offset)
+                                        },
+                                        onDrag = { change, _ ->
+                                            viewModel.updateMove(change.position)
+                                        },
+                                        onDragEnd = {
+                                            viewModel.endMove()
                                         }
-                                    }
-
-                                    return@pointerInput
+                                    )
                                 }
                                 if (!isMobile) {
-                                    awaitEachGesture {
+                                    return@pointerInput awaitEachGesture {
                                         val event = awaitPointerEvent()
                                         if (event.keyboardModifiers.isCtrlPressed || event.keyboardModifiers.isMetaPressed) {
                                             val scrollY = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
@@ -395,8 +396,6 @@ private fun DrawScreenBody(
                                             }
                                         }
                                     }
-
-                                    return@pointerInput
                                 }
                                 detectTransformGestures { _, pan, zoom, rotation ->
                                     dragState = dragState.copy(
@@ -409,6 +408,7 @@ private fun DrawScreenBody(
                         contentAlignment = Alignment.Center,
                     ) {
                         DrawCanvas(
+                            provider = viewModel,
                             currentBrush = currentBrush,
                             currentColor = currentColor,
                             brushSize = brushSize,
@@ -424,6 +424,7 @@ private fun DrawScreenBody(
                     }
 
                     DrawControls(
+                        viewModel = viewModel,
                         tool = currentTool,
                         brushSize = brushSize,
                         brush = currentBrush,
@@ -543,6 +544,7 @@ private fun DrawScreenBody(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DrawControls(
+    viewModel: DrawViewModel,
     brushSize: Float = 10f,
     brush: BrushData,
     tool: Tool,
@@ -573,6 +575,11 @@ fun DrawControls(
 
     var showShapePicker by remember { mutableStateOf(false) }
     val shapePickerBottomSheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+
+    var showLayersSheet by remember { mutableStateOf(false) }
+    val layersSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
 
@@ -655,9 +662,30 @@ fun DrawControls(
         }
     }
 
+    if (showLayersSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showLayersSheet = false },
+            sheetState = layersSheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+        ) {
+            LayersPanel(
+                drawViewModel = viewModel,
+                modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
+            )
+        }
+    }
+
+    LaunchedEffect(showLayersSheet) {
+        if (showLayersSheet) {
+            layersSheetState.show()
+        } else {
+            layersSheetState.hide()
+        }
+    }
+
     if (!isFloating) {
         BottomAppBar(
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth().height(50.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -714,6 +742,15 @@ fun DrawControls(
                         Lucide.PaintBucket,
                         contentDescription = "Fill",
                         tint = if (tool.isFill) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                IconButton(onClick = {
+                    showLayersSheet = true
+                }) {
+                    Icon(
+                        Lucide.Layers,
+                        contentDescription = "Layers",
+                        tint = if (showLayersSheet) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -786,13 +823,24 @@ fun DrawControls(
                     tint = if (tool.isZoom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
-            IconButton(onClick = {
-                onToolSelected(Tool.Drag)
-            }) {
+            IconButton(
+                onClick = { onToolSelected(Tool.Drag) },
+            ) {
                 Icon(
-                    Lucide.Grab,
-                    contentDescription = "Grab",
-                    tint = if (tool.isDrag) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    Lucide.Move,
+                    contentDescription = "Move Tool",
+                    tint = if (tool.isDrag) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface
+                )
+            }
+            IconButton(
+                onClick = { onToolSelected(Tool.Selection) }
+            ) {
+                Icon(
+                    Lucide.BoxSelect,
+                    contentDescription = "Selection Tool",
+                    tint = if (tool.isSelection) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface
                 )
             }
         }
