@@ -4,6 +4,11 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
 import androidx.compose.foundation.gestures.awaitVerticalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculateCentroidSize
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateRotation
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.verticalDrag
 import androidx.compose.ui.geometry.Offset
@@ -15,7 +20,10 @@ import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.util.fastAny
+import androidx.compose.ui.util.fastForEach
 import io.github.taalaydev.doodleverse.data.models.BrushData
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -92,9 +100,8 @@ internal suspend fun PointerInputScope.handleDrawing(
     }
 }
 
-/*
-    * Handle drag gesture with a single finger
-
+/**
+ * Handle drag gesture with a single finger
  */
 suspend fun PointerInputScope.detectAdvancedVerticalDragGestures(
     onDragStart: (Offset) -> Unit = { },
@@ -143,6 +150,156 @@ suspend fun PointerInputScope.detectAdvancedVerticalDragGestures(
     }
 }
 
+suspend fun PointerInputScope.handleDragAndZoomGestures(
+    dragState: MutableState<DragState>,
+    zoomSensitivity: Float = 0.05f,
+    minZoom: Float = 0.8f,
+    maxZoom: Float = 2.5f,
+) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        var drag: PointerInputChange?
+        var startDistance: Float? = null
+        var startCenter: Offset? = null
+
+        do {
+            drag = awaitTouchSlopOrCancellation(down.id) { change, _ ->
+                if (currentEvent.changes.size >= 2) {
+                    if (startDistance == null) {
+                        startDistance = distanceBetween(
+                            currentEvent.changes[0].position,
+                            currentEvent.changes[1].position
+                        )
+                    }
+                    if (startCenter == null) {
+                        startCenter = centerOf(
+                            currentEvent.changes[0].position,
+                            currentEvent.changes[1].position
+                        )
+                    }
+                    change.consume()
+                }
+            }
+        } while (drag != null && !drag.isConsumed)
+
+        var prevCenter: Offset? = startCenter
+        if (drag != null) {
+            drag(drag.id) {
+                if (currentEvent.changes.size < 2) {
+                    return@drag
+                }
+
+                /**
+                 * Zoom
+                 */
+                val currentDistance = distanceBetween(
+                    currentEvent.changes[0].position,
+                    currentEvent.changes[1].position
+                )
+
+                if (startDistance != null) {
+                    val rawScaleChange = currentDistance / startDistance!!
+                    val scaleChange = 1 + (rawScaleChange - 1) * zoomSensitivity
+                    val newZoom = dragState.value.zoom * scaleChange
+                    dragState.value = (dragState.value.copy(
+                        zoom = newZoom.coerceIn(minZoom, maxZoom)
+                    ))
+                }
+
+                /**
+                 * Drag
+                 */
+                val currentCenter = centerOf(
+                    currentEvent.changes[0].position,
+                    currentEvent.changes[1].position
+                )
+
+                if (prevCenter != null) {
+                    val dragChange = currentCenter - prevCenter!!
+                    dragState.value = (dragState.value.copy(
+                        draggedTo = dragState.value.draggedTo + dragChange
+                    ))
+                }
+
+                prevCenter = currentCenter
+                it.consume()
+            }
+        }
+    }
+}
+
+suspend fun PointerInputScope.modDetectTransformGestures(
+    panZoomLock: Boolean = false,
+    onGesture: (centroid: Offset, pan: Offset, zoom: Float, rotation: Float) -> Unit
+) {
+    awaitEachGesture {
+        var rotation = 0f
+        var zoom = 1f
+        var pan = Offset.Zero
+        var pastTouchSlop = false
+        val touchSlop = viewConfiguration.touchSlop
+        var lockedToPanZoom = false
+
+        awaitFirstDown(requireUnconsumed = false)
+        do {
+            val event = awaitPointerEvent()
+            val canceled = event.changes.fastAny { it.isConsumed }
+            if (!canceled) {
+                val zoomChange = event.calculateZoom()
+                val rotationChange = event.calculateRotation()
+                val panChange = event.modCalculatePan()
+
+                if (!pastTouchSlop) {
+                    zoom *= zoomChange
+                    rotation += rotationChange
+                    pan += panChange
+
+                    val centroidSize = event.calculateCentroidSize(useCurrent = false)
+                    val zoomMotion = abs(1 - zoom) * centroidSize
+                    val rotationMotion = abs(rotation * PI.toFloat() * centroidSize / 180f)
+                    val panMotion = pan.getDistance()
+
+                    if (zoomMotion > touchSlop ||
+                        rotationMotion > touchSlop ||
+                        panMotion > touchSlop
+                    ) {
+                        pastTouchSlop = true
+                        lockedToPanZoom = panZoomLock && rotationMotion < touchSlop
+                    }
+                }
+
+                if (pastTouchSlop) {
+                    val centroid = event.calculateCentroid(useCurrent = false)
+                    val effectiveRotation = if (lockedToPanZoom) 0f else rotationChange
+                    if (effectiveRotation != 0f ||
+                        zoomChange != 1f ||
+                        panChange != Offset.Zero
+                    ) {
+                        onGesture(centroid, panChange, zoomChange, effectiveRotation)
+                    }
+                    event.changes.fastForEach {
+                        if (it.positionChanged()) {
+                            it.consume()
+                        }
+                    }
+                }
+            }
+        } while (!canceled && event.changes.fastAny { it.pressed })
+    }
+}
+
+fun PointerEvent.modCalculatePan(): Offset {
+    if (changes.size < 2) {
+        return Offset.Zero
+    }
+
+    val currentCentroid = calculateCentroid(useCurrent = true)
+    if (currentCentroid == Offset.Unspecified) {
+        return Offset.Zero
+    }
+    val previousCentroid = calculateCentroid(useCurrent = false)
+    return currentCentroid - previousCentroid
+}
 
 internal fun Offset.getDensityOffsetBetweenPoints(
     startPoint: Offset,
@@ -187,6 +344,9 @@ private fun quadraticBezier(p0: Offset, p1: Offset, p2: Offset, t: Float): Offse
 internal fun Offset.distanceTo(other: Offset): Float {
     return sqrt((this.x - other.x).pow(2) + (this.y - other.y).pow(2))
 }
+
+internal fun distanceBetween(a: Offset, b: Offset) = sqrt((a.x - b.x).pow(2) + (a.y - b.y).pow(2))
+internal fun centerOf(a: Offset, b: Offset) = Offset((a.x + b.x) / 2, (a.y + b.y) / 2)
 
 sealed interface DrawState {
     data object Idle : DrawState

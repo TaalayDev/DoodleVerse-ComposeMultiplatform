@@ -40,3 +40,7 @@ fun ImageBitmap.withBackground(color: androidx.compose.ui.graphics.Color): Image
     canvas.drawImage(this, Offset.Zero, Paint())
     return image
 }
+
+fun ImageBitmap.resize(newWidth: Int, newHeight: Int): ImageBitmap {
+    return ImageBitmap.createScaledBitmap(this, newWidth, newHeight)
+}

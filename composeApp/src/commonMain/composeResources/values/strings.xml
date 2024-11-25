@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Doodle Verse</string>
+    <string name="chibi_dog_lesson_title">Chibi Dog</string>
+    <string name="chibi_dog_lesson_description">Learn how to draw a chibi dog</string>
+    <string name="chibi_dog_lesson_1_description">Draw a circle for the head of the dog</string>
+    <string name="chibi_dog_lesson_2_description">Draw a small circle for the body of the dog</string>
+</resources>

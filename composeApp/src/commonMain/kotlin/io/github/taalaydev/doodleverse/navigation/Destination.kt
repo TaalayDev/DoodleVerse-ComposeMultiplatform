@@ -19,10 +19,24 @@ sealed class Destination(val route: String) {
             navArgument("projectId") { type = NavType.LongType }
         )
     }
+    data object Lessons : Destination(route = Routes.LESSONS)
+    data object LessonDetail : Destination(route = Routes.LESSON_DETAIL) {
+        operator fun invoke(lessonId: Long): String {
+            return route.appendParams("lessonId" to lessonId)
+        }
+
+        override val args = listOf(
+            navArgument("lessonId") { type = NavType.LongType }
+        )
+    }
+    data object About : Destination(route = Routes.ABOUT)
 
     object Routes {
         const val HOME = "home"
         const val DRAWING = "drawing/{projectId}"
+        const val LESSONS = "lessons"
+        const val LESSON_DETAIL = "lesson/{lessonId}"
+        const val ABOUT = "about"
     }
 }
 

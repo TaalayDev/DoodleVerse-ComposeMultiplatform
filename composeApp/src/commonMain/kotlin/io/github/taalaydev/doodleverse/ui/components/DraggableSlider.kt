@@ -1,6 +1,7 @@
 package io.github.taalaydev.doodleverse.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -50,6 +51,11 @@ fun BoxScope.DraggableSlider(
         .offset { position }
         .background(
             Color.White.copy(alpha = 0.4f),
+            shape = RoundedCornerShape(8.dp)
+        )
+        .border(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
             shape = RoundedCornerShape(8.dp)
         )
         .clip(RoundedCornerShape(8.dp))

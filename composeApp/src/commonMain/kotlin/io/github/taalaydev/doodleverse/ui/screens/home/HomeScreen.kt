@@ -2,6 +2,7 @@ package io.github.taalaydev.doodleverse.ui.screens.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.*
@@ -21,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,6 +52,7 @@ fun HomeScreen(
     val error by remember { mutableStateOf<String?>(null) }
 
     var showNewProjectDialog by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
         viewModel.loadProjects()
@@ -70,19 +74,27 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Projects") },
-                actions = {
-                    IconButton(onClick = { /* Implement info dialog */ }) {
-                        Icon(ComposeIcons.Info, contentDescription = "Info")
+            Column {
+                TopAppBar(
+                    title = { Text("Projects") },
+                    actions = {
+                        IconButton(onClick = {
+                            showNewProjectDialog = true
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = "Create New Project")
+                        }
                     }
-                    IconButton(onClick = {
-                        showNewProjectDialog = true
-                    }) {
-                        Icon(Icons.Default.Add, contentDescription = "Create New Project")
+                )
+                NavigationBanner(
+                    selectedTab = selectedTab,
+                    onTabSelected = { index, route ->
+                        selectedTab = index
+                        if (route != null) {
+                            navController.navigate(route)
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { padding ->
         when {
@@ -102,6 +114,123 @@ fun HomeScreen(
             )
         }
     }
+}
+
+@Composable
+private fun NavigationBanner(
+    selectedTab: Int,
+    onTabSelected: (Int, String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tabs = listOf(
+        NavigationItem("Projects", Lucide.FolderOpen, null),
+        NavigationItem("Lessons", Lucide.GraduationCap, Destination.Lessons.route),
+        NavigationItem("About", Lucide.Info, Destination.About.route),
+    )
+
+    Surface(
+        modifier = modifier.fillMaxWidth().height(80.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            tabs.forEachIndexed { index, item ->
+                NavigationItem(
+                    item = item,
+                    isSelected = selectedTab == index,
+                    onClick = { onTabSelected(index, item.route) }
+                )
+            }
+        }
+    }
+}
+
+private data class NavigationItem(
+    val title: String,
+    val icon: ImageVector,
+    val route: String?
+)
+
+@Composable
+private fun NavigationItem(
+    item: NavigationItem,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val containerColor = if (isSelected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
+    val contentColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .background(containerColor)
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = item.icon,
+            contentDescription = item.title,
+            tint = contentColor,
+            modifier = Modifier.size(24.dp)
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = item.title,
+            style = MaterialTheme.typography.labelMedium,
+            color = contentColor
+        )
+
+        // Animated indicator
+        if (isSelected) {
+            Spacer(modifier = Modifier.height(2.dp))
+            Box(
+                modifier = Modifier
+                    .width(20.dp)
+                    .height(2.dp)
+                    .background(
+                        color = contentColor,
+                        shape = RoundedCornerShape(1.dp)
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun NavigationIndicator(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .width(20.dp)
+            .height(2.dp)
+            .background(
+                color = MaterialTheme.colorScheme.primary,
+                shape = RoundedCornerShape(1.dp)
+            )
+    )
 }
 
 @Composable

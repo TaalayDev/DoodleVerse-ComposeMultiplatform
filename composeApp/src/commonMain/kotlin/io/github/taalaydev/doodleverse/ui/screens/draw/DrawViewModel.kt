@@ -24,6 +24,7 @@ import io.github.taalaydev.doodleverse.core.SelectionTransform
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.core.copy
 import io.github.taalaydev.doodleverse.core.hitTestSelectionHandles
+import io.github.taalaydev.doodleverse.core.resize
 import io.github.taalaydev.doodleverse.core.toIntOffset
 import io.github.taalaydev.doodleverse.core.toIntSize
 import io.github.taalaydev.doodleverse.core.withBackground
@@ -54,6 +55,7 @@ import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.random.Random
 
 data class DrawState(
     // val layers: List<LayerModel> = emptyList(),
@@ -71,7 +73,10 @@ val DrawState.currentFrame: FrameModel get() = frames[currentFrameIndex]
 
 interface DrawProvider {
     val selectionState: SelectionState
+    fun undo()
+    fun redo()
     fun updateCurrentTool(tool: Tool)
+    fun setColor(color: Color)
     fun startSelection(offset: Offset)
     fun updateSelection(offset: Offset)
     fun updateSelection(state: SelectionState)
@@ -79,10 +84,18 @@ interface DrawProvider {
     fun applySelection()
     fun startTransform(transform: SelectionTransform, point: Offset)
     fun updateSelectionTransform(pan: Offset)
+    fun startMove(offset: Offset)
+    fun updateMove(offset: Offset)
+    fun endMove()
+
+    suspend fun addLayer(layer: LayerModel): Long
+    suspend fun deleteLayer(layer: LayerModel)
+    suspend fun updateLayer(layer: LayerModel, cache: ImageBitmap?)
+    suspend fun updateProject()
 }
 
 class DrawingController(
-    private val projectRepo: ProjectRepository,
+    // private val projectRepo: ProjectRepository,
     private val provider: DrawProvider,
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default
@@ -252,7 +265,7 @@ class DrawingController(
         )
 
         scope.launch {
-            val id = projectRepo.insertLayer(newLayer.toEntity())
+            val id = provider.addLayer(newLayer)
 
             scope.launch(Dispatchers.Main) {
                 val newState = state.value.copy(
@@ -297,7 +310,7 @@ class DrawingController(
         updateUndoRedo()
 
         scope.launch {
-            projectRepo.deleteLayerById(deletedLayer.id)
+            provider.deleteLayer(deletedLayer)
         }
     }
 
@@ -339,21 +352,9 @@ class DrawingController(
 
     private fun updateLayer(layer: LayerModel, cache: ImageBitmap?) {
         scope.launch(dispatcher) {
-            projectRepo.updateLayer(layer.toEntity().copy(
-                pixels = imageBitmapByteArray(cache ?: return@launch, ImageFormat.PNG),
-                width = cache.width,
-                height = cache.height
-            ))
+            provider.updateLayer(layer, cache)
 
-            projectRepo.updateProject(
-                projectRepo.getProjectById(currentFrame.projectId).copy(
-                    lastModified = Clock.System.now().toEpochMilliseconds(),
-                    thumb = imageBitmapByteArray(
-                        getCombinedImageBitmap() ?:
-                        return@launch, ImageFormat.PNG
-                    )
-                )
-            )
+            provider.updateProject()
         }
     }
 
@@ -537,6 +538,12 @@ class DrawingController(
         selectLayer(state.value.currentLayerIndex)
         updateLayer(currentLayer, layerBitmap)
     }
+
+    fun clearUndoRedoStack() {
+        _undoStack.clear()
+        _redoStack.clear()
+        updateUndoRedo()
+    }
 }
 
 // ViewModel for the drawing screen
@@ -557,8 +564,7 @@ class DrawViewModel(
     override val selectionState: SelectionState get() = _selectionState
 
     val drawingController = DrawingController(
-        projectRepo,
-        this,
+        provider = this,
         viewModelScope,
         dispatcher
     )
@@ -623,6 +629,20 @@ class DrawViewModel(
         }
     }
 
+    override suspend fun updateProject() {
+        val project = _project.value ?: return
+
+        projectRepo.updateProject(
+            projectRepo.getProjectById(project.id).copy(
+                lastModified = Clock.System.now().toEpochMilliseconds(),
+                thumb = imageBitmapByteArray(
+                    drawingController.getCombinedImageBitmap() ?: return,
+                    ImageFormat.PNG
+                )
+            )
+        )
+    }
+
     fun setBrush(brush: BrushData) {
         applySelection()
         if (brush.isShape) {
@@ -639,7 +659,7 @@ class DrawViewModel(
         _currentTool.value = tool
     }
 
-    fun setColor(color: Color) {
+    override fun setColor(color: Color) {
         applySelection()
         _currentColor.value = color
     }
@@ -649,12 +669,12 @@ class DrawViewModel(
         _brushSize.value = size
     }
 
-    fun undo() {
+    override fun undo() {
         endSelection()
         drawingController.undo()
     }
 
-    fun redo() {
+    override fun redo() {
         applySelection()
         drawingController.redo()
     }
@@ -664,9 +684,17 @@ class DrawViewModel(
         drawingController.addLayer(name)
     }
 
+    override suspend fun addLayer(layer: LayerModel): Long {
+        return projectRepo.insertLayer(layer.toEntity())
+    }
+
     fun deleteLayer(index: Int) {
         applySelection()
         drawingController.deleteLayer(index)
+    }
+
+    override suspend fun deleteLayer(layer: LayerModel) {
+        projectRepo.deleteLayerById(layer.id)
     }
 
     fun selectLayer(index: Int) {
@@ -689,6 +717,14 @@ class DrawViewModel(
         drawingController.changeLayerOpacity(index, opacity)
     }
 
+    override suspend fun updateLayer(layer: LayerModel, cache: ImageBitmap?) {
+        projectRepo.updateLayer(layer.toEntity().copy(
+            pixels = imageBitmapByteArray(cache ?: return, ImageFormat.PNG),
+            width = cache.width,
+            height = cache.height
+        ))
+    }
+
     override fun updateCurrentTool(tool: Tool) {
         applySelection()
         _currentTool.value = tool
@@ -696,14 +732,14 @@ class DrawViewModel(
 
     // Layer movement functions
 
-    fun startMove(offset: Offset) {
+    override fun startMove(offset: Offset) {
         val currentTool = _currentTool.value
         if (currentTool is Tool.Drag) {
             _startPoint.value = offset
         }
     }
 
-    fun updateMove(offset: Offset) {
+    override fun updateMove(offset: Offset) {
         val currentTool = _currentTool.value
         if (currentTool is Tool.Drag && _startPoint.value != Offset.Zero) {
             _endPoint.value = offset
@@ -716,7 +752,7 @@ class DrawViewModel(
         }
     }
 
-    fun endMove() {
+    override fun endMove() {
         val currentTool = _currentTool.value
         if (currentTool is Tool.Drag) {
             _startPoint.value = Offset.Zero
@@ -868,8 +904,9 @@ class DrawViewModel(
             )
 
             val state = drawingController.state.value
+            val size = drawingController.canvasSize.value
             drawingController.state.value = state.copy(
-                caches = state.caches + (state.currentLayer.id to ImageBitmap(width, height)),
+                caches = state.caches + (state.currentLayer.id to ImageBitmap(size.width.toInt(), size.height.toInt())),
                 dirtyLayers = state.dirtyLayers + state.currentLayer.id.toInt()
             )
             drawingController.isDirty.value = true

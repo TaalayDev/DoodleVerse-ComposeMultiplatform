@@ -31,17 +31,22 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.withSave
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.core.SelectionController
 import io.github.taalaydev.doodleverse.core.SelectionHitTestResult
+import io.github.taalaydev.doodleverse.core.SelectionState
 import io.github.taalaydev.doodleverse.core.Tool
+import io.github.taalaydev.doodleverse.core.copy
 import io.github.taalaydev.doodleverse.core.getTransformedBounds
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.core.handleDrawing
 import io.github.taalaydev.doodleverse.core.hitTest
+import io.github.taalaydev.doodleverse.core.resize
 import io.github.taalaydev.doodleverse.data.models.PointModel
 import io.github.taalaydev.doodleverse.getColorFromBitmap
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawProvider
@@ -70,6 +75,7 @@ fun DrawCanvas(
     initialPath: DrawingPath? = null,
     controller: DrawingController,
     onColorPicked: (Color) -> Unit = {},
+    highlightedBackgroundImage: ImageBitmap? = null,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -190,7 +196,6 @@ fun DrawCanvas(
                         )
                     }
                 }
-                .background(Color.White)
         ) {
             if (savedSize.width < size.width || savedSize.height < size.height) {
                 savedSize = size
@@ -229,6 +234,39 @@ fun DrawCanvas(
                     replacementColor,
                 )
                 drawState.value = DrawState.Idle
+                controller.addState(
+                    DrawingPath(
+                        path = Path(),
+                        brush = currentBrush,
+                        color = paint.color,
+                        size = paint.strokeWidth,
+                        startPoint = currentPosition,
+                        endPoint = currentPosition,
+                        points = mutableListOf(
+                            PointModel(
+                                x = currentPosition.x,
+                                y = currentPosition.y
+                            )
+                        ),
+                    ),
+                    bitmap!!
+                )
+            }
+
+            if (highlightedBackgroundImage != null) {
+                drawImage(
+                    image = highlightedBackgroundImage,
+                    srcOffset = IntOffset(0, 0),
+                    srcSize = IntSize(
+                        highlightedBackgroundImage.width,
+                        highlightedBackgroundImage.height
+                    ),
+                    dstSize = IntSize(
+                        size.width.toInt(),
+                        size.height.toInt()
+                    ),
+                    colorFilter = ColorFilter.tint(Color(0x80FF000000))
+                )
             }
 
             if (tool.isEyedropper && drawState.value != DrawState.Idle) {
@@ -302,12 +340,7 @@ fun DrawCanvas(
                         val lerpY = lerp(prevPosition.y, currentPosition.y, 0.5f)
 
                         drawingPath?.endPoint = Offset(lerpX, lerpY)
-                        drawingPath?.points?.add(
-                            PointModel(
-                                x = lerpX,
-                                y = lerpY
-                            )
-                        )
+                        drawingPath?.points?.add(PointModel(x = lerpX, y = lerpY))
 
                         drawingPath?.path?.quadraticBezierTo(
                             prevPosition.x,
@@ -317,18 +350,20 @@ fun DrawCanvas(
                         )
 
                         if (currentBrush.isShape) {
-                            shapeCanvas?.drawRect(
-                                Rect(Offset.Zero, canvasSize),
-                                Paint().apply {
-                                    blendMode = BlendMode.Clear
-                                }
-                            )
-                            DrawRenderer.drawPath(
-                                shapeCanvas!!,
-                                drawingPath!!,
-                                paint,
-                                size
-                            )
+                            shapeCanvas?.let {
+                                it.drawRect(
+                                    Rect(Offset.Zero, canvasSize),
+                                    Paint().apply {
+                                        blendMode = BlendMode.Clear
+                                    }
+                                )
+                                DrawRenderer.drawPath(
+                                    it,
+                                    drawingPath!!,
+                                    paint,
+                                    size
+                                )
+                            }
                         } else if (brushImage != null) {
                             DrawRenderer.drawBrushStampsBetweenPoints(
                                 imageCanvas!!,
@@ -356,12 +391,45 @@ fun DrawCanvas(
                         currentPosition = Offset.Zero
                         prevPosition = currentPosition
                         drawState.value = DrawState.Idle
-                        if (currentBrush.isShape) {
-                            imageCanvas?.drawImage(shapeBitmap!!, Offset.Zero, paint = Paint())
+                        if (currentBrush.isShape && shapeBitmap != null) {
+                            // imageCanvas?.drawImage(shapeBitmap!!, Offset.Zero, paint = Paint())
+
+                            // Calculate the bounds of the shape
+                            val points = drawingPath?.points ?: emptyList()
+                            val minX = points.minOfOrNull { it.x } ?: 0f
+                            val minY = points.minOfOrNull { it.y } ?: 0f
+                            val maxX = points.maxOfOrNull { it.x } ?: 0f
+                            val maxY = points.maxOfOrNull { it.y } ?: 0f
+                            val shapeBounds = Rect(
+                                Offset(minX, minY) - Offset(brushSize, brushSize),
+                                Offset(maxX, maxY) + Offset(brushSize, brushSize)
+                            )
+
+                            // Copy the shape bitmap
+                            val shapeCopy = shapeBitmap!!.copy()
+                            val shapeBitmapCopy = ImageBitmap(canvasWidth, canvasHeight)
+                            val shapeCanvasCopy = Canvas(shapeBitmapCopy)
+                            shapeCanvasCopy.drawImage(
+                                shapeCopy,
+                                topLeftOffset = -shapeBounds.topLeft,
+                                paint = Paint()
+                            )
+
+                            // Set the selection state
+                            val selectionState = SelectionState(
+                                bounds = shapeBounds,
+                                originalBitmap = shapeBitmapCopy,
+                                transformedBitmap = shapeBitmapCopy,
+                                offset = Offset.Zero,
+                                isActive = true
+                            )
+                            provider.updateSelection(selectionState)
+
                             shapeBitmap = null
                             shapeCanvas = null
+                        } else {
+                            controller.addState(drawingPath!!, bitmap!!)
                         }
-                        controller.addState(drawingPath!!, bitmap!!)
 
                         drawingPath = null
                     }
@@ -414,7 +482,7 @@ fun DrawCanvas(
             }
         }
 
-        if (tool is Tool.Selection && provider.selectionState.isActive) {
+        if (provider.selectionState.isActive) {
             SelectionOverlay(
                 state = provider.selectionState,
                 onTransformStart = { transform, point ->

@@ -13,6 +13,7 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -43,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -92,10 +94,12 @@ import io.github.taalaydev.doodleverse.ui.components.CircularFloatingActionMenu
 import io.github.taalaydev.doodleverse.ui.components.ColorPalettePanel
 import io.github.taalaydev.doodleverse.ui.components.ColorPicker
 import io.github.taalaydev.doodleverse.ui.components.DraggableSlider
+import io.github.taalaydev.doodleverse.ui.components.DrawBox
 import io.github.taalaydev.doodleverse.ui.components.DrawCanvas
 import io.github.taalaydev.doodleverse.ui.components.LayersPanel
 import io.github.taalaydev.doodleverse.ui.components.NewProjectDialog
 import io.github.taalaydev.doodleverse.ui.components.SelectionOverlay
+import io.github.taalaydev.doodleverse.ui.components.StyledDropdownMenu
 import io.github.vinceglb.filekit.core.FileKit
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
@@ -167,8 +171,6 @@ private fun DrawScreenBody(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
-    val focusRequester = remember { FocusRequester() }
-
     val brushSize by viewModel.brushSize.collectAsStateWithLifecycle()
     val currentColor by viewModel.currentColor.collectAsStateWithLifecycle()
     val currentTool by viewModel.currentTool.collectAsStateWithLifecycle()
@@ -177,7 +179,9 @@ private fun DrawScreenBody(
     val canUndo by viewModel.canUndo.collectAsStateWithLifecycle()
     val canRedo by viewModel.canRedo.collectAsStateWithLifecycle()
 
-    var dragState by remember { mutableStateOf(DragState()) }
+    val dragState = remember { mutableStateOf(DragState()) }
+
+    var menuOpen by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
 
@@ -191,10 +195,6 @@ private fun DrawScreenBody(
     val isMobile = when (size.widthSizeClass) {
         WindowWidthSizeClass.Compact -> true
         else -> false
-    }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
     }
 
     Scaffold(
@@ -216,25 +216,6 @@ private fun DrawScreenBody(
                 },
                 title = {},
                 actions = {
-                    IconButton(
-                        onClick = {
-                            scope.launch {
-                                val result = FileKit.pickFile(PickerType.Image, mode = PickerMode.Single)
-                                if (result != null) {
-                                    val bytes = result.readBytes()
-                                    val bitmap = imageBitmapFromByteArray(bytes, 0, 0)
-
-                                    viewModel.importImage(bytes, bitmap.width, bitmap.height)
-                                }
-                            }
-                        }
-                    ) {
-                        Icon(
-                            Lucide.ImagePlus,
-                            contentDescription = "Import Image",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
                     IconButton(onClick = {
                         viewModel.undo()
                     }) {
@@ -255,15 +236,97 @@ private fun DrawScreenBody(
                             modifier = Modifier.size(18.dp)
                         )
                     }
+
                     IconButton(
                         onClick = {
-                            viewModel.saveAsPng()
+                            menuOpen = true
                         }
                     ) {
                         Icon(
                             Lucide.Save,
                             contentDescription = "Save",
                             modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = menuOpen,
+                        onDismissRequest = {
+                            menuOpen = false
+                        },
+                        modifier = Modifier
+                            .width(IntrinsicSize.Max)
+                            .heightIn(max = 200.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surface,
+                                RoundedCornerShape(8.dp)
+                            )
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Lucide.Save,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            "Save Image",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                viewModel.saveAsPng()
+                                menuOpen = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Lucide.ImagePlus,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            "Import Image",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                menuOpen = false
+                                scope.launch {
+                                    val result = FileKit.pickFile(PickerType.Image, mode = PickerMode.Single)
+                                    if (result != null) {
+                                        val bytes = result.readBytes()
+                                        val bitmap = imageBitmapFromByteArray(bytes, 0, 0)
+
+                                        viewModel.importImage(bytes, bitmap.width, bitmap.height)
+                                    }
+                                }
+                            }
                         )
                     }
                 }
@@ -283,145 +346,21 @@ private fun DrawScreenBody(
                     },
             ) {
                 Column(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().clipToBounds(),
                     verticalArrangement = Arrangement.SpaceBetween,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    var oldTool by remember { mutableStateOf<Tool?>(null) }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .graphicsLayer {
-                                scaleX = dragState.zoom
-                                scaleY = dragState.zoom
-                                translationX = dragState.draggedTo.x
-                                translationY = dragState.draggedTo.y
-                                rotationZ = dragState.rotation
-                            }
-                            .padding(10.dp)
-                            .focusRequester(focusRequester)
-                            .focusable()
-                            .onPreviewKeyEvent { event ->
-                                if (event.type == KeyEventType.KeyDown) {
-                                    val isControlPressed = event.isCtrlPressed || event.isMetaPressed
-                                    val isShiftPressed = event.isShiftPressed
-                                    val isSpacePressed = event.key == Key.Spacebar
-
-                                    when {
-                                        isControlPressed && !isShiftPressed && event.key == Key.Z -> {
-                                            viewModel.undo()
-                                            true
-                                        }
-                                        isControlPressed && isShiftPressed && event.key == Key.Z -> {
-                                            viewModel.redo()
-                                            true
-                                        }
-                                        isControlPressed && event.key == Key.B -> {
-                                            true
-                                        }
-                                        isControlPressed && (event.key == Key.Plus || event.key == Key.Equals) -> {
-                                            dragState = dragState.copy(
-                                                zoom = (dragState.zoom * 1.1f).coerceAtMost(5f)
-                                            )
-                                            true
-                                        }
-                                        isControlPressed && event.key == Key.Minus -> {
-                                            dragState = dragState.copy(
-                                                zoom = (dragState.zoom / 1.1f).coerceAtLeast(0.2f)
-                                            )
-                                            true
-                                        }
-                                        isSpacePressed -> {
-                                            if (oldTool == null) {
-                                                oldTool = currentTool
-                                                viewModel.setTool(Tool.Drag)
-                                            }
-                                            true
-                                        }
-                                        else -> {
-                                            if (oldTool != null) {
-                                                viewModel.setTool(oldTool!!)
-                                                oldTool = null
-                                            }
-                                            false
-                                        }
-                                    }
-                                } else {
-                                    false
-                                }
-                            }
-                            .pointerInput(currentTool, isMobile) {
-                                if (currentTool == Tool.Drag) {
-                                    return@pointerInput detectDragGestures(
-                                        onDragStart = { offset ->
-                                            viewModel.startMove(offset)
-                                        },
-                                        onDrag = { change, _ ->
-                                            viewModel.updateMove(change.position)
-                                        },
-                                        onDragEnd = {
-                                            viewModel.endMove()
-                                        }
-                                    )
-                                }
-                                if (!isMobile) {
-                                    return@pointerInput awaitEachGesture {
-                                        val event = awaitPointerEvent()
-                                        if (event.keyboardModifiers.isCtrlPressed || event.keyboardModifiers.isMetaPressed) {
-                                            val scrollY = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
-                                            val scrollX = event.changes.firstOrNull()?.scrollDelta?.x ?: 0f
-
-                                            if (scrollY != 0f || scrollX != 0f) {
-                                                val sensitivity = 10f
-                                                dragState = dragState.copy(
-                                                    draggedTo = dragState.draggedTo.copy(
-                                                        y = dragState.draggedTo.y - scrollY * sensitivity,
-                                                        x = dragState.draggedTo.x - scrollX * sensitivity
-                                                    )
-                                                )
-                                            }
-                                        } else {
-                                            val scrollDelta =
-                                                event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
-                                            if (scrollDelta != 0f) {
-                                                val sensitivity = 0.01f
-                                                val zoomChange = 1f + (scrollDelta * sensitivity)
-                                                dragState = dragState.copy(
-                                                    zoom = (dragState.zoom * zoomChange).coerceIn(
-                                                        0.5f,
-                                                        5f
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                                detectTransformGestures { _, pan, zoom, rotation ->
-                                    dragState = dragState.copy(
-                                        zoom = (dragState.zoom * zoom).coerceIn(0.5f, 5f),
-                                        draggedTo = dragState.draggedTo + pan,
-                                        rotation = dragState.rotation + rotation
-                                    )
-                                }
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        DrawCanvas(
-                            provider = viewModel,
-                            currentBrush = currentBrush,
-                            currentColor = currentColor,
-                            brushSize = brushSize,
-                            tool = currentTool,
-                            gestureEnabled = !currentTool.isZoom && !currentTool.isDrag,
-                            controller = viewModel.drawingController,
-                            onColorPicked = { color ->
-                                viewModel.setColor(color)
-                            },
-                            modifier = Modifier
-                                .aspectRatio(projectModel.aspectRatioValue),
-                        )
-                    }
+                    DrawBox(
+                        drawProvider = viewModel,
+                        drawController = viewModel.drawingController,
+                        dragState = dragState,
+                        brushSize = brushSize,
+                        currentColor = currentColor,
+                        currentTool = currentTool,
+                        currentBrush = currentBrush,
+                        isMobile = isMobile,
+                        aspectRatio = projectModel.aspectRatioValue,
+                    )
 
                     DrawControls(
                         viewModel = viewModel,
@@ -485,13 +424,13 @@ private fun DrawScreenBody(
                                     val y = offset.y.coerceIn(0f, sliderHeightPx - thumbHeightPx)
                                     val normalizedPosition = 1f - y / (sliderHeightPx - thumbHeightPx)
                                     val newZoom = minZoom + normalizedPosition * (maxZoom - minZoom)
-                                    dragState = dragState.copy(zoom = newZoom)
+                                    dragState.value = dragState.value.copy(zoom = newZoom)
                                 }
                             }
                     ) {
                         // Map zoom to slider position
-                        val sliderPosition = remember(dragState.zoom, sliderHeightPx) {
-                            val normalizedZoom = (dragState.zoom - minZoom) / (maxZoom - minZoom)
+                        val sliderPosition = remember(dragState.value.zoom, sliderHeightPx) {
+                            val normalizedZoom = (dragState.value.zoom - minZoom) / (maxZoom - minZoom)
                             (sliderHeightPx - thumbHeightPx) * (1 - normalizedZoom)
                         }
 
@@ -509,7 +448,7 @@ private fun DrawScreenBody(
                                             .coerceIn(0f, sliderHeightPx - thumbHeightPx)
                                         val normalizedPosition = 1f - newSliderPosition / (sliderHeightPx - thumbHeightPx)
                                         val newZoom = minZoom + normalizedPosition * (maxZoom - minZoom)
-                                        dragState = dragState.copy(zoom = newZoom)
+                                        dragState.value = dragState.value.copy(zoom = newZoom)
                                     }
                                 )
                         )

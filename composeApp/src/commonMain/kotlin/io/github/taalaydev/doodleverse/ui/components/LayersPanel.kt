@@ -71,8 +71,6 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.random.Random
 
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LayersPanel(
     drawViewModel: DrawViewModel,
