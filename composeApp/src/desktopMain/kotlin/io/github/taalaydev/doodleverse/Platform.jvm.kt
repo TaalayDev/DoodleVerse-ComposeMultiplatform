@@ -92,3 +92,5 @@ actual fun getColorFromBitmap(bitmap: ImageBitmap, x: Int, y: Int): Int? {
     val skiaBitmap = bitmap.asSkiaBitmap()
     return skiaBitmap.getColor(x, y)
 }
+
+actual fun getPlatformType(): PlatformType = PlatformType.DESKTOP

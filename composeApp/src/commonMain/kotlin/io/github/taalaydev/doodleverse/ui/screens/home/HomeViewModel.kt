@@ -9,6 +9,7 @@ import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.toEntity
 import io.github.taalaydev.doodleverse.data.models.toModel
+import io.github.taalaydev.doodleverse.data.models.AnimationStateModel
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,14 +34,21 @@ class HomeViewModel(
         val project = ProjectModel(
             id = 0,
             name = name,
-            frames = emptyList(),
+            animationStates = emptyList(),
             createdAt = Clock.System.now().toEpochMilliseconds(),
             lastModified = Clock.System.now().toEpochMilliseconds(),
             aspectRatio = Size(width, height),
         )
+        val animationState = AnimationStateModel(
+            id = 0,
+            name = "Animation 1",
+            duration = 1000,
+            frames = emptyList(),
+            projectId = 0,
+        )
         val frame = FrameModel(
             id = 0,
-            projectId = 0,
+            animationId = 0,
             name = "Frame 1",
             layers = emptyList(),
         )
@@ -56,15 +64,23 @@ class HomeViewModel(
         )
 
         val projectId = repository.insertProject(project.toEntity())
-        val frameId = repository.insertFrame(frame.copy(projectId = projectId).toEntity())
+        val animationStateId = repository.insertAnimationState(animationState.copy(projectId = projectId).toEntity())
+        val frameId = repository.insertFrame(frame.copy(animationId = animationStateId).toEntity())
         val layerId = repository.insertLayer(layer.copy(frameId = frameId).toEntity())
 
         return project.copy(
             id = projectId,
-            frames = listOf(
-                frame.copy(
-                    id = frameId,
-                    layers = listOf(layer.copy(id = layerId))
+            animationStates = listOf(
+                animationState.copy(
+                    id = animationStateId,
+                    frames = listOf(
+                        frame.copy(
+                            id = frameId,
+                            layers = listOf(
+                                layer.copy(id = layerId)
+                            )
+                        )
+                    )
                 )
             )
         )

@@ -49,6 +49,7 @@ import io.github.taalaydev.doodleverse.core.hitTest
 import io.github.taalaydev.doodleverse.core.resize
 import io.github.taalaydev.doodleverse.data.models.PointModel
 import io.github.taalaydev.doodleverse.getColorFromBitmap
+import io.github.taalaydev.doodleverse.getPlatformType
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawProvider
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawingController
 import io.github.taalaydev.doodleverse.ui.screens.draw.currentLayer
@@ -498,7 +499,8 @@ fun DrawCanvas(
                 onTapOutside = {
                     provider.applySelection()
                 },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                isMobile = getPlatformType().isAndroid || getPlatformType().isIos
             )
         }
     }

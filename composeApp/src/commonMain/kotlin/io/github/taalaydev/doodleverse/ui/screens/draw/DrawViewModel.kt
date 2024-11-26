@@ -33,6 +33,7 @@ import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.FrameModel
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
+import io.github.taalaydev.doodleverse.data.models.AnimationStateModel
 import io.github.taalaydev.doodleverse.data.models.ToolsData
 import io.github.taalaydev.doodleverse.data.models.toEntity
 import io.github.taalaydev.doodleverse.data.models.toModel
@@ -62,14 +63,37 @@ data class DrawState(
     val dirtyLayers: List<Int> = emptyList(),
     val caches: Map<Long, ImageBitmap> = emptyMap(),
     val currentLayerIndex: Int = 0,
-    val frames: List<FrameModel> = emptyList(),
+    val states: List<AnimationStateModel> = emptyList(),
+    val currentStateIndex: Int = 0,
     val currentFrameIndex: Int = 0
 )
 
+val DrawState.frames: List<FrameModel> get() = states[currentStateIndex].frames
 val DrawState.currentLayer: LayerModel get() = layers[currentLayerIndex]
 fun DrawState.currentLayerImage(): ImageBitmap? = caches[currentLayer.id]
 val DrawState.layers: List<LayerModel> get() = frames[currentFrameIndex].layers
 val DrawState.currentFrame: FrameModel get() = frames[currentFrameIndex]
+
+fun DrawState.copyFrames(
+    frames: List<FrameModel> = this.frames,
+    caches: Map<Long, ImageBitmap> = this.caches,
+    currentLayerIndex: Int = this.currentLayerIndex,
+): DrawState {
+    return DrawState(
+        states = states.mapIndexed { index, state ->
+            if (index == currentStateIndex) {
+                state.copy(frames = frames)
+            } else {
+                state
+            }
+        },
+        dirtyLayers = dirtyLayers,
+        caches = caches,
+        currentLayerIndex = currentLayerIndex,
+        currentStateIndex = currentStateIndex,
+        currentFrameIndex = currentFrameIndex
+    )
+}
 
 interface DrawProvider {
     val selectionState: SelectionState
@@ -84,6 +108,7 @@ interface DrawProvider {
     fun applySelection()
     fun startTransform(transform: SelectionTransform, point: Offset)
     fun updateSelectionTransform(pan: Offset)
+    fun updateSelectionTransform(centroid: Offset, pan: Offset, zoom: Float, rotation: Float)
     fun startMove(offset: Offset)
     fun updateMove(offset: Offset)
     fun endMove()
@@ -106,21 +131,29 @@ class DrawingController(
     private val _redoStack = mutableListOf<DrawState>()
 
     var state = mutableStateOf(DrawState(
-        frames = listOf(
-            FrameModel(
-                id = 1L,
+        states = listOf(
+            AnimationStateModel(
+                id = 0,
+                name = "Animation 1",
+                duration = 1000,
                 projectId = 0,
-                name = "Frame 1",
-                layers = listOf(
-                    LayerModel(
+                frames = listOf(
+                    FrameModel(
                         id = 1L,
-                        frameId = 1L,
-                        name = "Layer 1",
-                        paths = emptyList()
+                        animationId = 0,
+                        name = "Frame 1",
+                        layers = listOf(
+                            LayerModel(
+                                id = 1L,
+                                frameId = 1L,
+                                name = "Layer 1",
+                                paths = emptyList()
+                            )
+                        )
                     )
                 )
             )
-        )
+        ),
     ))
     private val layers: List<LayerModel> get() = state.value.layers
     private val currentLayer: LayerModel get() = layers[state.value.currentLayerIndex]
@@ -164,7 +197,7 @@ class DrawingController(
     }
 
     fun addState(path: DrawingPath, image: ImageBitmap) {
-        val newState = state.value.copy(
+        val newState = state.value.copyFrames(
             frames = state.value.frames.mapIndexed { index, frame ->
                 if (index == state.value.currentFrameIndex) {
                     frame.copy(
@@ -223,7 +256,7 @@ class DrawingController(
     }
 
     fun loadFrames(frames: List<FrameModel>) {
-        val newState = state.value.copy(
+        val newState = state.value.copyFrames(
             frames = frames.map { frame ->
                 frame.copy(
                     layers = if (frame.layers.isNotEmpty()) {
@@ -268,7 +301,7 @@ class DrawingController(
             val id = provider.addLayer(newLayer)
 
             scope.launch(Dispatchers.Main) {
-                val newState = state.value.copy(
+                val newState = state.value.copyFrames(
                     frames = state.value.frames.mapIndexed { index, frame ->
                         if (index == state.value.currentFrameIndex) {
                             frame.copy(layers = layers + newLayer.copy(id = id))
@@ -292,7 +325,7 @@ class DrawingController(
     fun deleteLayer(index: Int) {
         val newLayers = layers.toMutableList()
         val deletedLayer = newLayers.removeAt(index)
-        val newState = state.value.copy(
+        val newState = state.value.copyFrames(
             frames = state.value.frames.mapIndexed { index, frame ->
                 if (index == state.value.currentFrameIndex) {
                     frame.copy(layers = newLayers)
@@ -330,7 +363,7 @@ class DrawingController(
     fun layerVisibilityChanged(index: Int, isVisible: Boolean) {
         val newLayers = layers.toMutableList()
         newLayers[index] = newLayers[index].copy(isVisible = isVisible)
-        val newState = state.value.copy(
+        val newState = state.value.copyFrames(
             frames = state.value.frames.mapIndexed { index, frame ->
                 if (index == state.value.currentFrameIndex) {
                     frame.copy(
@@ -363,7 +396,7 @@ class DrawingController(
         val layer = newLayers.removeAt(from)
         newLayers.add(to, layer)
 
-        val newState = state.value.copy(
+        val newState = state.value.copyFrames(
             frames = state.value.frames.mapIndexed { index, frame ->
                 if (index == state.value.currentFrameIndex) {
                     frame.copy(layers = newLayers)
@@ -379,7 +412,7 @@ class DrawingController(
     fun changeLayerOpacity(index: Int, opacity: Float) {
         val newLayers = state.value.layers.toMutableList()
         newLayers[index] = newLayers[index].copy(opacity = opacity.toDouble())
-        val newState = state.value.copy(
+        val newState = state.value.copyFrames(
             frames = state.value.frames.mapIndexed { index, frame ->
                 if (index == state.value.currentFrameIndex) {
                     frame.copy(layers = newLayers)
@@ -627,7 +660,11 @@ class DrawViewModel(
                     drawingController.getCombinedImageBitmap() ?:
                     return@launch, ImageFormat.PNG
                 ),
-                frames = state.value.frames.map { it.toEntity() },
+                animationStates = state.value.states.map {
+                    it.toEntity().copy(
+                        frames = state.value.frames.map { it.toEntity() }
+                    )
+                }
             ))
         }
     }
@@ -848,6 +885,17 @@ class DrawViewModel(
             }
             SelectionTransform.None -> state
         }
+    }
+
+    override fun updateSelectionTransform(centroid: Offset, pan: Offset, zoom: Float, rotation: Float) {
+        val state = _selectionState
+
+        // Apply transformations based on the current transform type
+        _selectionState = state.copy(
+            offset = state.offset + pan,
+            scale = (state.scale * zoom).coerceIn(0.1f, 5f),
+            rotation = state.rotation + rotation
+        )
     }
 
     override fun applySelection() {

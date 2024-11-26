@@ -4,12 +4,15 @@ import io.github.taalaydev.doodleverse.data.database.dao.DrawingPathDao
 import io.github.taalaydev.doodleverse.data.database.dao.LayerDao
 import io.github.taalaydev.doodleverse.data.database.dao.PointDao
 import io.github.taalaydev.doodleverse.data.database.dao.ProjectDao
+import io.github.taalaydev.doodleverse.database.dao.AnimationStateDao
 import io.github.taalaydev.doodleverse.database.dao.FrameDao
+import io.github.taalaydev.doodleverse.database.entities.AnimationStateEntity
 import io.github.taalaydev.doodleverse.database.entities.DrawingPathEntity
 import io.github.taalaydev.doodleverse.database.entities.LayerEntity
 import io.github.taalaydev.doodleverse.database.entities.ProjectEntity
 import io.github.taalaydev.doodleverse.database.entities.FrameEntity
 import io.github.taalaydev.doodleverse.database.entities.PointEntity
+import io.github.taalaydev.doodleverse.shared.AnimationStateModel
 import io.github.taalaydev.doodleverse.shared.DrawingPathModel
 import io.github.taalaydev.doodleverse.shared.FrameModel
 import io.github.taalaydev.doodleverse.shared.LayerModel
@@ -21,6 +24,7 @@ import kotlinx.coroutines.flow.map
 
 internal class ProjectRepositoryImpl(
     private val projectDao: ProjectDao,
+    private val animationStateDao: AnimationStateDao,
     private val frameDao: FrameDao,
     private val layerDao: LayerDao,
     private val drawingPathDao: DrawingPathDao,
@@ -56,10 +60,44 @@ internal class ProjectRepositoryImpl(
         projectDao.deleteAllProjects()
     }
 
+    // Animation States
+
+    override suspend fun getAllAnimationStates(projectId: Long): List<AnimationStateModel> {
+        return animationStateDao.getAll(projectId).map {
+            it.toModel().copy(
+                frames = frameDao.getAllFrames(it.id).map { it.toModel() }
+            )
+        }
+    }
+
+    override suspend fun getAnimationStateById(id: Long): AnimationStateModel {
+        return animationStateDao.getById(id).toModel()
+    }
+
+    override suspend fun insertAnimationState(animationState: AnimationStateModel): Long {
+        return animationStateDao.insert(animationState.toEntity())
+    }
+
+    override suspend fun updateAnimationState(animationState: AnimationStateModel) {
+        animationStateDao.update(animationState.toEntity())
+    }
+
+    override suspend fun insertAnimationStates(animationStates: List<AnimationStateModel>) {
+        animationStateDao.insert(animationStates.map { it.toEntity() })
+    }
+
+    override suspend fun deleteAnimationStateById(id: Long) {
+        animationStateDao.deleteById(id)
+    }
+
+    override suspend fun deleteAllAnimationStates() {
+        animationStateDao.deleteAll()
+    }
+
     // Frames
 
-    override suspend fun getAllFrames(projectId: Long): List<FrameModel> {
-        return frameDao.getAllFrames(projectId).map {
+    override suspend fun getAllFrames(animationStateId: Long): List<FrameModel> {
+        return frameDao.getAllFrames(animationStateId).map {
             it.toModel().copy(
                 layers = layerDao.getAllLayers(it.id).map { it.toModel() }
             )
@@ -200,7 +238,7 @@ fun ProjectEntity.toModel(): ProjectModel {
         thumbnail = thumbnail,
         created = created,
         lastModified = lastModified,
-        frames = emptyList(),
+        animationStates = emptyList(),
         width = width,
         height = height,
         thumb = thumb,
@@ -220,10 +258,29 @@ fun ProjectModel.toEntity(): ProjectEntity {
     )
 }
 
+fun AnimationStateEntity.toModel(): AnimationStateModel {
+    return AnimationStateModel(
+        id = id,
+        name = name,
+        duration = duration,
+        frames = emptyList(),
+        projectId = projectId,
+    )
+}
+
+fun AnimationStateModel.toEntity(): AnimationStateEntity {
+    return AnimationStateEntity(
+        id = id,
+        name = name,
+        duration = duration,
+        projectId = projectId,
+    )
+}
+
 fun FrameEntity.toModel(): FrameModel {
     return FrameModel(
         id = id,
-        projectId = projectId,
+        animationId = animationId,
         name = name,
         order = order,
         layers = emptyList(),
@@ -233,7 +290,7 @@ fun FrameEntity.toModel(): FrameModel {
 fun FrameModel.toEntity(): FrameEntity {
     return FrameEntity(
         id = id,
-        projectId = projectId,
+        animationId = animationId,
         name = name,
         order = order,
     )

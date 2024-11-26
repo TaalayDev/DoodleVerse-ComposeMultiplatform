@@ -106,3 +106,5 @@ actual fun getColorFromBitmap(bitmap: ImageBitmap, x: Int, y: Int): Int? {
     val skiaBitmap = bitmap.asAndroidBitmap()
     return skiaBitmap.getPixel(x, y)
 }
+
+actual fun getPlatformType(): PlatformType = PlatformType.ANDROID

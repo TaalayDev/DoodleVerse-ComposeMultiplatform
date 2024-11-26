@@ -13,7 +13,7 @@ import platform.Foundation.NSUserDomainMask
 import platform.UIKit.UIDevice
 
 fun getDatabaseBuilder(): RoomDatabase.Builder<DoodleVerseDatabase> {
-    val dbFilePath = documentDirectory() + "/my_room.db"
+    val dbFilePath = documentDirectory() + "/my_room_1.db"
     return Room.databaseBuilder<DoodleVerseDatabase>(
         name = dbFilePath,
     )
@@ -28,6 +28,7 @@ fun getRepository(): ProjectRepository {
 
     return ProjectRepositoryImpl(
         projectDao = room.projectDao(),
+        animationStateDao = room.animationStateDao(),
         frameDao = room.frameDao(),
         layerDao = room.layerDao(),
         drawingPathDao = room.drawingPathDao(),

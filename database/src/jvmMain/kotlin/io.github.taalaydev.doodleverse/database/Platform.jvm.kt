@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import java.io.File
 
 fun getDatabaseBuilder(): RoomDatabase.Builder<DoodleVerseDatabase> {
-    val dbFile = File(System.getProperty("java.io.tmpdir"), "database_5.db")
+    val dbFile = File(System.getProperty("java.io.tmpdir"), "database_6.db")
     return Room.databaseBuilder<DoodleVerseDatabase>(
         name = dbFile.absolutePath,
     )
@@ -23,6 +23,7 @@ fun getRepository(): ProjectRepository {
 
     return ProjectRepositoryImpl(
         projectDao = room.projectDao(),
+        animationStateDao = room.animationStateDao(),
         frameDao = room.frameDao(),
         layerDao = room.layerDao(),
         drawingPathDao = room.drawingPathDao(),

@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -46,7 +47,9 @@ fun SelectionOverlay(
     onTransformStart: (SelectionTransform, Offset) -> Unit,
     onTransformDelta: (Offset) -> Unit,
     onTransformEnd: () -> Unit,
+    onTransform: ((centroid: Offset, pan: Offset, zoom: Float, rotation: Float) -> Unit) = { _, _, _, _ -> },
     onTapOutside: () -> Unit,
+    isMobile: Boolean,
     modifier: Modifier = Modifier
 ) {
     if (!state.isActive) return
@@ -138,7 +141,7 @@ fun SelectionOverlay(
                 .width(pxToDp(bounds.size.width.toInt()))
                 .height(pxToDp(bounds.size.height.toInt()))
                 .offset { IntOffset(bounds.left.toInt(), bounds.top.toInt()) }
-                .pointerInput(Unit) {
+                .pointerInput(Unit, isMobile) {
                     detectDragGestures(
                         onDragStart = { offset ->
                             onTransformStart(SelectionTransform.Move, offset)

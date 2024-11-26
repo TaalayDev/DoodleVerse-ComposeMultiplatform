@@ -267,6 +267,17 @@ class LessonDrawViewModel(
         }
     }
 
+    override fun updateSelectionTransform(centroid: Offset, pan: Offset, zoom: Float, rotation: Float) {
+        val state = _selectionState
+
+        // Apply transformations based on the current transform type
+        _selectionState = state.copy(
+            offset = state.offset + pan,
+            scale = (state.scale * zoom).coerceIn(0.1f, 5f),
+            rotation = state.rotation + rotation
+        )
+    }
+
     override fun applySelection() {
         if (_selectionState.isActive && _selectionState.transformedBitmap != null) {
             // Apply the transformed selection back to the layer

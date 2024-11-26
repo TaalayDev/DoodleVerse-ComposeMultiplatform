@@ -11,6 +11,7 @@ import io.github.taalaydev.doodleverse.imageBitmapByteArray
 import io.github.taalaydev.doodleverse.imageBitmapFromByteArray
 
 import io.github.taalaydev.doodleverse.shared.ProjectModel as ProjectData
+import io.github.taalaydev.doodleverse.shared.AnimationStateModel as AnimationStateData
 import io.github.taalaydev.doodleverse.shared.LayerModel as LayerData
 import io.github.taalaydev.doodleverse.shared.FrameModel as FrameData
 import io.github.taalaydev.doodleverse.shared.DrawingPathModel as DrawingPathData
@@ -19,7 +20,7 @@ import io.github.taalaydev.doodleverse.shared.PointModel as PointData
 data class ProjectModel(
     val id: Long,
     val name: String,
-    val frames: List<FrameModel>,
+    val animationStates: List<AnimationStateModel>,
     val cachedBitmap: ImageBitmap? = null,
     val createdAt: Long,
     val lastModified: Long,
@@ -28,16 +29,19 @@ data class ProjectModel(
 ) {
     val aspectRatioValue: Float
         get() = aspectRatio.width / aspectRatio.height
-
-    companion object {
-        // TODO: Used for demo purposes, remove later
-        var currentProject: ProjectModel? = null
-    }
 }
+
+data class AnimationStateModel(
+    val id: Long,
+    val name: String,
+    val duration: Long,
+    val frames: List<FrameModel>,
+    val projectId: Long,
+)
 
 data class FrameModel(
     val id: Long,
-    val projectId: Long,
+    val animationId: Long,
     val name: String,
     val order: Int = 0,
     val layers: List<LayerModel>,
@@ -63,7 +67,7 @@ fun ProjectModel.toEntity(): ProjectData {
         lastModified = lastModified,
         width = aspectRatio.width,
         height = aspectRatio.height,
-        frames = emptyList(),
+        animationStates = animationStates.map { it.toEntity() },
         thumb = if (cachedBitmap != null) imageBitmapByteArray(cachedBitmap, ImageFormat.PNG) else null,
     )
 }
@@ -72,7 +76,7 @@ fun ProjectData.toModel(): ProjectModel {
     return ProjectModel(
         id = id,
         name = name,
-        frames = frames.map { it.toModel() },
+        animationStates = animationStates.map { it.toModel() },
         cachedBitmap = if (thumb != null) imageBitmapFromByteArray(
             thumb!!,
             width.toInt(),
@@ -84,10 +88,30 @@ fun ProjectData.toModel(): ProjectModel {
     )
 }
 
+fun AnimationStateModel.toEntity(): AnimationStateData {
+    return AnimationStateData(
+        id = id,
+        name = name,
+        duration = duration,
+        frames = frames.map { it.toEntity() },
+        projectId = projectId,
+    )
+}
+
+fun AnimationStateData.toModel(): AnimationStateModel {
+    return AnimationStateModel(
+        id = id,
+        name = name,
+        duration = duration,
+        frames = frames.map { it.toModel() },
+        projectId = projectId,
+    )
+}
+
 fun FrameModel.toEntity(): FrameData {
     return FrameData(
         id = id,
-        projectId = projectId,
+        animationId = animationId,
         name = name,
         order = order,
         layers = layers.map { it.toEntity() },
@@ -97,7 +121,7 @@ fun FrameModel.toEntity(): FrameData {
 fun FrameData.toModel(): FrameModel {
     return FrameModel(
         id = id,
-        projectId = projectId,
+        animationId = animationId,
         name = name,
         order = order,
         layers = layers.map { it.toModel() },

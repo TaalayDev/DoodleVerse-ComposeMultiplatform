@@ -11,6 +11,14 @@ abstract class ProjectRepository {
     abstract suspend fun deleteProjectById(id: Long)
     abstract suspend fun deleteAllProjects()
 
+    abstract suspend fun getAllAnimationStates(projectId: Long): List<AnimationStateModel>
+    abstract suspend fun getAnimationStateById(id: Long): AnimationStateModel
+    abstract suspend fun insertAnimationState(animationState: AnimationStateModel): Long
+    abstract suspend fun updateAnimationState(animationState: AnimationStateModel)
+    abstract suspend fun insertAnimationStates(animationStates: List<AnimationStateModel>)
+    abstract suspend fun deleteAnimationStateById(id: Long)
+    abstract suspend fun deleteAllAnimationStates()
+
     abstract suspend fun getAllFrames(projectId: Long): List<FrameModel>
     abstract suspend fun getFrameById(id: Long): FrameModel
     abstract suspend fun insertFrame(frame: FrameModel): Long

@@ -21,6 +21,21 @@ interface Platform {
     fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {}
 }
 
+enum class PlatformType {
+    WEB, DESKTOP, ANDROID, IOS;
+
+    val isWeb: Boolean
+        get() = this == WEB
+    val isDesktop: Boolean
+        get() = this == DESKTOP
+    val isAndroid: Boolean
+        get() = this == ANDROID
+    val isIos: Boolean
+        get() = this == IOS
+}
+
+expect fun getPlatformType(): PlatformType
+
 enum class ImageFormat {
     PNG, JPG;
 

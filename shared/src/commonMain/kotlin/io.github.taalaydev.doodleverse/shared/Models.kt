@@ -6,15 +6,23 @@ data class ProjectModel(
     val thumbnail: String,
     val created: Long,
     val lastModified: Long,
-    val frames: List<FrameModel>,
+    val animationStates: List<AnimationStateModel>,
     val width: Float,
     val height: Float,
     val thumb: ByteArray?,
 )
 
+data class AnimationStateModel(
+    val id: Long,
+    val name: String,
+    val duration: Long,
+    val frames: List<FrameModel>,
+    val projectId: Long,
+)
+
 data class FrameModel(
     val id: Long,
-    val projectId: Long,
+    val animationId: Long,
     val name: String,
     val order: Int = 0,
     val layers: List<LayerModel>,

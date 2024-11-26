@@ -145,11 +145,19 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "io.github.taalaydev.doodleverse"
+            packageName = "DoodleVerse"
             packageVersion = "1.0.0"
 
+            macOS {
+                bundleID = "io.github.taalaydev.doodleverse"
+                // iconFile.set(project.file("icon.icns"))
+            }
+            windows {
+                // iconFile.set(project.file("icon.ico"))
+            }
             linux {
                 modules("jdk.security.auth")
+                // iconFile.set(project.file("icon.png"))
             }
         }
     }

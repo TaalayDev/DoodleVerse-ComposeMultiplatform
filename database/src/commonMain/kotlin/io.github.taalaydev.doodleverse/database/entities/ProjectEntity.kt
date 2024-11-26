@@ -19,12 +19,22 @@ data class ProjectEntity(
     val thumb: ByteArray?,
 )
 
+@Entity(tableName = "animation_states")
+data class AnimationStateEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long,
+    val name: String,
+    val duration: Long,
+    @ColumnInfo(name = "project_id")
+    val projectId: Long,
+)
+
 @Entity(tableName = "frames")
 data class FrameEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long,
-    @ColumnInfo(name = "project_id")
-    val projectId: Long,
+    @ColumnInfo(name = "animation_id")
+    val animationId: Long,
     val name: String,
     val order: Int = 0,
 )

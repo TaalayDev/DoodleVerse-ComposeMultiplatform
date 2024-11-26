@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FrameDao {
-    @Query("SELECT * FROM frames WHERE project_id = :projectId")
-    suspend fun getAllFrames(projectId: Long): List<FrameEntity>
+    @Query("SELECT * FROM frames WHERE animation_id = :animationId")
+    suspend fun getAllFrames(animationId: Long): List<FrameEntity>
 
     @Query("SELECT * FROM frames WHERE id = :id")
     suspend fun getFrameById(id: Long): FrameEntity
