@@ -11,6 +11,7 @@ import io.github.taalaydev.doodleverse.data.models.toEntity
 import io.github.taalaydev.doodleverse.data.models.toModel
 import io.github.taalaydev.doodleverse.data.models.AnimationStateModel
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +20,8 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
 class HomeViewModel(
-    private val repository: ProjectRepository
+    private val repository: ProjectRepository,
+    private val dispatcher: CoroutineDispatcher,
 ) : ViewModel() {
     private val _projects = MutableStateFlow<List<ProjectModel>>(emptyList())
     val projects: StateFlow<List<ProjectModel>> = _projects.asStateFlow()
@@ -84,5 +86,17 @@ class HomeViewModel(
                 )
             )
         )
+    }
+
+    fun deleteProject(project: ProjectModel) {
+        viewModelScope.launch(dispatcher) {
+            repository.deleteProjectById(project.id)
+        }
+    }
+
+    fun updateProject(project: ProjectModel) {
+        viewModelScope.launch(dispatcher) {
+            repository.updateProject(project.toEntity())
+        }
     }
 }

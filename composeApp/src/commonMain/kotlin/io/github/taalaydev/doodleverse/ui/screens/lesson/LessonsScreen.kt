@@ -29,7 +29,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LessonsScreen(
     navController: NavController,
@@ -67,9 +67,9 @@ fun LessonsScreen(
                 FilterChip(
                     selected = selectedCategory != null,
                     onClick = {
-                        if (selectedCategory != null) selectedCategory = null
+                        selectedCategory = null
                     },
-                    label = { Text(selectedCategory?.name ?: "All Categories") },
+                    label = { Text("All Categories") },
                     leadingIcon = {
                         Icon(
                             Lucide.BookOpen,
@@ -79,19 +79,20 @@ fun LessonsScreen(
                     }
                 )
 
-                // Difficulty filter
-                FilterChip(
-                    selected = selectedDifficulty != null,
-                    onClick = {
-                        if (selectedDifficulty != null) selectedDifficulty = null
-                    },
-                    label = { Text(selectedDifficulty?.name ?: "All Difficulties") }
-                )
+                for (category in LessonCategory.entries) {
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick = {
+                            selectedCategory = category
+                        },
+                        label = { Text(category.name) }
+                    )
+                }
             }
 
             // Lessons grid
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(300.dp),
+                columns = GridCells.Adaptive(250.dp),
                 contentPadding = PaddingValues(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),

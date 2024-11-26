@@ -72,7 +72,7 @@ fun ColumnScope.DrawBox(
     dragState: MutableState<DragState>,
     aspectRatio: Float,
     background: Color = Color.White,
-    referenceImage: Painter? = null,
+    referenceImage: ImageBitmap? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
@@ -206,17 +206,17 @@ fun ColumnScope.DrawBox(
                 .clip(RoundedCornerShape(16.dp))
         )
 
-        if (referenceImage != null) {
-            Image(
-                painter = referenceImage,
-                contentDescription = null,
-                contentScale = ContentScale.Inside,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer(alpha = 0.5f),
-                colorFilter = ColorFilter.tint(Color.Red)
-            )
-        }
+//        if (referenceImage != null) {
+//            Image(
+//                painter = referenceImage,
+//                contentDescription = null,
+//                contentScale = ContentScale.Inside,
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .graphicsLayer(alpha = 0.5f),
+//                colorFilter = ColorFilter.tint(Color.Red)
+//            )
+//        }
 
         DrawCanvas(
             provider = drawProvider,
@@ -230,6 +230,7 @@ fun ColumnScope.DrawBox(
                 drawProvider.setColor(color)
             },
             modifier = Modifier.aspectRatio(aspectRatio),
+            referenceImage = referenceImage,
         )
     }
 }

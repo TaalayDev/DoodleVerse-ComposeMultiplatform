@@ -49,6 +49,7 @@ import io.github.taalaydev.doodleverse.ui.components.DrawBox
 import io.github.taalaydev.doodleverse.ui.components.DrawState
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawControls
 import io.github.taalaydev.doodleverse.ui.screens.draw.ShapePickerSheet
+import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
@@ -241,7 +242,7 @@ fun LessonDetailScreen(
                         isMobile = !isExpandedWidth,
                         dragState = dragState,
                         aspectRatio = 1f,
-                        referenceImage = painterResource(lesson.parts[currentPage].image),
+                        referenceImage = imageResource(lesson.parts[currentPage].image),
                     )
                 }
 

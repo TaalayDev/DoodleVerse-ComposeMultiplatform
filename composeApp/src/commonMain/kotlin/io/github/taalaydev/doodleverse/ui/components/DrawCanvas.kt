@@ -76,7 +76,7 @@ fun DrawCanvas(
     initialPath: DrawingPath? = null,
     controller: DrawingController,
     onColorPicked: (Color) -> Unit = {},
-    highlightedBackgroundImage: ImageBitmap? = null,
+    referenceImage: ImageBitmap? = null,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -251,22 +251,6 @@ fun DrawCanvas(
                         ),
                     ),
                     bitmap!!
-                )
-            }
-
-            if (highlightedBackgroundImage != null) {
-                drawImage(
-                    image = highlightedBackgroundImage,
-                    srcOffset = IntOffset(0, 0),
-                    srcSize = IntSize(
-                        highlightedBackgroundImage.width,
-                        highlightedBackgroundImage.height
-                    ),
-                    dstSize = IntSize(
-                        size.width.toInt(),
-                        size.height.toInt()
-                    ),
-                    colorFilter = ColorFilter.tint(Color(0x80FF000000))
                 )
             }
 
@@ -481,6 +465,22 @@ fun DrawCanvas(
                 } else {
                     drawImage(state.caches[layer.id] ?: continue, alpha = layer.opacity.toFloat())
                 }
+            }
+
+            if (referenceImage != null) {
+                drawImage(
+                    image = referenceImage,
+                    srcOffset = IntOffset(0, 0),
+                    srcSize = IntSize(
+                        referenceImage.width,
+                        referenceImage.height
+                    ),
+                    dstSize = IntSize(
+                        size.width.toInt(),
+                        size.height.toInt()
+                    ),
+                    colorFilter = ColorFilter.tint(Color(0x80FF0000))
+                )
             }
         }
 

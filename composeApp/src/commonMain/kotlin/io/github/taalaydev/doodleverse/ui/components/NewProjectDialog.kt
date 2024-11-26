@@ -16,6 +16,8 @@ import androidx.compose.ui.window.DialogProperties
 import com.composables.icons.lucide.ArrowDownUp
 import com.composables.icons.lucide.ArrowRightLeft
 import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Pen
+import io.github.taalaydev.doodleverse.data.models.ProjectModel
 
 data class ProjectTemplate(
     val name: String,
@@ -160,6 +162,69 @@ fun NewProjectDialog(
                         enabled = projectName.isNotBlank() && width > 0 && height > 0
                     ) {
                         Text("Create")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditProjectDialog(
+    project: ProjectModel,
+    onDismissRequest: () -> Unit,
+    onConfirm: (String) -> Unit,
+    properties: DialogProperties = DialogProperties(),
+) {
+    var projectName by remember { mutableStateOf(project.name) }
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = properties,
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Edit Project",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = projectName,
+                    onValueChange = { projectName = it },
+                    label = { Text("Project Name") },
+                    leadingIcon = { Icon(Lucide.Pen, contentDescription = null) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismissRequest) {
+                        Text("Cancel")
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Button(
+                        onClick = { onConfirm(projectName) },
+                        enabled = projectName.isNotBlank() && projectName != project.name
+                    ) {
+                        Text("Save")
                     }
                 }
             }

@@ -35,6 +35,7 @@ import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.navigation.Destination
 import io.github.taalaydev.doodleverse.ui.components.ComposeIcons
+import io.github.taalaydev.doodleverse.ui.components.EditProjectDialog
 import io.github.taalaydev.doodleverse.ui.components.NewProjectDialog
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
@@ -44,7 +45,7 @@ import kotlinx.datetime.Clock
 fun HomeScreen(
     navController: NavController = rememberNavController(),
     platform: Platform,
-    viewModel: HomeViewModel = viewModel { HomeViewModel(platform.projectRepo) },
+    viewModel: HomeViewModel = viewModel { HomeViewModel(platform.projectRepo, platform.dispatcherIO) },
 ) {
     val scope = rememberCoroutineScope()
     val projects by viewModel.projects.collectAsStateWithLifecycle()
@@ -52,6 +53,7 @@ fun HomeScreen(
     val error by remember { mutableStateOf<String?>(null) }
 
     var showNewProjectDialog by remember { mutableStateOf(false) }
+    var projectToEdit by remember { mutableStateOf<ProjectModel?>(null) }
     var selectedTab by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
@@ -68,6 +70,23 @@ fun HomeScreen(
                     val project = viewModel.createProject(name, width, height)
                     navController.navigate(Destination.Drawing(project.id))
                 }
+            }
+        )
+    }
+
+    // Show edit dialog when projectToEdit is not null
+    projectToEdit?.let { project ->
+        EditProjectDialog(
+            project = project,
+            onDismissRequest = { projectToEdit = null },
+            onConfirm = { newName ->
+                scope.launch {
+                    viewModel.updateProject(project.copy(
+                        name = newName,
+                        lastModified = Clock.System.now().toEpochMilliseconds()
+                    ))
+                }
+                projectToEdit = null
             }
         )
     }
@@ -108,8 +127,12 @@ fun HomeScreen(
                 onProjectClick = {
                     navController.navigate(Destination.Drawing(it.id))
                 },
-                onDeleteProject = { /* Implement delete project */ },
-                onEditProject = { p, n -> /* Implement edit project */ },
+                onDeleteProject = {
+                    viewModel.deleteProject(it)
+                },
+                onEditProject = { project ->
+                    projectToEdit = project
+                },
                 modifier = Modifier.padding(padding)
             )
         }
@@ -133,7 +156,6 @@ private fun NavigationBanner(
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
@@ -142,7 +164,8 @@ private fun NavigationBanner(
                 NavigationItem(
                     item = item,
                     isSelected = selectedTab == index,
-                    onClick = { onTabSelected(index, item.route) }
+                    onClick = { onTabSelected(index, item.route) },
+                    modifier = Modifier.width(80.dp)
                 )
             }
         }
@@ -163,7 +186,7 @@ private fun NavigationItem(
     modifier: Modifier = Modifier
 ) {
     val containerColor = if (isSelected) {
-        MaterialTheme.colorScheme.primaryContainer
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
     } else {
         MaterialTheme.colorScheme.surface
     }
@@ -277,11 +300,11 @@ fun ProjectGrid(
     projects: List<ProjectModel>,
     onProjectClick: (ProjectModel) -> Unit,
     onDeleteProject: (ProjectModel) -> Unit,
-    onEditProject: (ProjectModel, String) -> Unit,
+    onEditProject: (ProjectModel) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 250.dp),
+        columns = GridCells.Adaptive(minSize = 230.dp),
         contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -304,8 +327,10 @@ fun ProjectCard(
     project: ProjectModel,
     onProjectClick: (ProjectModel) -> Unit,
     onDeleteProject: (ProjectModel) -> Unit,
-    onEditProject: (ProjectModel, String) -> Unit
+    onEditProject: (ProjectModel) -> Unit
 ) {
+    var openMenu by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -320,8 +345,32 @@ fun ProjectCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = project.name, style = MaterialTheme.typography.titleMedium)
-                IconButton(onClick = { /* Implement menu */ }) {
-                    Icon(ComposeIcons.MoreVert, contentDescription = "More options")
+                Column {
+                    IconButton(onClick = {
+                        openMenu = true
+                    }) {
+                        Icon(ComposeIcons.MoreVert, contentDescription = "More options")
+                    }
+
+                    DropdownMenu(
+                        expanded = openMenu,
+                        onDismissRequest = { openMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                onDeleteProject(project)
+                                openMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Edit") },
+                            onClick = {
+                                onEditProject(project)
+                                openMenu = false
+                            }
+                        )
+                    }
                 }
             }
             Column(modifier = Modifier.padding(
@@ -364,7 +413,7 @@ fun ProjectCard(
 fun InfoChip(icon: ImageVector, label: String) {
     Surface(
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.secondary
+        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),

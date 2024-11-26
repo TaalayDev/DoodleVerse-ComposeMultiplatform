@@ -27,11 +27,8 @@ enum class LessonDifficulty {
 }
 
 enum class LessonCategory {
-    DRAWING,
-    ANIMATION,
-    GAME_DEVELOPMENT,
-    UI_DESIGN,
-    OTHER
+    ANIMALS,
+    ANIME,
 }
 
 data class LessonModel(
