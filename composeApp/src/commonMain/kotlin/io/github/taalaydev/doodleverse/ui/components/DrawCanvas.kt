@@ -416,6 +416,7 @@ fun DrawCanvas(
                             )
 
                             // Set the selection state
+                            provider.startSelection(shapeBounds.topLeft)
                             val selectionState = SelectionState(
                                 bounds = shapeBounds,
                                 originalBitmap = shapeBitmapCopy,

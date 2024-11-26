@@ -502,7 +502,10 @@ class DrawingController(
     fun applySelectionTransform(selectionState: SelectionState) {
         val bounds = selectionState.bounds
         val bitmap = selectionState.transformedBitmap ?: return
-        val layerBitmap = state.value.caches[currentLayer.id]?.copy() ?: return
+        val layerBitmap = state.value.caches[currentLayer.id]?.copy() ?: ImageBitmap(
+            canvasSize.value.width.toInt(),
+            canvasSize.value.height.toInt()
+        )
 
         val transformed = ImageBitmap(
             canvasSize.value.width.toInt(),
@@ -848,6 +851,7 @@ class DrawViewModel(
     }
 
     override fun applySelection() {
+        println("Applying selection")
         if (_selectionState.isActive && _selectionState.transformedBitmap != null) {
             // Apply the transformed selection back to the layer
             drawingController.applySelectionTransform(_selectionState)
