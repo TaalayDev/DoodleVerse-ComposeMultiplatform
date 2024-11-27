@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.Alignment
@@ -24,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -303,11 +306,11 @@ fun ProjectGrid(
     onEditProject: (ProjectModel) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 230.dp),
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Adaptive(minSize = 230.dp),
         contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalItemSpacing = 16.dp,
         modifier = modifier
     ) {
         items(projects.size) { index ->
@@ -334,7 +337,10 @@ fun ProjectCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onProjectClick(project) }
+            .clickable { onProjectClick(project) },
+        colors = CardDefaults.cardColors(
+
+        ),
     ) {
         Column {
             Row(
@@ -376,19 +382,22 @@ fun ProjectCard(
             Column(modifier = Modifier.padding(
                 horizontal = 16.dp,
             )) {
-                Spacer(modifier = Modifier.height(8.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp)
-                        .background(MaterialTheme.colorScheme.surface),
+                        .aspectRatio(project.aspectRatioValue)
+                        .background(MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.medium)
+                        .clip(RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (project.cachedBitmap != null) {
                         Image(
                             bitmap = project.cachedBitmap,
                             contentDescription = project.name,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier
+                                .aspectRatio(project.aspectRatioValue)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
                         )
                     } else {
                         Icon(Lucide.Image, contentDescription = null, modifier = Modifier.size(48.dp))
@@ -413,7 +422,7 @@ fun ProjectCard(
 fun InfoChip(icon: ImageVector, label: String) {
     Surface(
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+        color = Color.White.copy(alpha = 0.5f),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),

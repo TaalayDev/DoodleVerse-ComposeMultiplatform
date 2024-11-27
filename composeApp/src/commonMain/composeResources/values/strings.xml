@@ -1,8 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Doodle Verse</string>
-    <string name="chibi_dog_lesson_title">Chibi Dog</string>
-    <string name="chibi_dog_lesson_description">Learn how to draw a chibi dog</string>
-    <string name="chibi_dog_lesson_1_description">Draw a circle for the head of the dog</string>
-    <string name="chibi_dog_lesson_2_description">Draw a small circle for the body of the dog</string>
+    <string name="chibi_dog_lesson_title">Dog</string>
+    <string name="chibi_dog_lesson_description">Learn how to draw a dog</string>
+    <string name="chibi_dog_lesson_1_description">Start by drawing a large circle to form the base shape of the chibi dog's head. This circle will serve as the foundation for the character's face.</string>
+    <string name="chibi_dog_lesson_2_description">Add curved lines to outline the sides of the face, creating chubby cheeks and a slight point for the chin.</string>
+    <string name="chibi_dog_lesson_3_description">Add two large triangular shapes on top of the head for the ears. Position them symmetrically and add smaller inner triangles to create the inner ear details.</string>
+    <string name="chibi_dog_lesson_4_description">Draw two large oval shapes for the eyes, positioning them near the center of the head. Add small circles inside the eyes to represent the pupils.</string>
+    <string name="chibi_dog_lesson_5_description">Add a small, curved line below the eyes to form the nose. Draw a small, curved line below the nose to create the mouth.</string>
+    <string name="chibi_dog_lesson_6_description">Enhance the dog's expression by adding additional details to the face as in the guidelines.</string>
+    <string name="chibi_dog_lesson_7_description">Erase the unnecessary guideline elements while retaining the essential parts like the curved outlines of the face and ears. This step refines the drawing and prepares it for further details.</string>
+    <string name="chibi_dog_lesson_8_description">Sketch the chibi dog's body with rounded, soft edges. Add the front legs, keeping them symmetrical, and shape the paws with simple curves.</string>
+    <string name="chibi_dog_lesson_9_description">Draw the chibi dog's tail with a curved, fluffy shape. Add a zigzag pattern along the edge to emphasize the fluffiness and make it look lively.</string>
+    <string name="chibi_dog_lesson_10_description">To enhance the dog's appearance, add some fluffy fur details to its chest and legs. Draw curved, jagged lines to indicate soft fur.</string>
+    <string name="chibi_dog_lesson_11_description">Review your drawing and make any necessary adjustments to refine the lines and details. Erase any remaining guidelines and ensure the drawing is clean and polished.</string>
+
+    <string name="dimple_cat_lesson_title">Cat</string>
+    <string name="dimple_cat_lesson_description">Learn how to draw a cat</string>
+    <string name="dimple_cat_lesson_1_description">Start by drawing a large circle to form the base shape of the cat's head. This circle will help define the overall size and placement of the head for your drawing.</string>
+    <string name="dimple_cat_lesson_2_description">Draw the outline of the cat's cheeks and jawline by creating two curved lines that extend outward from the bottom sides of the circle.</string>
+    <string name="dimple_cat_lesson_3_description">Connect the two cheeks by drawing a smooth curved line at the bottom to form the cat’s chin.</string>
+    <string name="dimple_cat_lesson_4_description">Erase the left and right parts of the initial circle, leaving only the cheeks and chin lines intact.</string>
+    <string name="dimple_cat_lesson_5_description">Add two large, triangular ears at the top of the head. Position them symmetrically on either side, slightly angled outward.</string>
+    <string name="dimple_cat_lesson_6_description">Inside the face, draw two large oval shapes for the eyes. Position them symmetrically near the middle of the head.</string>
+    <string name="dimple_cat_lesson_7_description">Draw a slightly larger oval around each of the existing eyes to create an outline.</string>
+    <string name="dimple_cat_lesson_8_description">Erase the overlapping or unused parts of the outer eye outlines to clean up the drawing. Keep only the parts that create a smooth, complete shape around each eye.</string>
+    <string name="dimple_cat_lesson_9_description">Add a small upside-down triangle in the center of the face to form the cat’s nose. Below the nose, draw two curved lines that extend downward and outward to create the mouth.</string>
+    <string name="dimple_cat_lesson_10_description">Draw small curved lines above each eye to create the eyebrows. These lines should be slightly arched to add expression to the cat’s face. Next, draw two small circles on either side of the mouth area to represent the cheeks.</string>
+    <string name="dimple_cat_lesson_11_description">Sketch two oval shapes at the bottom of the face for the front paws. Position them symmetrically on each side, curving slightly inward to give a natural sitting pose. Add two short, curved lines on each paw to indicate the toes.</string>
+    <string name="dimple_cat_lesson_12_description">Draw four small oval shapes at the bottom of each front paw to create the toes. Arrange them side by side, ensuring they are evenly spaced and proportionate to the paw.</string>
+    <string name="dimple_cat_lesson_13_description">Add two short, curved lines on each paw to indicate the toes.</string>
+    <string name="dimple_cat_lesson_14_description">Draw a small, pointed shape at the bottom center of the cat’s head, resembling a tuft of fur.</string>
+    <string name="dimple_cat_lesson_15_description">Sketch a long, curved tail on the side of the cat. Start from the bottom near the paws and curve it outward, giving it a slightly fluffy appearance by adding a small zigzag line near the tip.</string>
+    <string name="dimple_cat_lesson_16_description">Review your drawing and add any final details or adjustments to enhance the cat's appearance. Erase any remaining guidelines and refine the lines for a clean and polished look. </string>
+
+    <string name="chibi_girl_lesson_title">Anime chibi girl</string>
+    <string name="chibi_girl_lesson_description">Learn how to draw an anime chibi girl</string>
+    <string name="chibi_girl_lesson_1_description">Begin by drawing a large circle to represent the base shape of the head. This circle will act as the foundation for the chibi character's face.</string>
+    <string name="chibi_girl_lesson_2_description">Add two small, curved shapes on each side of the head to form the ears. Position them slightly below the top of the circle, ensuring they are symmetrical.</string>
+    <string name="chibi_girl_lesson_3_description">Sketch two long, curved lines on each side of the head to create the outline of the hair. These lines should flow naturally from the top of the head down toward the cheeks, framing the face.</string>
+    <string name="chibi_girl_lesson_4_description">Draw a few pointed, triangular shapes at the top of the head to represent individual hair strands. Let these shapes flow naturally downward toward the face, overlapping slightly.</string>
+    <string name="chibi_girl_lesson_5_description">Draw the full outline of the hair, connecting the previously added strands with smooth, flowing lines.</string>
+    <string name="chibi_girl_lesson_6_description">Erase the parts of the initial circle guideline that overlap with the hair and face. This step refines the drawing, leaving only the detailed hair and head outline.</string>
+    <string name="chibi_girl_lesson_7_description">Inside the face, add two large oval shapes for the eyes. Position them symmetrically near the center of the head.</string>
+    <string name="chibi_girl_lesson_8_description">Draw curved lines above each eye to create the eyelashes. Extend the lines slightly outward for a more expressive and charming look.</string>
+    <string name="chibi_girl_lesson_9_description">Draw two small, curved lines above the eyes to form the eyebrows. Position them symmetrically and slightly above the eyelashes.</string>
+    <string name="chibi_girl_lesson_10_description">Draw a tiny curved line in the center of the face for the nose. Below it, add a small, curved smile to form the mouth.</string>
+    <string name="chibi_girl_lesson_11_description">Begin sketching the top of the dress by drawing a small, rounded neckline below the head.</string>
+    <string name="chibi_girl_lesson_12_description">Extend the neckline downward to create the main body of the dress. Draw two slightly flared lines outward to form the dress's shape, giving it a flowing and relaxed appearance.</string>
+    <string name="chibi_girl_lesson_13_description">Draw small, curved lines extending outward from the top of the dress to form the sleeves.</string>
+    <string name="chibi_girl_lesson_14_description">Sketch two small, curved lines extending downward from the sleeves to form the arms. Position them symmetrically on each side, keeping the lines simple and slightly rounded to match the chibi style.</string>
+    <string name="chibi_girl_lesson_15_description">Extend the bottom of the dress to form the skirt. Draw slightly flared, curved lines outward to give the skirt a flowing appearance.</string>
+    <string name="chibi_girl_lesson_16_description">Extend two simple, slightly curved lines downward from the bottom of the skirt to form the legs.</string>
+    <string name="chibi_girl_lesson_17_description">Add flowing lines extending downward from each side of the head to lengthen the hair.</string>
+    <string name="chibi_girl_lesson_18_description">Take a moment to review your drawing and refine any lines that need adjustment. Erase any unnecessary guidelines and ensure all elements are smooth and polished.</string>
 </resources>

@@ -653,7 +653,7 @@ class DrawViewModel(
     fun saveProject() {
         val project = _project.value ?: return
 
-        viewModelScope.launch {
+        viewModelScope.launch(dispatcher) {
             projectRepo.updateProject(project.toEntity().copy(
                 lastModified = Clock.System.now().toEpochMilliseconds(),
                 thumb = imageBitmapByteArray(
