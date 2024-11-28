@@ -206,18 +206,6 @@ fun ColumnScope.DrawBox(
                 .clip(RoundedCornerShape(16.dp))
         )
 
-//        if (referenceImage != null) {
-//            Image(
-//                painter = referenceImage,
-//                contentDescription = null,
-//                contentScale = ContentScale.Inside,
-//                modifier = Modifier
-//                    .fillMaxSize()
-//                    .graphicsLayer(alpha = 0.5f),
-//                colorFilter = ColorFilter.tint(Color.Red)
-//            )
-//        }
-
         DrawCanvas(
             provider = drawProvider,
             currentBrush = currentBrush,

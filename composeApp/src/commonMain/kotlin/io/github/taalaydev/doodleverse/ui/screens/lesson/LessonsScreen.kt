@@ -20,6 +20,10 @@ import androidx.navigation.NavController
 import com.composables.icons.lucide.ArrowLeft
 import com.composables.icons.lucide.BookOpen
 import com.composables.icons.lucide.Lucide
+import doodleverse.composeapp.generated.resources.Res
+import doodleverse.composeapp.generated.resources.all_categories
+import doodleverse.composeapp.generated.resources.back
+import doodleverse.composeapp.generated.resources.lessons
 import io.github.taalaydev.doodleverse.core.lessons
 import io.github.taalaydev.doodleverse.data.models.LessonCategory
 import io.github.taalaydev.doodleverse.data.models.LessonDifficulty
@@ -41,10 +45,13 @@ fun LessonsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Lessons") },
+                title = { Text(stringResource(Res.string.lessons)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Lucide.ArrowLeft, contentDescription = "Back")
+                        Icon(
+                            Lucide.ArrowLeft,
+                            contentDescription = stringResource(Res.string.back)
+                        )
                     }
                 }
             )
@@ -69,7 +76,7 @@ fun LessonsScreen(
                     onClick = {
                         selectedCategory = null
                     },
-                    label = { Text("All Categories") },
+                    label = { Text(stringResource(Res.string.all_categories)) },
                     leadingIcon = {
                         Icon(
                             Lucide.BookOpen,
@@ -155,7 +162,7 @@ fun LessonCard(
                     modifier = Modifier.align(Alignment.TopStart)
                 ) {
                     Text(
-                        text = lesson.difficulty.name,
+                        text = stringResource(lesson.difficulty.title),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -169,7 +176,7 @@ fun LessonCard(
                     modifier = Modifier.align(Alignment.TopEnd)
                 ) {
                     Text(
-                        text = lesson.category.name,
+                        text = stringResource(lesson.category.title),
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )

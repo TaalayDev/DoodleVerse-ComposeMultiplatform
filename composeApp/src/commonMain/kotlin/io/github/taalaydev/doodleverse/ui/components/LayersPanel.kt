@@ -64,9 +64,17 @@ import com.composables.icons.lucide.GripVertical
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Plus
 import com.composables.icons.lucide.Trash
+import doodleverse.composeapp.generated.resources.Res
+import doodleverse.composeapp.generated.resources.add_new_layer
+import doodleverse.composeapp.generated.resources.delete_layer
+import doodleverse.composeapp.generated.resources.drag_handle
+import doodleverse.composeapp.generated.resources.layer_preview
+import doodleverse.composeapp.generated.resources.opacity
+import doodleverse.composeapp.generated.resources.toggle_visibility
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawViewModel
 import io.github.taalaydev.doodleverse.ui.screens.draw.layers
+import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.random.Random
@@ -131,7 +139,7 @@ fun LayersPanel(
                                 ) {
                                     Icon(
                                         imageVector = Lucide.GripVertical,
-                                        contentDescription = "Drag handle",
+                                        contentDescription = stringResource(Res.string.drag_handle),
                                         modifier = Modifier.size(15.dp)
                                     )
                                 }
@@ -164,7 +172,7 @@ fun LayersPanelHeader(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Opacity: ",
+                text = stringResource(Res.string.opacity) + ": ",
                 fontSize = 12.sp,
                 color = Color.Gray,
             )
@@ -192,7 +200,7 @@ fun LayersPanelHeader(
             ) {
                 Column {
                     Text(
-                        text = "Opacity",
+                        text = stringResource(Res.string.opacity),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
@@ -227,7 +235,11 @@ fun LayersPanelHeader(
         IconButton(
             onClick = { onLayerAdded() }
         ) {
-            Icon(Lucide.Plus, contentDescription = "Add new layer", modifier = Modifier.size(18.dp))
+            Icon(
+                Lucide.Plus,
+                contentDescription = stringResource(Res.string.add_new_layer),
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
@@ -244,7 +256,10 @@ fun LayerTile(
     dragHandle: @Composable (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
+    val backgroundColor = if (isActive)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+    else
+        MaterialTheme.colorScheme.surface
     val contentColor = if (isActive) Color.White else Color.Black
 
     Card(
@@ -281,7 +296,7 @@ fun LayerTile(
                 ) {
                     Icon(
                         imageVector = if (layer.isVisible) Lucide.Eye else Lucide.EyeOff,
-                        contentDescription = "Toggle visibility",
+                        contentDescription = stringResource(Res.string.toggle_visibility),
                         tint = contentColor,
                         modifier = Modifier.size(15.dp)
                     )
@@ -293,7 +308,7 @@ fun LayerTile(
                 ) {
                     Icon(
                         imageVector = Lucide.Trash,
-                        contentDescription = "Delete layer",
+                        contentDescription = stringResource(Res.string.delete_layer),
                         tint = contentColor,
                         modifier = Modifier.size(15.dp)
                     )
@@ -315,12 +330,10 @@ fun LayerPreview(image: ImageBitmap?) {
         if (image != null) {
             Image(
                 bitmap = image,
-                contentDescription = "Layer preview",
+                contentDescription = stringResource(Res.string.layer_preview),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-        } else {
-
         }
     }
 }

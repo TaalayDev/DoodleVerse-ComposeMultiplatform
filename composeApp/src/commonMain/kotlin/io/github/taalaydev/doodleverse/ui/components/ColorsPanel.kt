@@ -38,6 +38,10 @@ import com.github.skydoves.colorpicker.compose.BrightnessSlider
 import com.github.skydoves.colorpicker.compose.ColorEnvelope
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
+import doodleverse.composeapp.generated.resources.Res
+import doodleverse.composeapp.generated.resources.add_custom_color
+import doodleverse.composeapp.generated.resources.color_palette
+import org.jetbrains.compose.resources.stringResource
 
 val Color.Companion.Pink: Color
     get() = Color(0xFFE91E63)
@@ -75,7 +79,7 @@ fun ColorPalettePanel(
 
     Column(modifier = modifier.padding(8.dp)) {
         Text(
-            text = "Color Palette",
+            text = stringResource(Res.string.color_palette),
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -149,6 +153,6 @@ fun AddColorButton(onColorAdd: () -> Unit) {
             .clickable { onColorAdd() },
         contentAlignment = Alignment.Center
     ) {
-        Icon(Lucide.Plus, contentDescription = "Add custom color", modifier = Modifier.size(18.dp))
+        Icon(Lucide.Plus, contentDescription = stringResource(Res.string.add_custom_color), modifier = Modifier.size(18.dp))
     }
 }

@@ -6,32 +6,45 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.taalaydev.doodleverse.ImageFormat
 import io.github.taalaydev.doodleverse.core.SelectionHitTestResult
 import io.github.taalaydev.doodleverse.core.SelectionState
 import io.github.taalaydev.doodleverse.core.SelectionTransform
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.core.hitTestSelectionHandles
+import io.github.taalaydev.doodleverse.data.models.AnimationStateModel
 import io.github.taalaydev.doodleverse.data.models.BrushData
+import io.github.taalaydev.doodleverse.data.models.FrameModel
 import io.github.taalaydev.doodleverse.data.models.LayerModel
+import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.ToolsData
+import io.github.taalaydev.doodleverse.data.models.toEntity
+import io.github.taalaydev.doodleverse.imageBitmapByteArray
+import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawProvider
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawState
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawingController
+import io.github.taalaydev.doodleverse.ui.screens.draw.layers
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import kotlin.random.Random
 
 class LessonDrawViewModel(
-    dispatcher: CoroutineDispatcher
+    private val projectRepo: ProjectRepository,
+    private val dispatcher: CoroutineDispatcher
 ) : ViewModel(), DrawProvider {
     private val _tools = MutableStateFlow<ToolsData?>(null)
     val tools: StateFlow<ToolsData?> = _tools.asStateFlow()
@@ -71,6 +84,78 @@ class LessonDrawViewModel(
     val canRedo: StateFlow<Boolean> get() = drawingController.canRedo
 
     val state: MutableState<DrawState> get() = drawingController.state
+
+    fun createProject(
+        name: String,
+        width: Int,
+        height: Int,
+        onProjectCreated: (ProjectModel) -> Unit
+    ) {
+        viewModelScope.launch(dispatcher) {
+            val project = ProjectModel(
+                id = 0,
+                name = name,
+                animationStates = emptyList(),
+                createdAt = Clock.System.now().toEpochMilliseconds(),
+                lastModified = Clock.System.now().toEpochMilliseconds(),
+                aspectRatio = Size(width.toFloat(), height.toFloat()),
+            )
+            val animationState = AnimationStateModel(
+                id = 0,
+                name = "Animation 1",
+                duration = 1000,
+                frames = emptyList(),
+                projectId = 0,
+            )
+            val frame = FrameModel(
+                id = 0,
+                animationId = 0,
+                name = "Frame 1",
+                layers = emptyList(),
+            )
+            val layer = LayerModel(
+                id = 0,
+                frameId = 0,
+                name = "Layer 1",
+                isVisible = true,
+                isLocked = false,
+                isBackground = false,
+                opacity = 1.0,
+                paths = emptyList(),
+            )
+            val cache = state.value.caches.values.firstOrNull()
+
+            val projectId = projectRepo.insertProject(project.toEntity())
+            val animationStateId = projectRepo.insertAnimationState(animationState.copy(projectId = projectId).toEntity())
+            val frameId = projectRepo.insertFrame(frame.copy(animationId = animationStateId).toEntity())
+            val layerId = projectRepo.insertLayer(layer.copy(frameId = frameId).toEntity().copy(
+                pixels = imageBitmapByteArray(cache ?: return@launch, ImageFormat.PNG),
+                width = width,
+                height = height
+            ))
+
+            viewModelScope.launch(Dispatchers.Main) {
+                onProjectCreated(
+                    project.copy(
+                        id = projectId,
+                        animationStates = listOf(
+                            animationState.copy(
+                                id = animationStateId,
+                                frames = listOf(
+                                    frame.copy(
+                                        id = frameId,
+                                        layers = listOf(
+                                            layer.copy(id = layerId)
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            }
+        }
+    }
 
     fun setBrush(brush: BrushData) {
         applySelection()

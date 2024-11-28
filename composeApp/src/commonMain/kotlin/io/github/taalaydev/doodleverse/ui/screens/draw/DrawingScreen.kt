@@ -78,6 +78,25 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import doodleverse.composeapp.generated.resources.Res
+import doodleverse.composeapp.generated.resources.back
+import doodleverse.composeapp.generated.resources.brush
+import doodleverse.composeapp.generated.resources.brush_settings
+import doodleverse.composeapp.generated.resources.brush_size
+import doodleverse.composeapp.generated.resources.color
+import doodleverse.composeapp.generated.resources.eraser
+import doodleverse.composeapp.generated.resources.eyedropper
+import doodleverse.composeapp.generated.resources.fill
+import doodleverse.composeapp.generated.resources.import_image
+import doodleverse.composeapp.generated.resources.layers
+import doodleverse.composeapp.generated.resources.move_tool
+import doodleverse.composeapp.generated.resources.redo
+import doodleverse.composeapp.generated.resources.save
+import doodleverse.composeapp.generated.resources.save_image
+import doodleverse.composeapp.generated.resources.selection_tool
+import doodleverse.composeapp.generated.resources.shapes
+import doodleverse.composeapp.generated.resources.undo
+import doodleverse.composeapp.generated.resources.zoom
 import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.core.DragState
 import io.github.taalaydev.doodleverse.core.Tool
@@ -105,6 +124,7 @@ import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 data class DpSize(val width: Dp, val height: Dp)
@@ -209,7 +229,7 @@ private fun DrawScreenBody(
                     }) {
                         Icon(
                             Lucide.ArrowLeft,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(Res.string.back),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -221,7 +241,7 @@ private fun DrawScreenBody(
                     }) {
                         Icon(
                             Lucide.Undo2,
-                            contentDescription = "Undo",
+                            contentDescription = stringResource(Res.string.undo),
                             tint = if (canUndo) Color.Black else Color.Gray,
                             modifier = Modifier.size(18.dp)
                         )
@@ -231,7 +251,7 @@ private fun DrawScreenBody(
                     }) {
                         Icon(
                             Lucide.Redo2,
-                            contentDescription = "Redo",
+                            contentDescription = stringResource(Res.string.redo),
                             tint = if (canRedo) Color.Black else Color.Gray,
                             modifier = Modifier.size(18.dp)
                         )
@@ -244,7 +264,7 @@ private fun DrawScreenBody(
                     ) {
                         Icon(
                             Lucide.Save,
-                            contentDescription = "Save",
+                            contentDescription = stringResource(Res.string.save),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -279,7 +299,7 @@ private fun DrawScreenBody(
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Text(
-                                            "Save Image",
+                                            stringResource(Res.string.save_image),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
@@ -308,7 +328,7 @@ private fun DrawScreenBody(
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Text(
-                                            "Import Image",
+                                            stringResource(Res.string.import_image),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
@@ -633,7 +653,7 @@ fun DrawControls(
                 IconButton(onClick = { showColorPicker = true }) {
                     Icon(
                         Lucide.Palette,
-                        contentDescription = "Color",
+                        contentDescription = stringResource(Res.string.color),
                         tint = color
                     )
                 }
@@ -644,7 +664,7 @@ fun DrawControls(
                 ) {
                     Icon(
                         Lucide.Brush,
-                        contentDescription = "Brush",
+                        contentDescription = stringResource(Res.string.brush),
                         tint = if (tool.isBrush) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -653,7 +673,7 @@ fun DrawControls(
                 }) {
                     Icon(
                         Lucide.Eraser,
-                        contentDescription = "Eraser",
+                        contentDescription = stringResource(Res.string.eraser),
                         tint = if (tool.isEraser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -662,7 +682,7 @@ fun DrawControls(
                 }) {
                     Icon(
                         Lucide.SlidersHorizontal,
-                        contentDescription = "Brush Settings",
+                        contentDescription = stringResource(Res.string.brush_settings),
                     )
                 }
                 IconButton(onClick = {
@@ -670,7 +690,7 @@ fun DrawControls(
                 }) {
                     Icon(
                         Lucide.Shapes,
-                        contentDescription = "Shapes",
+                        contentDescription = stringResource(Res.string.shapes),
                         tint = if (tool.isShape) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -679,7 +699,7 @@ fun DrawControls(
                 }) {
                     Icon(
                         Lucide.PaintBucket,
-                        contentDescription = "Fill",
+                        contentDescription = stringResource(Res.string.fill),
                         tint = if (tool.isFill) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -688,7 +708,7 @@ fun DrawControls(
                 }) {
                     Icon(
                         Lucide.Layers,
-                        contentDescription = "Layers",
+                        contentDescription = stringResource(Res.string.layers),
                         tint = if (showLayersSheet) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -713,7 +733,7 @@ fun DrawControls(
             ) {
                 Icon(
                     Lucide.Brush,
-                    contentDescription = "Brush",
+                    contentDescription = stringResource(Res.string.brush),
                     tint = if (tool.isBrush) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -722,7 +742,7 @@ fun DrawControls(
             }) {
                 Icon(
                     Lucide.Eraser,
-                    contentDescription = "Eraser",
+                    contentDescription = stringResource(Res.string.eraser),
                     tint = if (tool.isEraser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -731,7 +751,7 @@ fun DrawControls(
             }) {
                 Icon(
                     Lucide.Shapes,
-                    contentDescription = "Shapes",
+                    contentDescription = stringResource(Res.string.shapes),
                     tint = if (tool.isShape) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -740,7 +760,7 @@ fun DrawControls(
             }) {
                 Icon(
                     Lucide.PaintBucket,
-                    contentDescription = "Fill",
+                    contentDescription = stringResource(Res.string.fill),
                     tint = if (tool.isFill) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -749,7 +769,7 @@ fun DrawControls(
             }) {
                 Icon(
                     Lucide.Pipette,
-                    contentDescription = "Eyedropper",
+                    contentDescription = stringResource(Res.string.eyedropper),
                     tint = if (tool.isEyedropper) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -758,7 +778,7 @@ fun DrawControls(
             }) {
                 Icon(
                     Lucide.ZoomIn,
-                    contentDescription = "Zoom",
+                    contentDescription = stringResource(Res.string.zoom),
                     tint = if (tool.isZoom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -767,7 +787,7 @@ fun DrawControls(
             ) {
                 Icon(
                     Lucide.Move,
-                    contentDescription = "Move Tool",
+                    contentDescription = stringResource(Res.string.move_tool),
                     tint = if (tool.isDrag) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurface
                 )
@@ -777,7 +797,7 @@ fun DrawControls(
             ) {
                 Icon(
                     Lucide.BoxSelect,
-                    contentDescription = "Selection Tool",
+                    contentDescription = stringResource(Res.string.selection_tool),
                     tint = if (tool.isSelection) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurface
                 )
@@ -848,7 +868,7 @@ fun SizeSelector(
                 ) {
                     Icon(
                         Lucide.Brush,
-                        contentDescription = "Brush Size",
+                        contentDescription = stringResource(Res.string.brush_size),
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))

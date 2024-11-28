@@ -34,6 +34,24 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.composables.icons.lucide.*
+import doodleverse.composeapp.generated.resources.Res
+import doodleverse.composeapp.generated.resources.back
+import doodleverse.composeapp.generated.resources.completed
+import doodleverse.composeapp.generated.resources.days_ago
+import doodleverse.composeapp.generated.resources.eraser
+import doodleverse.composeapp.generated.resources.more_options
+import doodleverse.composeapp.generated.resources.next
+import doodleverse.composeapp.generated.resources.not_yet
+import doodleverse.composeapp.generated.resources.pen
+import doodleverse.composeapp.generated.resources.previous
+import doodleverse.composeapp.generated.resources.ready_to_draw
+import doodleverse.composeapp.generated.resources.ready_to_draw_description
+import doodleverse.composeapp.generated.resources.redo
+import doodleverse.composeapp.generated.resources.shapes
+import doodleverse.composeapp.generated.resources.start_drawing
+import doodleverse.composeapp.generated.resources.step_count
+import doodleverse.composeapp.generated.resources.step_count_of
+import doodleverse.composeapp.generated.resources.undo
 import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.core.DragState
 import io.github.taalaydev.doodleverse.core.DrawRenderer
@@ -52,6 +70,7 @@ import io.github.taalaydev.doodleverse.ui.screens.draw.ShapePickerSheet
 import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun LessonDetailScreen(
@@ -59,7 +78,12 @@ fun LessonDetailScreen(
     lesson: LessonModel,
     navController: NavController,
     modifier: Modifier = Modifier,
-    viewModel: LessonDrawViewModel = viewModel { LessonDrawViewModel(platform.dispatcherIO) }
+    viewModel: LessonDrawViewModel = viewModel {
+        LessonDrawViewModel(
+            platform.projectRepo,
+            platform.dispatcherIO
+        )
+    }
 ) {
     val scope = rememberCoroutineScope()
     var showStartDrawing by remember { mutableStateOf(false) }
@@ -85,12 +109,16 @@ fun LessonDetailScreen(
     val shapePickerBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showShapePicker by remember { mutableStateOf(false) }
 
+    val title = stringResource(lesson.title)
+
     if (showStartDrawing) {
         DrawingPromptDialog(
             onDismiss = { showStartDrawing = false },
             onStartDrawing = {
-                showStartDrawing = false
-                navController.navigate(Destination.Drawing(0))
+                viewModel.createProject(title, 1,1) { project ->
+                    showStartDrawing = false
+                    navController.navigate(Destination.Drawing(project.id))
+                }
             }
         )
     }
@@ -164,7 +192,7 @@ fun LessonDetailScreen(
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            text = "Step ${currentPage + 1} of ${lesson.parts.size}",
+                            text = stringResource(Res.string.step_count_of, currentPage + 1, lesson.parts.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
@@ -172,7 +200,10 @@ fun LessonDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Lucide.ArrowLeft, contentDescription = "Back")
+                        Icon(
+                            Lucide.ArrowLeft,
+                            contentDescription = stringResource(Res.string.back)
+                        )
                     }
                 },
                 actions = {
@@ -181,7 +212,7 @@ fun LessonDetailScreen(
                     }) {
                         Icon(
                             Lucide.Eraser,
-                            contentDescription = "Eraser",
+                            contentDescription = stringResource(Res.string.eraser),
                             tint = if (currentTool.isEraser)
                                 MaterialTheme.colorScheme.primary
                             else
@@ -194,7 +225,7 @@ fun LessonDetailScreen(
                     }) {
                         Icon(
                             Lucide.Circle,
-                            contentDescription = "Shape",
+                            contentDescription = stringResource(Res.string.shapes),
                             tint = if (currentTool.isShape)
                                 MaterialTheme.colorScheme.primary
                             else
@@ -207,7 +238,7 @@ fun LessonDetailScreen(
                     }) {
                         Icon(
                             Lucide.Pen,
-                            contentDescription = "Pen",
+                            contentDescription = stringResource(Res.string.pen),
                             tint = if (currentTool.isBrush)
                                 MaterialTheme.colorScheme.primary
                             else
@@ -242,7 +273,11 @@ fun LessonDetailScreen(
                         isMobile = !isExpandedWidth,
                         dragState = dragState,
                         aspectRatio = 1f,
-                        referenceImage = imageResource(lesson.parts[currentPage].image),
+                        referenceImage = if (currentPage != lesson.parts.size - 1) {
+                            imageResource(lesson.parts[currentPage].image)
+                        } else {
+                            null
+                        },
                     )
                 }
 
@@ -270,7 +305,7 @@ fun LessonDetailScreen(
                     ) {
                         Icon(
                             Lucide.Undo2,
-                            contentDescription = "Undo",
+                            contentDescription = stringResource(Res.string.undo),
                             tint = if (canUndo) Color.Black else Color.Gray,
                             modifier = Modifier.size(18.dp)
                         )
@@ -288,7 +323,7 @@ fun LessonDetailScreen(
                     ) {
                         Icon(
                             Lucide.Redo2,
-                            contentDescription = "Redo",
+                            contentDescription = stringResource(Res.string.redo),
                             tint = if (canRedo) Color.Black else Color.Gray,
                             modifier = Modifier.size(18.dp)
                         )
@@ -333,7 +368,7 @@ fun LessonDetailScreen(
                         ) {
                             Icon(Lucide.ChevronLeft, contentDescription = null)
                             Spacer(Modifier.width(4.dp))
-                            Text("Prev")
+                            Text(stringResource(Res.string.previous))
                         }
 
                         Column(
@@ -341,7 +376,7 @@ fun LessonDetailScreen(
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                         ) {
                             Text(
-                                text = "Step ${currentPage + 1}",
+                                text =  stringResource(Res.string.step_count, currentPage + 1),
                                 style = MaterialTheme.typography.titleSmall
                             )
                             LinearProgressIndicator(
@@ -364,7 +399,12 @@ fun LessonDetailScreen(
                             },
                             modifier = Modifier.width(100.dp)
                         ) {
-                            Text(if (currentPage == lesson.parts.size - 1) "Start Drawing" else "Next")
+                            Text(
+                                if (currentPage == lesson.parts.size - 1)
+                                    stringResource(Res.string.start_drawing)
+                                else
+                                    stringResource(Res.string.next)
+                            )
                             Spacer(Modifier.width(4.dp))
                             Icon(Lucide.ChevronRight, contentDescription = null)
                         }
@@ -404,7 +444,10 @@ private fun LessonSidebar(
                     style = MaterialTheme.typography.titleLarge
                 )
                 IconButton(onClick = { /* Show more options */ }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More")
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = stringResource(Res.string.more_options)
+                    )
                 }
             }
 
@@ -448,7 +491,7 @@ private fun LessonSidebar(
                 ) {
                     Icon(Lucide.Pen, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Start Drawing")
+                    Text(stringResource(Res.string.start_drawing))
                 }
             }
         }
@@ -497,7 +540,10 @@ private fun LessonStepCard(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     if (isCompleted) {
-                        Icon(Lucide.Check, contentDescription = "Completed")
+                        Icon(
+                            Lucide.Check,
+                            contentDescription = stringResource(Res.string.completed)
+                        )
                     } else {
                         Text(
                             text = stepNumber.toString(),
@@ -510,7 +556,7 @@ private fun LessonStepCard(
             // Step content
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Step $stepNumber",
+                    text = stringResource(Res.string.step_count, stepNumber),
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
@@ -532,22 +578,19 @@ private fun DrawingPromptDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Ready to Draw?")
+            Text(stringResource(Res.string.ready_to_draw))
         },
         text = {
-            Text(
-                "You've learned all the steps! Would you like to start drawing now? " +
-                        "You can always come back to review the lesson later.",
-            )
+            Text(stringResource(Res.string.ready_to_draw_description))
         },
         confirmButton = {
             Button(onClick = onStartDrawing) {
-                Text("Start Drawing")
+                Text(stringResource(Res.string.start_drawing))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Not Yet")
+                Text(stringResource(Res.string.not_yet))
             }
         }
     )

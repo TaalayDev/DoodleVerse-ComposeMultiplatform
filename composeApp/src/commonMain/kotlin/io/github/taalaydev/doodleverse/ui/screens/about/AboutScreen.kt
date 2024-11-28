@@ -19,7 +19,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.composables.icons.lucide.*
+import doodleverse.composeapp.generated.resources.Res
+import doodleverse.composeapp.generated.resources.about_app_description
+import doodleverse.composeapp.generated.resources.about_app_title
+import doodleverse.composeapp.generated.resources.app_name
+import doodleverse.composeapp.generated.resources.back
+import doodleverse.composeapp.generated.resources.developed_by
+import doodleverse.composeapp.generated.resources.developer_name
+import doodleverse.composeapp.generated.resources.features
+import doodleverse.composeapp.generated.resources.features_list
+import doodleverse.composeapp.generated.resources.version_number
+import doodleverse.composeapp.generated.resources.visit_website
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(
@@ -41,10 +55,13 @@ fun AboutScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("About DoodleVerse") },
+                title = { Text(stringResource(Res.string.about_app_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Lucide.ArrowLeft, contentDescription = "Back")
+                        Icon(
+                            Lucide.ArrowLeft,
+                            contentDescription = stringResource(Res.string.back)
+                        )
                     }
                 }
             )
@@ -78,7 +95,7 @@ fun AboutScreen(
             Spacer(Modifier.height(24.dp))
 
             Text(
-                text = "DoodleVerse",
+                text = stringResource(Res.string.app_name),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold
                 ),
@@ -86,7 +103,7 @@ fun AboutScreen(
             )
 
             Text(
-                text = "Version 1.0.0",
+                text = stringResource(Res.string.version_number, "1.0.0"),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.alpha(animatedProgress.value)
@@ -103,17 +120,11 @@ fun AboutScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Features",
+                        text = stringResource(Res.string.features),
                         style = MaterialTheme.typography.titleLarge
                     )
                     Spacer(Modifier.height(8.dp))
-                    listOf(
-                        "Cross-platform drawing application",
-                        "Multiple brush types and tools",
-                        "Layer system for complex artworks",
-                        "Real-time preview of changes",
-                        "Project management system"
-                    ).forEach { feature ->
+                    stringArrayResource(Res.array.features_list).forEach { feature ->
                         Row(
                             modifier = Modifier.padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -142,12 +153,12 @@ fun AboutScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "About DoodleVerse",
+                        text = stringResource(Res.string.about_app_title),
                         style = MaterialTheme.typography.titleLarge
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "DoodleVerse is your creative companion for digital art. Built with Kotlin Multiplatform and Jetpack Compose, it provides a seamless drawing experience across all platforms. Whether you're a beginner or professional artist, DoodleVerse offers the tools you need to bring your imagination to life.",
+                        text = stringResource(Res.string.about_app_description),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -164,7 +175,7 @@ fun AboutScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Developed by",
+                        text = stringResource(Res.string.developed_by),
                         style = MaterialTheme.typography.titleLarge
                     )
                     Spacer(Modifier.height(16.dp))
@@ -183,7 +194,7 @@ fun AboutScreen(
                         }
                         Spacer(Modifier.width(16.dp))
                         Text(
-                            text = "TaalayDev",
+                            text = stringResource(Res.string.developer_name),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -194,7 +205,7 @@ fun AboutScreen(
                     ) {
                         Icon(Lucide.Globe, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Visit Website")
+                        Text(stringResource(Res.string.visit_website))
                     }
                 }
             }

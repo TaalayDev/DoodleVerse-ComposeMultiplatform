@@ -17,7 +17,16 @@ import com.composables.icons.lucide.ArrowDownUp
 import com.composables.icons.lucide.ArrowRightLeft
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Pen
+import doodleverse.composeapp.generated.resources.Res
+import doodleverse.composeapp.generated.resources.cancel
+import doodleverse.composeapp.generated.resources.create
+import doodleverse.composeapp.generated.resources.edit_project
+import doodleverse.composeapp.generated.resources.new_project
+import doodleverse.composeapp.generated.resources.project_name
+import doodleverse.composeapp.generated.resources.save
+import doodleverse.composeapp.generated.resources.template
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
+import org.jetbrains.compose.resources.stringResource
 
 data class ProjectTemplate(
     val name: String,
@@ -67,14 +76,14 @@ fun NewProjectDialog(
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
-                    text = "New Project",
+                    text = stringResource(Res.string.new_project),
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = projectName,
                     onValueChange = { projectName = it },
-                    label = { Text("Project Name") },
+                    label = { Text(stringResource(Res.string.project_name)) },
                     leadingIcon = { Icon(Icons.Default.Create, contentDescription = null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -90,7 +99,7 @@ fun NewProjectDialog(
                         value = templates[selectedTemplateIndex].name,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Template") },
+                        label = { Text(stringResource(Res.string.template)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = false) },
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
@@ -149,7 +158,7 @@ fun NewProjectDialog(
                 ) {
                     if (showCancelButton) {
                         TextButton(onClick = onDismissRequest) {
-                            Text("Cancel")
+                            Text(stringResource(Res.string.cancel))
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
@@ -161,7 +170,7 @@ fun NewProjectDialog(
                         },
                         enabled = projectName.isNotBlank() && width > 0 && height > 0
                     ) {
-                        Text("Create")
+                        Text(stringResource(Res.string.create))
                     }
                 }
             }
@@ -193,7 +202,7 @@ fun EditProjectDialog(
                     .fillMaxWidth()
             ) {
                 Text(
-                    text = "Edit Project",
+                    text = stringResource(Res.string.edit_project),
                     style = MaterialTheme.typography.headlineSmall
                 )
 
@@ -202,7 +211,7 @@ fun EditProjectDialog(
                 OutlinedTextField(
                     value = projectName,
                     onValueChange = { projectName = it },
-                    label = { Text("Project Name") },
+                    label = { Text(stringResource(Res.string.project_name)) },
                     leadingIcon = { Icon(Lucide.Pen, contentDescription = null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -215,7 +224,7 @@ fun EditProjectDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismissRequest) {
-                        Text("Cancel")
+                        Text(stringResource(Res.string.cancel))
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -224,7 +233,7 @@ fun EditProjectDialog(
                         onClick = { onConfirm(projectName) },
                         enabled = projectName.isNotBlank() && projectName != project.name
                     ) {
-                        Text("Save")
+                        Text(stringResource(Res.string.save))
                     }
                 }
             }

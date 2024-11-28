@@ -1,6 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Doodle Verse</string>
+
+    <string name="color_palette">Color Palette</string>
+    <string name="add_custom_color">Add custom color</string>
+    <string name="move">Move</string>
+    <string name="toggle_visibility">Toggle visibility</string>
+    <string name="delete_layer">Delete layer</string>
+    <string name="layer_preview">Layer preview</string>
+    <string name="add_new_layer">Add new layer</string>
+    <string name="opacity">Opacity</string>
+    <string name="drag_handle">Drag handle</string>
+    <string name="new_project">New project</string>
+    <string name="edit_project">Edit project</string>
+    <string name="project_name">Project Name</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="template">Template</string>
+    <string name="create">Create</string>
+    <string name="back">Back</string>
+
+    <string name="about_app_title">About DoodleVerse</string>
+    <string name="version_number">Version %1$s</string>
+    <string name="features">Features</string>
+    <string-array name="features_list">
+        <item>Cross-platform drawing application</item>
+        <item>Multiple brush types and tools</item>
+        <item>Layer system for complex artworks</item>
+        <item>Real-time preview of changes</item>
+        <item>Project management system</item>
+    </string-array>
+    <string name="about_app_description">
+        DoodleVerse is your creative companion for digital art. Built with Kotlin Multiplatform and Jetpack Compose, it provides a seamless drawing experience across all platforms. Whether you're a beginner or professional artist, DoodleVerse offers the tools you need to bring your imagination to life.
+    </string>
+    <string name="developed_by">Developed by</string>
+    <string name="developer_name">TaalayDev</string>
+    <string name="visit_website">Visit website</string>
+
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
+    <string name="clear">Clear</string>
+    <string name="save_image">Save Image</string>
+    <string name="share_image">Share Image</string>
+    <string name="import_image">Import Image</string>
+    <string name="color">Color</string>
+    <string name="brush">Brush</string>
+    <string name="eraser">Eraser</string>
+    <string name="fill">Fill</string>
+    <string name="shapes">Shapes</string>
+    <string name="line">Line</string>
+    <string name="rectangle">Rectangle</string>
+    <string name="circle">Circle</string>
+    <string name="ellipse">Ellipse</string>
+    <string name="polygon">Polygon</string>
+    <string name="brush_settings">Brush Settings</string>
+    <string name="layers">Layers</string>
+    <string name="eyedropper">Eyedropper</string>
+    <string name="zoom">Zoom</string>
+    <string name="move_tool">Move Tool</string>
+    <string name="selection_tool">Selection Tool</string>
+    <string name="brush_size">Brush size</string>
+
+    <string name="projects">Projects</string>
+    <string name="create_new_project">Create New Project</string>
+    <string name="lessons">Lessons</string>
+    <string name="about">About</string>
+    <string name="no_projects_found">No projects found</string>
+    <string name="create_new">Create New</string>
+    <string name="more_options">More options</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="just_now">Just now</string>
+    <string name="minutes_ago">%1$dm ago</string>
+    <string name="hours_ago">%1$dh ago</string>
+    <string name="days_ago">%1$dd ago</string>
+
+    <string name="pen">Pen</string>
+    <string name="previous">Prev</string>
+    <string name="next">Next</string>
+    <string name="step">Step</string>
+    <string name="step_count">Step %1$d</string>
+    <string name="step_count_of">Step %1$d of %2$d</string>
+    <string name="start_drawing">Start Drawing</string>
+    <string name="completed">Completed</string>
+    <string name="ready_to_draw">Ready to draw?</string>
+    <string name="ready_to_draw_description">You've learned all the steps! Would you like to start drawing now?\nYou can always come back to review the lesson later.</string>
+    <string name="not_yet">Not yet</string>
+
+    <string name="all_categories">All Categories</string>
+    <string name="category_animals">Animals</string>
+    <string name="category_anime">Anime</string>
+
+    <string name="difficulty">Difficulty</string>
+    <string name="difficulty_easy">Easy</string>
+    <string name="difficulty_medium">Medium</string>
+    <string name="difficulty_hard">Hard</string>
+
     <string name="chibi_dog_lesson_title">Dog</string>
     <string name="chibi_dog_lesson_description">Learn how to draw a dog</string>
     <string name="chibi_dog_lesson_1_description">Start by drawing a large circle to form the base shape of the chibi dog's head. This circle will serve as the foundation for the character's face.</string>
@@ -15,24 +110,24 @@
     <string name="chibi_dog_lesson_10_description">To enhance the dog's appearance, add some fluffy fur details to its chest and legs. Draw curved, jagged lines to indicate soft fur.</string>
     <string name="chibi_dog_lesson_11_description">Review your drawing and make any necessary adjustments to refine the lines and details. Erase any remaining guidelines and ensure the drawing is clean and polished.</string>
 
-    <string name="dimple_cat_lesson_title">Cat</string>
-    <string name="dimple_cat_lesson_description">Learn how to draw a cat</string>
-    <string name="dimple_cat_lesson_1_description">Start by drawing a large circle to form the base shape of the cat's head. This circle will help define the overall size and placement of the head for your drawing.</string>
-    <string name="dimple_cat_lesson_2_description">Draw the outline of the cat's cheeks and jawline by creating two curved lines that extend outward from the bottom sides of the circle.</string>
-    <string name="dimple_cat_lesson_3_description">Connect the two cheeks by drawing a smooth curved line at the bottom to form the cat’s chin.</string>
-    <string name="dimple_cat_lesson_4_description">Erase the left and right parts of the initial circle, leaving only the cheeks and chin lines intact.</string>
-    <string name="dimple_cat_lesson_5_description">Add two large, triangular ears at the top of the head. Position them symmetrically on either side, slightly angled outward.</string>
-    <string name="dimple_cat_lesson_6_description">Inside the face, draw two large oval shapes for the eyes. Position them symmetrically near the middle of the head.</string>
-    <string name="dimple_cat_lesson_7_description">Draw a slightly larger oval around each of the existing eyes to create an outline.</string>
-    <string name="dimple_cat_lesson_8_description">Erase the overlapping or unused parts of the outer eye outlines to clean up the drawing. Keep only the parts that create a smooth, complete shape around each eye.</string>
-    <string name="dimple_cat_lesson_9_description">Add a small upside-down triangle in the center of the face to form the cat’s nose. Below the nose, draw two curved lines that extend downward and outward to create the mouth.</string>
-    <string name="dimple_cat_lesson_10_description">Draw small curved lines above each eye to create the eyebrows. These lines should be slightly arched to add expression to the cat’s face. Next, draw two small circles on either side of the mouth area to represent the cheeks.</string>
-    <string name="dimple_cat_lesson_11_description">Sketch two oval shapes at the bottom of the face for the front paws. Position them symmetrically on each side, curving slightly inward to give a natural sitting pose. Add two short, curved lines on each paw to indicate the toes.</string>
-    <string name="dimple_cat_lesson_12_description">Draw four small oval shapes at the bottom of each front paw to create the toes. Arrange them side by side, ensuring they are evenly spaced and proportionate to the paw.</string>
-    <string name="dimple_cat_lesson_13_description">Add two short, curved lines on each paw to indicate the toes.</string>
-    <string name="dimple_cat_lesson_14_description">Draw a small, pointed shape at the bottom center of the cat’s head, resembling a tuft of fur.</string>
-    <string name="dimple_cat_lesson_15_description">Sketch a long, curved tail on the side of the cat. Start from the bottom near the paws and curve it outward, giving it a slightly fluffy appearance by adding a small zigzag line near the tip.</string>
-    <string name="dimple_cat_lesson_16_description">Review your drawing and add any final details or adjustments to enhance the cat's appearance. Erase any remaining guidelines and refine the lines for a clean and polished look. </string>
+    <string name="simple_cat_lesson_title">Cat</string>
+    <string name="simple_cat_lesson_description">Learn how to draw a cat</string>
+    <string name="simple_cat_lesson_1_description">Start by drawing a large circle to form the base shape of the cat's head. This circle will help define the overall size and placement of the head for your drawing.</string>
+    <string name="simple_cat_lesson_2_description">Draw the outline of the cat's cheeks and jawline by creating two curved lines that extend outward from the bottom sides of the circle.</string>
+    <string name="simple_cat_lesson_3_description">Connect the two cheeks by drawing a smooth curved line at the bottom to form the cat’s chin.</string>
+    <string name="simple_cat_lesson_4_description">Erase the left and right parts of the initial circle, leaving only the cheeks and chin lines intact.</string>
+    <string name="simple_cat_lesson_5_description">Add two large, triangular ears at the top of the head. Position them symmetrically on either side, slightly angled outward.</string>
+    <string name="simple_cat_lesson_6_description">Inside the face, draw two large oval shapes for the eyes. Position them symmetrically near the middle of the head.</string>
+    <string name="simple_cat_lesson_7_description">Draw a slightly larger oval around each of the existing eyes to create an outline.</string>
+    <string name="simple_cat_lesson_8_description">Erase the overlapping or unused parts of the outer eye outlines to clean up the drawing. Keep only the parts that create a smooth, complete shape around each eye.</string>
+    <string name="simple_cat_lesson_9_description">Add a small upside-down triangle in the center of the face to form the cat’s nose. Below the nose, draw two curved lines that extend downward and outward to create the mouth.</string>
+    <string name="simple_cat_lesson_10_description">Draw small curved lines above each eye to create the eyebrows. These lines should be slightly arched to add expression to the cat’s face. Next, draw two small circles on either side of the mouth area to represent the cheeks.</string>
+    <string name="simple_cat_lesson_11_description">Sketch two oval shapes at the bottom of the face for the front paws. Position them symmetrically on each side, curving slightly inward to give a natural sitting pose. Add two short, curved lines on each paw to indicate the toes.</string>
+    <string name="simple_cat_lesson_12_description">Draw four small oval shapes at the bottom of each front paw to create the toes. Arrange them side by side, ensuring they are evenly spaced and proportionate to the paw.</string>
+    <string name="simple_cat_lesson_13_description">Add two short, curved lines on each paw to indicate the toes.</string>
+    <string name="simple_cat_lesson_14_description">Draw a small, pointed shape at the bottom center of the cat’s head, resembling a tuft of fur.</string>
+    <string name="simple_cat_lesson_15_description">Sketch a long, curved tail on the side of the cat. Start from the bottom near the paws and curve it outward, giving it a slightly fluffy appearance by adding a small zigzag line near the tip.</string>
+    <string name="simple_cat_lesson_16_description">Review your drawing and add any final details or adjustments to enhance the cat's appearance. Erase any remaining guidelines and refine the lines for a clean and polished look. </string>
 
     <string name="chibi_girl_lesson_title">Anime chibi girl</string>
     <string name="chibi_girl_lesson_description">Learn how to draw an anime chibi girl</string>

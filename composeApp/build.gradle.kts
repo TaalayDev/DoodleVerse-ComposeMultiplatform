@@ -150,14 +150,15 @@ compose.desktop {
 
             macOS {
                 bundleID = "io.github.taalaydev.doodleverse"
-                // iconFile.set(project.file("icon.icns"))
+                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.icns"))
+                minimumSystemVersion = "12.0"
             }
             windows {
                 // iconFile.set(project.file("icon.ico"))
             }
             linux {
                 modules("jdk.security.auth")
-                // iconFile.set(project.file("icon.png"))
+                // iconFile.set(project.file("logo.png"))
             }
         }
     }

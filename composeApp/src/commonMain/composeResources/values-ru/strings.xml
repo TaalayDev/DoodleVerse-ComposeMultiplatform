@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Doodle Verse</string>
+
+    <string name="color_palette">Цветовая палитра</string>
+    <string name="add_custom_color">Добавить свой цвет</string>
+    <string name="move">Переместить</string>
+    <string name="toggle_visibility">Переключить видимость</string>
+    <string name="delete_layer">Удалить слой</string>
+    <string name="layer_preview">Предпросмотр слоя</string>
+    <string name="add_new_layer">Добавить новый слой</string>
+    <string name="opacity">Прозрачность</string>
+    <string name="drag_handle">Перетащить</string>
+    <string name="new_project">Новый проект</string>
+    <string name="edit_project">Редактировать проект</string>
+    <string name="project_name">Название проекта</string>
+    <string name="cancel">Отмена</string>
+    <string name="save">Сохранить</string>
+    <string name="template">Шаблон</string>
+    <string name="create">Создать</string>
+    <string name="back">Назад</string>
+
+    <string name="about_app_title">О DoodleVerse</string>
+    <string name="version_number">Версия %1$s</string>
+    <string name="features">Возможности</string>
+    <string-array name="features_list">
+        <item>Кроссплатформенное приложение для рисования</item>
+        <item>Различные типы кистей и инструментов</item>
+        <item>Система слоев для сложных работ</item>
+        <item>Предпросмотр изменений в реальном времени</item>
+        <item>Система управления проектами</item>
+    </string-array>
+    <string name="about_app_description">
+        DoodleVerse — ваш творческий компаньон для цифрового искусства. Созданный с использованием Kotlin Multiplatform и Jetpack Compose, он обеспечивает удобный процесс рисования на всех платформах. Независимо от того, новичок вы или профессиональный художник, DoodleVerse предлагает инструменты, необходимые для воплощения вашего воображения в жизнь.
+    </string>
+    <string name="developed_by">Разработано</string>
+    <string name="developer_name">TaalayDev</string>
+    <string name="visit_website">Посетить сайт</string>
+
+    <string name="undo">Отменить</string>
+    <string name="redo">Повторить</string>
+    <string name="clear">Очистить</string>
+    <string name="save_image">Сохранить изображение</string>
+    <string name="share_image">Поделиться</string>
+    <string name="import_image">Импортировать</string>
+    <string name="color">Цвет</string>
+    <string name="brush">Кисть</string>
+    <string name="eraser">Ластик</string>
+    <string name="fill">Заливка</string>
+    <string name="shapes">Фигуры</string>
+    <string name="line">Линия</string>
+    <string name="rectangle">Прямоугольник</string>
+    <string name="circle">Круг</string>
+    <string name="ellipse">Эллипс</string>
+    <string name="polygon">Многоугольник</string>
+    <string name="brush_settings">Настройки кисти</string>
+    <string name="layers">Слои</string>
+    <string name="eyedropper">Пипетка</string>
+    <string name="zoom">Масштаб</string>
+    <string name="move_tool">Перемещение</string>
+    <string name="selection_tool">Выделение</string>
+    <string name="brush_size">Размер кисти</string>
+
+    <string name="projects">Проекты</string>
+    <string name="create_new_project">Создать новый проект</string>
+    <string name="lessons">Уроки</string>
+    <string name="about">О приложении</string>
+    <string name="no_projects_found">Проекты не найдены</string>
+    <string name="create_new">Создать новый</string>
+    <string name="more_options">Дополнительно</string>
+    <string name="delete">Удалить</string>
+    <string name="edit">Редактировать</string>
+    <string name="just_now">Только что</string>
+    <string name="minutes_ago">%1$d мин. назад</string>
+    <string name="hours_ago">%1$d ч. назад</string>
+    <string name="days_ago">%1$d д. назад</string>
+
+    <string name="pen">Перо</string>
+    <string name="previous">Назад</string>
+    <string name="next">Далее</string>
+    <string name="step">Шаг</string>
+    <string name="step_count">Шаг %1$d</string>
+    <string name="step_count_of">Шаг %1$d из %2$d</string>
+    <string name="start_drawing">Начать рисовать</string>
+    <string name="completed">Завершено</string>
+    <string name="ready_to_draw">Готовы рисовать?</string>
+    <string name="ready_to_draw_description">Вы изучили все шаги! Хотите начать рисовать?\nВы всегда можете вернуться к уроку позже.</string>
+    <string name="not_yet">Не сейчас</string>
+
+    <string name="all_categories">Все категории</string>
+    <string name="category_animals">Животные</string>
+    <string name="category_anime">Аниме</string>
+
+    <string name="difficulty">Сложность</string>
+    <string name="difficulty_easy">Легко</string>
+    <string name="difficulty_medium">Средне</string>
+    <string name="difficulty_hard">Сложно</string>
+
+    <string name="chibi_dog_lesson_title">Собачка</string>
+    <string name="chibi_dog_lesson_description">Учимся рисовать собачку</string>
+    <string name="chibi_dog_lesson_1_description">Начните с большого круга — это будет основа головы собачки в стиле чиби. Круг послужит фундаментом для мордочки персонажа.</string>
+    <string name="chibi_dog_lesson_2_description">Добавьте изогнутые линии, очерчивающие стороны мордочки, создавая пухлые щёчки и слегка заострённый подбородок.</string>
+    <string name="chibi_dog_lesson_3_description">Нарисуйте сверху два больших треугольника для ушей. Расположите их симметрично и добавьте внутренние треугольники поменьше для деталей внутренней части ушей.</string>
+    <string name="chibi_dog_lesson_4_description">Нарисуйте два больших овала для глаз ближе к центру головы. Добавьте маленькие кружки внутри глаз — это будут зрачки.</string>
+    <string name="chibi_dog_lesson_5_description">Добавьте маленькую изогнутую линию под глазами — это нос. Нарисуйте небольшую изогнутую линию под носом для рта.</string>
+    <string name="chibi_dog_lesson_6_description">Улучшите выражение мордочки, добавив дополнительные детали, как показано в инструкции.</string>
+    <string name="chibi_dog_lesson_7_description">Сотрите лишние вспомогательные линии, оставив только основные элементы: изогнутые контуры мордочки и уши. Этот шаг уточняет рисунок и готовит его к добавлению деталей.</string>
+    <string name="chibi_dog_lesson_8_description">Наметьте тело собачки округлыми, мягкими линиями. Добавьте передние лапки, соблюдая симметрию, и оформите лапы простыми изгибами.</string>
+    <string name="chibi_dog_lesson_9_description">Нарисуйте хвост изогнутой, пушистой формы. Добавьте зигзагообразный узор по краю, чтобы подчеркнуть пушистость и придать живость.</string>
+    <string name="chibi_dog_lesson_10_description">Для улучшения внешнего вида добавьте пушистый мех на груди и лапках. Нарисуйте изогнутые, неровные линии, показывающие мягкий мех.</string>
+    <string name="chibi_dog_lesson_11_description">Просмотрите свой рисунок и внесите необходимые корректировки в линии и детали. Сотрите оставшиеся вспомогательные линии и убедитесь, что рисунок чистый и аккуратный.</string>
+
+    <string name="simple_cat_lesson_title">Кошка</string>
+    <string name="simple_cat_lesson_description">Учимся рисовать кошку</string>
+    <string name="simple_cat_lesson_1_description">Начните с большого круга, который станет основой головы кошки. Этот круг поможет определить общий размер и расположение головы для вашего рисунка.</string>
+    <string name="simple_cat_lesson_2_description">Нарисуйте контур щёк и линию челюсти кошки, проведя две изогнутые линии, которые расходятся от нижних сторон круга.</string>
+    <string name="simple_cat_lesson_3_description">Соедините две щеки плавной изогнутой линией снизу, формируя подбородок кошки.</string>
+    <string name="simple_cat_lesson_4_description">Сотрите левую и правую части исходного круга, оставив только линии щёк и подбородка.</string>
+    <string name="simple_cat_lesson_5_description">Добавьте два больших треугольных уха сверху головы. Расположите их симметрично по обеим сторонам, слегка наклонив наружу.</string>
+    <string name="simple_cat_lesson_6_description">Внутри мордочки нарисуйте два больших овала для глаз. Расположите их симметрично ближе к середине головы.</string>
+    <string name="simple_cat_lesson_7_description">Нарисуйте овал чуть большего размера вокруг каждого из существующих глаз, создавая контур.</string>
+    <string name="simple_cat_lesson_8_description">Сотрите пересекающиеся или неиспользуемые части внешних контуров глаз, чтобы сделать рисунок чище. Оставьте только те части, которые создают плавную, законченную форму вокруг каждого глаза.</string>
+    <string name="simple_cat_lesson_9_description">Добавьте маленький перевёрнутый треугольник в центре мордочки — это нос кошки. Под носом нарисуйте две изогнутые линии, идущие вниз и в стороны, создавая рот.</string>
+    <string name="simple_cat_lesson_10_description">Нарисуйте маленькие изогнутые линии над каждым глазом — это брови. Эти линии должны быть слегка изогнуты, чтобы придать выражение мордочке кошки. Затем нарисуйте два маленьких кружка по обеим сторонам от рта, изображая щёчки.</string>
+    <string name="simple_cat_lesson_11_description">Наметьте две овальные формы внизу мордочки для передних лапок. Расположите их симметрично по обеим сторонам, слегка изогнув внутрь, чтобы создать естественную сидячую позу.</string>
+    <string name="simple_cat_lesson_12_description">Нарисуйте четыре маленьких овала внизу каждой передней лапки, создавая пальчики. Расположите их рядом друг с другом, убедившись, что они равномерно распределены и пропорциональны лапке.</string>
+    <string name="simple_cat_lesson_13_description">Добавьте по две короткие изогнутые линии на каждой лапке, обозначая пальчики.</string>
+    <string name="simple_cat_lesson_14_description">Нарисуйте маленькую заострённую форму в нижнем центре головы кошки, похожую на пучок меха.</string>
+    <string name="simple_cat_lesson_15_description">Нарисуйте длинный изогнутый хвост сбоку от кошки. Начните снизу возле лапок и изогните его наружу, придав слегка пушистый вид, добавив небольшую зигзагообразную линию около кончика.</string>
+    <string name="simple_cat_lesson_16_description">Просмотрите свой рисунок и добавьте финальные детали или корректировки, чтобы улучшить внешний вид кошки. Сотрите оставшиеся вспомогательные линии и уточните контуры для чистого и аккуратного вида.</string>
+
+    <string name="chibi_girl_lesson_title">Девочка в стиле чиби</string>
+    <string name="chibi_girl_lesson_description">Учимся рисовать аниме-девочку в стиле чиби</string>
+    <string name="chibi_girl_lesson_1_description">Начните с большого круга, который будет основой головы. Этот круг послужит фундаментом для лица чиби-персонажа.</string>
+    <string name="chibi_girl_lesson_2_description">Добавьте две маленькие изогнутые формы по бокам головы — это уши. Расположите их чуть ниже верхней части круга, соблюдая симметрию.</string>
+    <string name="chibi_girl_lesson_3_description">Наметьте две длинные изогнутые линии по бокам головы, создавая контур волос. Эти линии должны естественно спускаться от макушки к щекам, обрамляя лицо.</string>
+    <string name="chibi_girl_lesson_4_description">Нарисуйте несколько заострённых, треугольных форм на макушке, изображая отдельные пряди волос. Пусть эти формы естественно спускаются к лицу, слегка перекрывая друг друга.</string>
+    <string name="chibi_girl_lesson_5_description">Нарисуйте полный контур волос, соединяя ранее добавленные пряди плавными, текучими линиями.</string>
+    <string name="chibi_girl_lesson_6_description">Сотрите части исходного круга-основы, которые перекрываются с волосами и лицом. Этот шаг уточняет рисунок, оставляя только детализированный контур волос и головы.</string>
+    <string name="chibi_girl_lesson_7_description">Внутри лица добавьте два больших овала для глаз. Расположите их симметрично ближе к центру головы.</string>
+    <string name="chibi_girl_lesson_8_description">Нарисуйте изогнутые линии над каждым глазом, создавая ресницы. Слегка продлите линии наружу для более выразительного и очаровательного вида.</string>
+    <string name="chibi_girl_lesson_9_description">Нарисуйте две маленькие изогнутые линии над глазами — это брови. Расположите их симметрично чуть выше ресниц.</string>
+    <string name="chibi_girl_lesson_10_description">Нарисуйте крошечную изогнутую линию в центре лица — это нос. Под ним добавьте маленькую изогнутую улыбку, формируя рот.</string>
+    <string name="chibi_girl_lesson_11_description">Начните рисовать верх платья, наметив небольшой закруглённый вырез под головой.</string>
+    <string name="chibi_girl_lesson_12_description">Продлите линию выреза вниз, создавая основную часть платья. Нарисуйте две слегка расширяющиеся линии наружу, формируя силуэт платья, придавая ему струящийся и свободный вид.</string>
+    <string name="chibi_girl_lesson_13_description">Нарисуйте маленькие изогнутые линии, идущие наружу от верха платья, формируя рукава.</string>
+    <string name="chibi_girl_lesson_14_description">Наметьте две маленькие изогнутые линии, спускающиеся вниз от рукавов, формируя руки. Расположите их симметрично по обеим сторонам, сохраняя линии простыми и слегка закруглёнными в соответствии со стилем чиби.</string>
+    <string name="chibi_girl_lesson_15_description">Продлите низ платья, формируя юбку. Нарисуйте слегка расширяющиеся, изогнутые линии наружу, придавая юбке струящийся вид.</string>
+    <string name="chibi_girl_lesson_16_description">Продлите две простые, слегка изогнутые линии вниз от края юбки, формируя ноги.</string>
+    <string name="chibi_girl_lesson_17_description">Добавьте плавные линии, спускающиеся вниз от каждой стороны головы, удлиняя волосы.</string>
+    <string name="chibi_girl_lesson_18_description">Уделите время просмотру вашего рисунка и уточните линии, требующие корректировки. Сотрите ненужные вспомогательные линии и убедитесь, что все элементы плавные и аккуратные.</string>
+</resources>

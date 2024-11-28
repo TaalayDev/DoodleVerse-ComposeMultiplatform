@@ -34,6 +34,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.composables.icons.lucide.*
+import doodleverse.composeapp.generated.resources.Res
+import doodleverse.composeapp.generated.resources.about
+import doodleverse.composeapp.generated.resources.create_new
+import doodleverse.composeapp.generated.resources.create_new_project
+import doodleverse.composeapp.generated.resources.days_ago
+import doodleverse.composeapp.generated.resources.delete
+import doodleverse.composeapp.generated.resources.edit
+import doodleverse.composeapp.generated.resources.hours_ago
+import doodleverse.composeapp.generated.resources.just_now
+import doodleverse.composeapp.generated.resources.lessons
+import doodleverse.composeapp.generated.resources.minutes_ago
+import doodleverse.composeapp.generated.resources.more_options
+import doodleverse.composeapp.generated.resources.no_projects_found
+import doodleverse.composeapp.generated.resources.projects
 import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.navigation.Destination
@@ -42,6 +56,7 @@ import io.github.taalaydev.doodleverse.ui.components.EditProjectDialog
 import io.github.taalaydev.doodleverse.ui.components.NewProjectDialog
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,12 +113,15 @@ fun HomeScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Projects") },
+                    title = { Text(stringResource(Res.string.projects)) },
                     actions = {
                         IconButton(onClick = {
                             showNewProjectDialog = true
                         }) {
-                            Icon(Icons.Default.Add, contentDescription = "Create New Project")
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = stringResource(Res.string.create_new_project)
+                            )
                         }
                     }
                 )
@@ -149,9 +167,9 @@ private fun NavigationBanner(
     modifier: Modifier = Modifier
 ) {
     val tabs = listOf(
-        NavigationItem("Projects", Lucide.FolderOpen, null),
-        NavigationItem("Lessons", Lucide.GraduationCap, Destination.Lessons.route),
-        NavigationItem("About", Lucide.Info, Destination.About.route),
+        NavigationItem(stringResource(Res.string.projects), Lucide.FolderOpen, null),
+        NavigationItem(stringResource(Res.string.lessons), Lucide.GraduationCap, Destination.Lessons.route),
+        NavigationItem(stringResource(Res.string.about), Lucide.Info, Destination.About.route),
     )
 
     Surface(
@@ -289,11 +307,11 @@ fun EmptyProjectsScreen(onCreateNew: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(ComposeIcons.Folder, contentDescription = null, modifier = Modifier.size(64.dp))
-        Text("No projects found", modifier = Modifier.padding(16.dp))
+        Text(stringResource(Res.string.no_projects_found), modifier = Modifier.padding(16.dp))
         Button(onClick = onCreateNew) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Create New")
+            Text(stringResource(Res.string.create_new))
         }
     }
 }
@@ -355,7 +373,10 @@ fun ProjectCard(
                     IconButton(onClick = {
                         openMenu = true
                     }) {
-                        Icon(ComposeIcons.MoreVert, contentDescription = "More options")
+                        Icon(
+                            ComposeIcons.MoreVert,
+                            contentDescription = stringResource(Res.string.more_options)
+                        )
                     }
 
                     DropdownMenu(
@@ -363,14 +384,14 @@ fun ProjectCard(
                         onDismissRequest = { openMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Delete") },
+                            text = { Text(stringResource(Res.string.delete)) },
                             onClick = {
                                 onDeleteProject(project)
                                 openMenu = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Edit") },
+                            text = { Text(stringResource(Res.string.edit)) },
                             onClick = {
                                 onEditProject(project)
                                 openMenu = false
@@ -435,13 +456,14 @@ fun InfoChip(icon: ImageVector, label: String) {
     }
 }
 
+@Composable
 fun formatLastEdited(lastEdited: Long): String {
     val now = Clock.System.now().toEpochMilliseconds()
     val diff = now - lastEdited
     return when {
-        diff < 60_000 -> "Just now"
-        diff < 3_600_000 -> "${diff / 60_000}m ago"
-        diff < 86_400_000 -> "${diff / 3_600_000}h ago"
-        else -> "${diff / 86_400_000}d ago"
+        diff < 60_000 -> stringResource(Res.string.just_now)
+        diff < 3_600_000 -> stringResource(Res.string.minutes_ago, diff / 60_000)
+        diff < 86_400_000 -> stringResource(Res.string.hours_ago, diff / 3_600_000)
+        else -> stringResource(Res.string.days_ago, diff / 86_400_000)
     }
 }

@@ -31,6 +31,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.composables.icons.lucide.GripHorizontal
 import com.composables.icons.lucide.Lucide
+import doodleverse.composeapp.generated.resources.Res
+import doodleverse.composeapp.generated.resources.move
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun BoxScope.DraggableSlider(
@@ -70,7 +73,7 @@ fun BoxScope.DraggableSlider(
         ) {
             Icon(
                 Lucide.GripHorizontal,
-                contentDescription = "Move",
+                contentDescription = stringResource(Res.string.move),
                 tint = Color.Gray.copy(alpha = 0.8f),
                 modifier = Modifier.size(18.dp).pointerInput(Unit) {
                     focusManager?.clearFocus()
