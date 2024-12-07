@@ -1,11 +1,13 @@
 package io.github.taalaydev.doodleverse.ui.screens.about
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,15 +30,19 @@ import doodleverse.composeapp.generated.resources.developed_by
 import doodleverse.composeapp.generated.resources.developer_name
 import doodleverse.composeapp.generated.resources.features
 import doodleverse.composeapp.generated.resources.features_list
+import doodleverse.composeapp.generated.resources.logo
 import doodleverse.composeapp.generated.resources.version_number
 import doodleverse.composeapp.generated.resources.visit_website
+import io.github.taalaydev.doodleverse.Platform
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(
+    platform: Platform,
     navController: NavController,
     modifier: Modifier = Modifier
 ) {
@@ -80,15 +86,14 @@ fun AboutScreen(
                 modifier = Modifier
                     .size(120.dp)
                     .scale(animatedProgress.value)
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(16.dp))
                     .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Lucide.Brush,
+                Image(
+                    painter = painterResource(Res.drawable.logo),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(120.dp)
                 )
             }
 
@@ -200,7 +205,9 @@ fun AboutScreen(
                     }
                     Spacer(Modifier.height(16.dp))
                     OutlinedButton(
-                        onClick = { /* Open website */ },
+                        onClick = {
+                            platform.launchUrl("https://taalaydev.github.io/")
+                        },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Lucide.Globe, contentDescription = null)

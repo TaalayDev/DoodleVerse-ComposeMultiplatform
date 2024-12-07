@@ -9,6 +9,10 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.compose.compiler)
+
+    // Android specific plugins
+    alias(libs.plugins.google.playServices)
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 kotlin {
@@ -56,6 +60,9 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+
+            implementation(project.dependencies.platform(libs.firebase.bom))
+            implementation(libs.firebase.crashlyticsKtx)
 
             implementation(project(":database"))
         }
@@ -137,6 +144,8 @@ android {
 dependencies {
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.ui.graphics.android)
+
+    implementation("com.google.firebase:firebase-common-ktx:21.0.0")
 }
 
 compose.desktop {
@@ -144,7 +153,7 @@ compose.desktop {
         mainClass = "io.github.taalaydev.doodleverse.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Pkg)
             packageName = "DoodleVerse"
             packageVersion = "1.0.0"
 
@@ -152,6 +161,17 @@ compose.desktop {
                 bundleID = "io.github.taalaydev.doodleverse"
                 iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.icns"))
                 minimumSystemVersion = "12.0"
+
+                signing {
+                    sign.set(true)
+                    identity.set("3rd Party Mac Developer Application: Turgunaliev Daiyrbek (7R25FWCLN3)")
+                }
+
+                //provisioningProfile.set(project.file("src/desktopMain/mac/DoodleVerseMacProfile.provisionprofile"))
+                //runtimeProvisioningProfile.set(project.file("src/desktopMain/mac/DoodleVerseMacJavaRuntimeProfile.provisionprofile"))
+
+                // entitlementsFile.set(project.file("src/desktopMain/mac/entitlements.plist"))
+                // runtimeEntitlementsFile.set(project.file("src/desktopMain/mac/runtime-entitlements.plist"))
             }
             windows {
                 // iconFile.set(project.file("icon.ico"))

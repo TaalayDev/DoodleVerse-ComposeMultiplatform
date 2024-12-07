@@ -14,6 +14,8 @@ import java.io.File
 import javax.imageio.ImageIO
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
+import java.awt.Desktop
+import java.net.URI
 
 class JVMPlatform: Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"
@@ -26,6 +28,14 @@ class JVMPlatform: Platform {
 
     override fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
         saveBitmap(bitmap, filename, format)
+    }
+
+    override fun launchUrl(url: String): Boolean {
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            Desktop.getDesktop().browse(URI(url))
+            return true
+        }
+        return false
     }
 }
 
@@ -79,8 +89,6 @@ actual fun imageBitmapByteArray(bitmap: ImageBitmap, format: ImageFormat): ByteA
 
 actual fun imageBitmapFromByteArray(bytes: ByteArray, width: Int, height: Int): ImageBitmap {
     try {
-//        val bufferedImage = ImageIO.read(bytes.inputStream())
-//        return bufferedImage.toComposeImageBitmap()
         val skiaImage = Image.makeFromEncoded(bytes)
         return skiaImage.toComposeImageBitmap()
     } catch (e: Exception) {

@@ -28,7 +28,7 @@ class HomeViewModel(
 
     suspend fun loadProjects() {
         repository.getAllProjects().collect {
-            _projects.value = it.map { project -> project.toModel() }
+            _projects.value = it.map { project -> project.toModel() }.sortedByDescending { it.lastModified }
         }
     }
 

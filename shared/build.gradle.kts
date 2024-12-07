@@ -47,6 +47,11 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.coroutines.core)
+
+            implementation("dev.gitlive:firebase-firestore:2.1.0") // This line
+            implementation("dev.gitlive:firebase-common:2.1.0")// This line
+            implementation("dev.gitlive:firebase-analytics:2.1.0")// This line
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
         }
     }
 }

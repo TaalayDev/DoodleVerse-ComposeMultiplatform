@@ -40,10 +40,14 @@ import io.github.taalaydev.doodleverse.data.models.toModel
 import io.github.taalaydev.doodleverse.imageBitmapByteArray
 import io.github.taalaydev.doodleverse.imageBitmapFromByteArray
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
+import io.github.taalaydev.doodleverse.shared.QueueManager
 import io.github.vinceglb.filekit.core.FileKit
+import io.github.vinceglb.filekit.core.PickerMode
+import io.github.vinceglb.filekit.core.PickerType
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -125,10 +129,16 @@ class DrawingController(
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
+    companion object {
+        private const val MAX_UNDO_REDO = 20
+    }
+
     val currentPath = mutableStateOf<DrawingPath?>(null)
 
     private val _undoStack = mutableListOf<DrawState>()
     private val _redoStack = mutableListOf<DrawState>()
+
+    private var saveJob: Job? = null
 
     var state = mutableStateOf(DrawState(
         states = listOf(
@@ -218,6 +228,7 @@ class DrawingController(
             caches = caches + (currentLayer.id to image.copy())
         )
         _undoStack.add(state.value)
+
         _redoStack.clear()
         state.value = newState
 
@@ -251,6 +262,13 @@ class DrawingController(
     }
 
     private fun updateUndoRedo() {
+        if (_undoStack.size > MAX_UNDO_REDO) {
+            _undoStack.removeFirst()
+        }
+        if (_redoStack.size > MAX_UNDO_REDO) {
+            _redoStack.removeFirst()
+        }
+
         _canUndo.value = _undoStack.isNotEmpty()
         _canRedo.value = _redoStack.isNotEmpty()
     }
@@ -384,9 +402,14 @@ class DrawingController(
     }
 
     private fun updateLayer(layer: LayerModel, cache: ImageBitmap?) {
-        scope.launch(dispatcher) {
-            provider.updateLayer(layer, cache)
+        if (saveJob?.isActive == true) {
+            saveJob?.cancel()
+        }
 
+        saveJob = scope.launch(dispatcher) {
+            delay(1000)
+
+            provider.updateLayer(layer, cache)
             provider.updateProject()
         }
     }
@@ -672,7 +695,7 @@ class DrawViewModel(
     override suspend fun updateProject() {
         val project = _project.value ?: return
 
-        projectRepo.updateProject(
+        return projectRepo.updateProject(
             projectRepo.getProjectById(project.id).copy(
                 lastModified = Clock.System.now().toEpochMilliseconds(),
                 thumb = imageBitmapByteArray(
@@ -758,7 +781,7 @@ class DrawViewModel(
     }
 
     override suspend fun updateLayer(layer: LayerModel, cache: ImageBitmap?) {
-        projectRepo.updateLayer(layer.toEntity().copy(
+        return projectRepo.updateLayer(layer.toEntity().copy(
             pixels = imageBitmapByteArray(cache ?: return, ImageFormat.PNG),
             width = cache.width,
             height = cache.height
@@ -899,7 +922,6 @@ class DrawViewModel(
     }
 
     override fun applySelection() {
-        println("Applying selection")
         if (_selectionState.isActive && _selectionState.transformedBitmap != null) {
             // Apply the transformed selection back to the layer
             drawingController.applySelectionTransform(_selectionState)
@@ -936,6 +958,18 @@ class DrawViewModel(
         }
     }
 
+    fun importImage() {
+        viewModelScope.launch {
+            val result = FileKit.pickFile(PickerType.Image, mode = PickerMode.Single)
+            if (result != null) {
+                val bytes = result.readBytes()
+                val bitmap = imageBitmapFromByteArray(bytes, 0, 0)
+
+                importImage(bytes, bitmap.width, bitmap.height)
+            }
+        }
+    }
+
     fun importImage(bytes: ByteArray, width: Int, height: Int) {
         var bitmap = imageBitmapFromByteArray(bytes, width, height)
         // Create a new layer for the imported image
@@ -947,7 +981,7 @@ class DrawViewModel(
             // Need to wait for layer to be added before we can draw on it
             delay(100)
 
-            _currentTool.value = Tool.Selection
+            // _currentTool.value = Tool.Selection
             _selectionState = SelectionState(
                 bounds = Rect(Offset.Zero, Size(width.toFloat(), height.toFloat())),
                 originalBitmap = bitmap,

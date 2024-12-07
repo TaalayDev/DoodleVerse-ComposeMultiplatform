@@ -26,6 +26,10 @@ class WasmPlatform: Platform {
     override fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
         saveBitmap(bitmap, filename, format)
     }
+    override fun launchUrl(url: String): Boolean {
+        window.open(url, "_blank")
+        return true
+    }
 }
 
 fun saveBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
@@ -39,6 +43,8 @@ fun saveBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
 
     val bytes = encodedData.bytes
     val uint8Array = Uint8Array(bytes.size)
+
+
 }
 
 actual fun imageBitmapByteArray(bitmap: ImageBitmap, format: ImageFormat): ByteArray {

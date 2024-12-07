@@ -30,9 +30,7 @@
         <item>Real-time preview of changes</item>
         <item>Project management system</item>
     </string-array>
-    <string name="about_app_description">
-        DoodleVerse is your creative companion for digital art. Built with Kotlin Multiplatform and Jetpack Compose, it provides a seamless drawing experience across all platforms. Whether you're a beginner or professional artist, DoodleVerse offers the tools you need to bring your imagination to life.
-    </string>
+    <string name="about_app_description">DoodleVerse is your creative companion for digital art. Whether you're a beginner or professional artist, DoodleVerse offers the tools you need to bring your imagination to life.</string>
     <string name="developed_by">Developed by</string>
     <string name="developer_name">TaalayDev</string>
     <string name="visit_website">Visit website</string>
@@ -149,4 +147,16 @@
     <string name="chibi_girl_lesson_16_description">Extend two simple, slightly curved lines downward from the bottom of the skirt to form the legs.</string>
     <string name="chibi_girl_lesson_17_description">Add flowing lines extending downward from each side of the head to lengthen the hair.</string>
     <string name="chibi_girl_lesson_18_description">Take a moment to review your drawing and refine any lines that need adjustment. Erase any unnecessary guidelines and ensure all elements are smooth and polished.</string>
+
+    <string name="simple_frog_lesson_title">How to Draw a Cute Frog</string>
+    <string name="simple_frog_lesson_description">Learn how to draw a cute frog</string>
+    <string name="simple_frog_lesson_1_description">Start with an oval, slightly stretched horizontally. This will be the base for your frog's head. Make sure the top part of the oval is smoothly rounded, while the bottom is slightly flatter. Leave space for the eyes, which will be added later.</string>
+    <string name="simple_frog_lesson_2_description">Draw two large semicircles on the sides of the upper part of the head. These semicircles will serve as the base for the frog's eyes.</string>
+    <string name="simple_frog_lesson_3_description">Inside each semicircle, draw small circles to represent pupils. Add tiny dots for highlights to make the eyes look more expressive.</string>
+    <string name="simple_frog_lesson_4_description">Draw a small curved mouth in the center of the lower part of the head to give the frog a friendly expression. Add a small circle on each side of the mouth to represent cheeks.</string>
+    <string name="simple_frog_lesson_5_description">At the bottom of the head, add two curved lines extending diagonally downward and inward. These will be the frog's arms. Ensure the lines are slightly bent to make them look natural.</string>
+    <string name="simple_frog_lesson_6_description">Extend the lines representing the arms downward to create the body outline. Draw two curved lines on each side extending from the lower part of the body.</string>
+    <string name="simple_frog_lesson_7_description">Add triangular shapes at the ends of the lines representing the back legs to create the feet.</string>
+    <string name="simple_frog_lesson_8_description">Draw an oval underneath the frog, representing a mound or lily pad that the frog is sitting on.</string>
+    <string name="simple_frog_lesson_9_description">Take a moment to review your drawing and make any necessary adjustments. Erase any unnecessary guidelines and ensure all lines are smooth and polished.</string>
 </resources>

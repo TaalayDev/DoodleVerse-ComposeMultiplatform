@@ -62,13 +62,39 @@ data class BrushData(
             stroke = "solid",
             strokeCap = StrokeCap.Round,
             strokeJoin = StrokeJoin.Round,
+            customPainter = { canvas, size, drawingPath ->
+                val paint = Paint().apply {
+                    color = drawingPath.color
+                    strokeWidth = drawingPath.size
+                    strokeCap = StrokeCap.Round
+                    strokeJoin = StrokeJoin.Round
+                    style = PaintingStyle.Stroke
+                    alpha = drawingPath.color.alpha
+                }
+
+                val path = drawingPath.path
+                val metrics = PathMeasure().apply { setPath(path, false) }
+                val length = metrics.length
+
+                val brushSize = drawingPath.size
+                val delta = min(brushSize * 0.2f, 10f)
+
+                var i = 0f
+                while (i < length) {
+                    val point = metrics.getPosition(i)
+                    val nextPoint = metrics.getPosition(i + delta)
+
+                    canvas.drawLine(point, nextPoint, paint)
+
+                    i += delta
+                }
+            }
         )
 
         val pencil = BrushData(
             id = 1,
             name = "Pencil",
             stroke = "pencil",
-            brush = Res.drawable.stamp_pencil,
             opacityDiff = 0.5f,
             densityOffset = 10.0,
             rotationRandomness = 15f,

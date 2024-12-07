@@ -19,6 +19,7 @@ interface Platform {
 
     val projectRepo: ProjectRepository
     fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {}
+    fun launchUrl(url: String): Boolean
 }
 
 enum class PlatformType {

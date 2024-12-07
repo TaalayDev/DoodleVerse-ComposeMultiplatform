@@ -1,5 +1,6 @@
 package io.github.taalaydev.doodleverse
 
+import io.github.taalaydev.doodleverse.shared.AnimationStateModel
 import io.github.taalaydev.doodleverse.shared.DrawingPathModel
 import io.github.taalaydev.doodleverse.shared.FrameModel
 import io.github.taalaydev.doodleverse.shared.LayerModel
@@ -25,7 +26,7 @@ class DemoProjectRepo : ProjectRepository() {
     override suspend fun insertProject(project: ProjectModel): Long {
         val id = projects.size.toLong()
         projects.add(project.copy(id = id))
-        insertFrames(project.frames)
+        insertAnimationStates(project.animationStates)
         return id
     }
 
@@ -45,8 +46,36 @@ class DemoProjectRepo : ProjectRepository() {
         projects.clear()
     }
 
-    override suspend fun getAllFrames(projectId: Long): List<FrameModel> {
-        return frames.filter { it.projectId == projectId }
+    override suspend fun getAllAnimationStates(projectId: Long): List<AnimationStateModel> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getAnimationStateById(id: Long): AnimationStateModel {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun insertAnimationState(animationState: AnimationStateModel): Long {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun updateAnimationState(animationState: AnimationStateModel) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun insertAnimationStates(animationStates: List<AnimationStateModel>) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteAnimationStateById(id: Long) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteAllAnimationStates() {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getAllFrames(animationId: Long): List<FrameModel> {
+        return frames.filter { it.animationId == animationId }
     }
 
     override suspend fun getFrameById(id: Long): FrameModel {

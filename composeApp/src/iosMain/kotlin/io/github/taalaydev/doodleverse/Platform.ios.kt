@@ -1,40 +1,41 @@
 package io.github.taalaydev.doodleverse
 
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import io.github.taalaydev.doodleverse.database.getRepository
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.refTo
-import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.IO
 import org.jetbrains.skia.Image
 import platform.CoreGraphics.CGBitmapContextCreate
 import platform.CoreGraphics.CGBitmapContextCreateImage
 import platform.CoreGraphics.CGColorSpaceCreateDeviceRGB
 import platform.CoreGraphics.CGImageAlphaInfo
-import platform.Foundation.NSData
 import platform.UIKit.UIDevice
 import platform.UIKit.UIImage
-import platform.UIKit.UIImageJPEGRepresentation
-import platform.UIKit.UIImagePNGRepresentation
+import platform.Foundation.NSProcessInfo
+import platform.Foundation.isMacCatalystApp
+import platform.Foundation.isiOSAppOnMac
 import platform.UIKit.UIImageWriteToSavedPhotosAlbum
-import platform.posix.memcpy
-import kotlin.reflect.KClass
+import platform.Foundation.NSURL
+import platform.UIKit.UIApplication
 
 class IOSPlatform: Platform {
     override val name: String = UIDevice.currentDevice.systemName() + " " + UIDevice.currentDevice.systemVersion
     override val isWeb: Boolean = false
-    override val isDesktop: Boolean = false
+    override val isDesktop: Boolean = NSProcessInfo.processInfo.isiOSAppOnMac()
     override val isAndroid: Boolean = false
-    override val isIos: Boolean = true
+    override val isIos: Boolean = !NSProcessInfo.processInfo.isiOSAppOnMac()
     override val projectRepo: ProjectRepository = getRepository()
     override val dispatcherIO = kotlinx.coroutines.Dispatchers.IO
     override fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
         saveBitmap(bitmap, filename, format)
+    }
+    override fun launchUrl(url: String): Boolean {
+        val nsUrl = NSURL(string = url)
+        return UIApplication.sharedApplication.openURL(nsUrl)
     }
 }
 
@@ -71,13 +72,16 @@ fun ImageBitmap.toUIImage(): UIImage? {
 
 @OptIn(ExperimentalForeignApi::class)
 actual fun imageBitmapByteArray(bitmap: ImageBitmap, format: ImageFormat): ByteArray {
-    val uiImage = bitmap.toUIImage() ?: return byteArrayOf()
-    val nsData: NSData? = when (format) {
-        ImageFormat.PNG -> UIImagePNGRepresentation(uiImage)
-        ImageFormat.JPG -> UIImageJPEGRepresentation(uiImage, 1.0)
-    }
-    return nsData?.bytes?.readBytes(nsData.length.toInt()) ?: byteArrayOf()
+    val image = bitmap.asSkiaBitmap()
+    val encodedData = Image.makeFromBitmap(image).encodeToData(format.skiaFormat)
+    return encodedData?.bytes ?: ByteArray(0)
 }
+
+val ImageFormat.skiaFormat: org.jetbrains.skia.EncodedImageFormat
+    get() = when (this) {
+        ImageFormat.PNG -> org.jetbrains.skia.EncodedImageFormat.PNG
+        ImageFormat.JPG -> org.jetbrains.skia.EncodedImageFormat.JPEG
+    }
 
 actual fun imageBitmapFromByteArray(bytes: ByteArray, width: Int, height: Int): ImageBitmap {
     try {

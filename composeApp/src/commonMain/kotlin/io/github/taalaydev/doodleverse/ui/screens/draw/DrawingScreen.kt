@@ -337,15 +337,7 @@ private fun DrawScreenBody(
                             },
                             onClick = {
                                 menuOpen = false
-                                scope.launch {
-                                    val result = FileKit.pickFile(PickerType.Image, mode = PickerMode.Single)
-                                    if (result != null) {
-                                        val bytes = result.readBytes()
-                                        val bitmap = imageBitmapFromByteArray(bytes, 0, 0)
-
-                                        viewModel.importImage(bytes, bitmap.width, bitmap.height)
-                                    }
-                                }
+                                viewModel.importImage()
                             }
                         )
                     }

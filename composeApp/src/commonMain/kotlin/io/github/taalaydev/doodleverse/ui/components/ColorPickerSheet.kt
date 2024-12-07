@@ -57,6 +57,7 @@ fun ColorPicker(
             Color(0xFF4DB6AC),
             Color(0xFFA1887F),
             Color(0xFF90A4AE),
+            Color(0xFFFFDBAC),
             Color(0xFFFFFFFF),
         )
     }

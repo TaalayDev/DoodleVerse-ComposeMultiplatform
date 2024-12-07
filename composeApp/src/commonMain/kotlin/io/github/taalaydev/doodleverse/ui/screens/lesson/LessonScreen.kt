@@ -117,6 +117,7 @@ fun LessonDetailScreen(
             onStartDrawing = {
                 viewModel.createProject(title, 1,1) { project ->
                     showStartDrawing = false
+                    navController.popBackStack()
                     navController.navigate(Destination.Drawing(project.id))
                 }
             }
@@ -388,7 +389,7 @@ fun LessonDetailScreen(
                         }
 
                         TextButton(
-                            enabled = canUndo,
+                            enabled = canUndo || currentPage == lesson.parts.size - 1,
                             onClick = {
                                 if (currentPage == lesson.parts.size - 1) {
                                     showStartDrawing = true

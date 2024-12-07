@@ -17,6 +17,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.*
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -51,6 +55,7 @@ import doodleverse.composeapp.generated.resources.projects
 import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.navigation.Destination
+import io.github.taalaydev.doodleverse.shared.Analytics
 import io.github.taalaydev.doodleverse.ui.components.ComposeIcons
 import io.github.taalaydev.doodleverse.ui.components.EditProjectDialog
 import io.github.taalaydev.doodleverse.ui.components.NewProjectDialog
@@ -75,6 +80,7 @@ fun HomeScreen(
     var selectedTab by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
+        // Analytics.logEvent("home_screen_opened")
         viewModel.loadProjects()
     }
 
@@ -316,6 +322,7 @@ fun EmptyProjectsScreen(onCreateNew: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun ProjectGrid(
     projects: List<ProjectModel>,
@@ -365,10 +372,15 @@ fun ProjectCard(
                 modifier = Modifier.fillMaxWidth().padding(
                     start = 16.dp,
                 ),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = project.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = project.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
                 Column {
                     IconButton(onClick = {
                         openMenu = true
@@ -451,7 +463,12 @@ fun InfoChip(icon: ImageVector, label: String) {
         ) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
-            Text(text = label, style = MaterialTheme.typography.bodySmall)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

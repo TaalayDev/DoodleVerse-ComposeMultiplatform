@@ -9,13 +9,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import doodleverse.composeapp.generated.resources.Res
+import doodleverse.composeapp.generated.resources.heart
 import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.core.lessons
 import io.github.taalaydev.doodleverse.ui.screens.about.AboutScreen
+import io.github.taalaydev.doodleverse.ui.screens.bridge.BridgeGame
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawingScreen
 import io.github.taalaydev.doodleverse.ui.screens.home.HomeScreen
 import io.github.taalaydev.doodleverse.ui.screens.lesson.LessonDetailScreen
 import io.github.taalaydev.doodleverse.ui.screens.lesson.LessonsScreen
+import io.github.taalaydev.doodleverse.ui.screens.quick_draw.QuickDrawGame
+import io.github.taalaydev.doodleverse.ui.screens.shape_race.ShapeRaceGame
 
 @Composable
 fun MainNavHost(
@@ -67,9 +72,19 @@ fun MainNavHost(
 
         composable(Destination.About.route) {
             AboutScreen(
+                platform = platform,
                 navController = navController,
                 modifier = Modifier.fillMaxSize()
             )
+        }
+        composable(Destination.QuickDraw.route) {
+            QuickDrawGame()
+        }
+        composable(Destination.ShapeRace.route) {
+            ShapeRaceGame(modifier = Modifier.fillMaxSize())
+        }
+        composable(Destination.Bridge.route) {
+            BridgeGame(referenceImageRes = Res.drawable.heart)
         }
     }
 }

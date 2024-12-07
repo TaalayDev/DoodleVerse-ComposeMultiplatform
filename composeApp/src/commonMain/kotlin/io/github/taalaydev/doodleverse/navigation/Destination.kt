@@ -30,6 +30,9 @@ sealed class Destination(val route: String) {
         )
     }
     data object About : Destination(route = Routes.ABOUT)
+    data object QuickDraw : Destination(route = Routes.QUICK_DRAW)
+    data object ShapeRace : Destination(route = Routes.SHAPE_RACE)
+    data object Bridge : Destination(route = Routes.BRIDGE)
 
     object Routes {
         const val HOME = "home"
@@ -37,6 +40,9 @@ sealed class Destination(val route: String) {
         const val LESSONS = "lessons"
         const val LESSON_DETAIL = "lesson/{lessonId}"
         const val ABOUT = "about"
+        const val QUICK_DRAW = "quick-draw"
+        const val SHAPE_RACE = "shape-race"
+        const val BRIDGE = "bridge"
     }
 }
 
