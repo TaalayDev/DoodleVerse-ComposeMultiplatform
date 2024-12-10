@@ -146,6 +146,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics.android)
 
     implementation("com.google.firebase:firebase-common-ktx:21.0.0")
+    implementation("com.google.firebase:firebase-analytics")
 }
 
 compose.desktop {

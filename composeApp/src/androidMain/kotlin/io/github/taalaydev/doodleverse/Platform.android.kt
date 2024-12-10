@@ -12,14 +12,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.util.Locale
-import kotlin.coroutines.resume
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.ktx.Firebase
+
+fun Map<Any?, Any>.toBundle(): android.os.Bundle {
+    val bundle = android.os.Bundle()
+    for ((key, value) in this) {
+        when (value) {
+            is String -> bundle.putString(key.toString(), value)
+            is Int -> bundle.putInt(key.toString(), value)
+            is Long -> bundle.putLong(key.toString(), value)
+            is Double -> bundle.putDouble(key.toString(), value)
+            is Boolean -> bundle.putBoolean(key.toString(), value)
+            is Array<*> -> bundle.putStringArray(key.toString(), value as Array<String>)
+            is IntArray -> bundle.putIntArray(key.toString(), value)
+            is LongArray -> bundle.putLongArray(key.toString(), value)
+            is DoubleArray -> bundle.putDoubleArray(key.toString(), value)
+            is BooleanArray -> bundle.putBooleanArray(key.toString(), value)
+            is Map<*, *> -> bundle.putBundle(key.toString(), (value as Map<Any?, Any>).toBundle())
+            else -> throw IllegalArgumentException("Unsupported value type: ${value.javaClass}")
+        }
+    }
+    return bundle
+}
+
+class AndroidAnalytics : Analytics() {
+    override fun logEvent(name: String, params: Map<Any?, Any>?) {
+        Firebase.analytics.logEvent(name, params?.toBundle())
+    }
+}
+
+actual fun getAnalytics(): Analytics = AndroidAnalytics()
 
 fun saveImageBitmap(context: Context, bitmap: ImageBitmap, filename: String, format: ImageFormat) {
     val bitmap = bitmap.asAndroidBitmap()

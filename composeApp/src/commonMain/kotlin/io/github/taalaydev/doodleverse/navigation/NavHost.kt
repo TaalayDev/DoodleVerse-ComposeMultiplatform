@@ -1,5 +1,6 @@
 package io.github.taalaydev.doodleverse.navigation
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -19,7 +20,6 @@ import io.github.taalaydev.doodleverse.ui.screens.draw.DrawingScreen
 import io.github.taalaydev.doodleverse.ui.screens.home.HomeScreen
 import io.github.taalaydev.doodleverse.ui.screens.lesson.LessonDetailScreen
 import io.github.taalaydev.doodleverse.ui.screens.lesson.LessonsScreen
-import io.github.taalaydev.doodleverse.ui.screens.quick_draw.QuickDrawGame
 import io.github.taalaydev.doodleverse.ui.screens.shape_race.ShapeRaceGame
 
 @Composable
@@ -78,7 +78,7 @@ fun MainNavHost(
             )
         }
         composable(Destination.QuickDraw.route) {
-            QuickDrawGame()
+            Box {}
         }
         composable(Destination.ShapeRace.route) {
             ShapeRaceGame(modifier = Modifier.fillMaxSize())

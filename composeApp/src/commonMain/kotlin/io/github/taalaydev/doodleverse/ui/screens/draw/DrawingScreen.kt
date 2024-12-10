@@ -640,7 +640,8 @@ fun DrawControls(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = { showColorPicker = true }) {
                     Icon(
@@ -649,19 +650,41 @@ fun DrawControls(
                         tint = color
                     )
                 }
-                IconButton(
-                    onClick = {
-                        showBrushPicker = true
-                    }
+
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (tool.isBrush) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        Lucide.Brush,
-                        contentDescription = stringResource(Res.string.brush),
-                        tint = if (tool.isBrush) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                    )
+                    IconButton(
+                        onClick = { viewModel.setBrush() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            Lucide.Brush,
+                            contentDescription = stringResource(Res.string.brush),
+                            tint = if (tool.isBrush) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { showBrushPicker = true },
+                        modifier = Modifier.size(20.dp)
+                    ) {
+                        Icon(
+                            Lucide.ChevronUp,
+                            contentDescription = null,
+                            tint = if (tool.isBrush) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
+
                 IconButton(onClick = {
-                    onBrushSelected(BrushData.eraser)
+                    onBrushSelected(BrushData.cleanEraser)
                 }) {
                     Icon(
                         Lucide.Eraser,
@@ -714,88 +737,197 @@ fun DrawControls(
                 .fillMaxWidth()
                 .height(60.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surface),
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
+                .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
-                onClick = {
-                    showBrushPicker = true
-                }
+            // Drawing tools group
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    Lucide.Brush,
-                    contentDescription = stringResource(Res.string.brush),
-                    tint = if (tool.isBrush) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (tool.isBrush) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { viewModel.setBrush() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            Lucide.Brush,
+                            contentDescription = stringResource(Res.string.brush),
+                            tint = if (tool.isBrush) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { showBrushPicker = true },
+                        modifier = Modifier.size(20.dp)
+                    ) {
+                        Icon(
+                            Lucide.ChevronUp,
+                            contentDescription = null,
+                            tint = if (tool.isBrush) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                IconButton(
+                    onClick = { onBrushSelected(BrushData.cleanEraser) },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (tool.isEraser) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        Lucide.Eraser,
+                        contentDescription = stringResource(Res.string.eraser),
+                        tint = if (tool.isEraser) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
-            IconButton(onClick = {
-                onBrushSelected(BrushData.eraser)
-            }) {
-                Icon(
-                    Lucide.Eraser,
-                    contentDescription = stringResource(Res.string.eraser),
-                    tint = if (tool.isEraser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                )
-            }
-            IconButton(onClick = {
-                showShapePicker = true
-            }) {
+
+            VerticalDivider()
+
+            // Shape tools
+            IconButton(
+                onClick = { showShapePicker = true },
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (tool.isShape) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                    .size(36.dp)
+            ) {
                 Icon(
                     Lucide.Shapes,
                     contentDescription = stringResource(Res.string.shapes),
-                    tint = if (tool.isShape) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    tint = if (tool.isShape) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            IconButton(onClick = {
-                onToolSelected(Tool.Fill)
-            }) {
-                Icon(
-                    Lucide.PaintBucket,
-                    contentDescription = stringResource(Res.string.fill),
-                    tint = if (tool.isFill) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                )
-            }
-            IconButton(onClick = {
-                onToolSelected(Tool.Eyedropper)
-            }) {
-                Icon(
-                    Lucide.Pipette,
-                    contentDescription = stringResource(Res.string.eyedropper),
-                    tint = if (tool.isEyedropper) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                )
-            }
-            IconButton(onClick = {
-                onToolSelected(Tool.Zoom)
-            }) {
-                Icon(
-                    Lucide.ZoomIn,
-                    contentDescription = stringResource(Res.string.zoom),
-                    tint = if (tool.isZoom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                )
-            }
-            IconButton(
-                onClick = { onToolSelected(Tool.Drag) },
+
+            // Additional tools group
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    Lucide.Move,
-                    contentDescription = stringResource(Res.string.move_tool),
-                    tint = if (tool.isDrag) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface
-                )
+                IconButton(
+                    onClick = { onToolSelected(Tool.Fill) },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (tool.isFill) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        Lucide.PaintBucket,
+                        contentDescription = stringResource(Res.string.fill),
+                        tint = if (tool.isFill) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = { onToolSelected(Tool.Eyedropper) },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (tool.isEyedropper) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        Lucide.Pipette,
+                        contentDescription = stringResource(Res.string.eyedropper),
+                        tint = if (tool.isEyedropper) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
-            IconButton(
-                onClick = { onToolSelected(Tool.Selection) }
+
+            VerticalDivider()
+
+            // View tools group
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    Lucide.BoxSelect,
-                    contentDescription = stringResource(Res.string.selection_tool),
-                    tint = if (tool.isSelection) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface
-                )
+                IconButton(
+                    onClick = { onToolSelected(Tool.Zoom) },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (tool.isZoom) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        Lucide.ZoomIn,
+                        contentDescription = stringResource(Res.string.zoom),
+                        tint = if (tool.isZoom) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = { onToolSelected(Tool.Drag) },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (tool.isDrag) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        Lucide.Move,
+                        contentDescription = stringResource(Res.string.move_tool),
+                        tint = if (tool.isDrag) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = { onToolSelected(Tool.Selection) },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (tool.isSelection) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        Lucide.BoxSelect,
+                        contentDescription = stringResource(Res.string.selection_tool),
+                        tint = if (tool.isSelection) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
+}
+
+@Composable
+private fun VerticalDivider(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .padding(horizontal = 4.dp)
+            .width(1.dp)
+            .height(24.dp)
+            .background(
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                RoundedCornerShape(1.dp)
+            )
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

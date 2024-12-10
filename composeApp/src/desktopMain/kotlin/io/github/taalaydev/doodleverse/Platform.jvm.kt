@@ -39,6 +39,14 @@ class JVMPlatform: Platform {
     }
 }
 
+class DesktopAnalytics : Analytics() {
+    override fun logEvent(name: String, params: Map<Any?, Any>?) {
+        // Not implemented
+    }
+}
+
+actual fun getAnalytics(): Analytics = DesktopAnalytics()
+
 fun saveBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
     val buffer = bitmap.asSkiaBitmap().toBufferedImage()
     val imageFormat = format.extension

@@ -22,6 +22,12 @@ interface Platform {
     fun launchUrl(url: String): Boolean
 }
 
+abstract class Analytics {
+    abstract fun logEvent(name: String, params: Map<Any?, Any>?)
+}
+
+expect fun getAnalytics(): Analytics
+
 enum class PlatformType {
     WEB, DESKTOP, ANDROID, IOS;
 

@@ -24,10 +24,12 @@ import doodleverse.composeapp.generated.resources.Res
 import doodleverse.composeapp.generated.resources.all_categories
 import doodleverse.composeapp.generated.resources.back
 import doodleverse.composeapp.generated.resources.lessons
+import io.github.taalaydev.doodleverse.Analytics
 import io.github.taalaydev.doodleverse.core.lessons
 import io.github.taalaydev.doodleverse.data.models.LessonCategory
 import io.github.taalaydev.doodleverse.data.models.LessonDifficulty
 import io.github.taalaydev.doodleverse.data.models.LessonModel
+import io.github.taalaydev.doodleverse.getAnalytics
 import io.github.taalaydev.doodleverse.navigation.Destination
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
@@ -37,7 +39,8 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun LessonsScreen(
     navController: NavController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    analytics: Analytics = getAnalytics()
 ) {
     var selectedCategory by remember { mutableStateOf<LessonCategory?>(null) }
     var selectedDifficulty by remember { mutableStateOf<LessonDifficulty?>(null) }
@@ -115,6 +118,8 @@ fun LessonsScreen(
                         lesson = lesson,
                         onClick = {
                             navController.navigate(Destination.LessonDetail(lesson.id))
+
+                            analytics.logEvent("lesson_opened", mapOf("lesson_title" to lesson.title))
                         }
                     )
                 }

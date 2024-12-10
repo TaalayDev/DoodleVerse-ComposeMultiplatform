@@ -52,10 +52,11 @@ import doodleverse.composeapp.generated.resources.minutes_ago
 import doodleverse.composeapp.generated.resources.more_options
 import doodleverse.composeapp.generated.resources.no_projects_found
 import doodleverse.composeapp.generated.resources.projects
+import io.github.taalaydev.doodleverse.Analytics
 import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
+import io.github.taalaydev.doodleverse.getAnalytics
 import io.github.taalaydev.doodleverse.navigation.Destination
-import io.github.taalaydev.doodleverse.shared.Analytics
 import io.github.taalaydev.doodleverse.ui.components.ComposeIcons
 import io.github.taalaydev.doodleverse.ui.components.EditProjectDialog
 import io.github.taalaydev.doodleverse.ui.components.NewProjectDialog
@@ -69,6 +70,7 @@ fun HomeScreen(
     navController: NavController = rememberNavController(),
     platform: Platform,
     viewModel: HomeViewModel = viewModel { HomeViewModel(platform.projectRepo, platform.dispatcherIO) },
+    analytics: Analytics = getAnalytics()
 ) {
     val scope = rememberCoroutineScope()
     val projects by viewModel.projects.collectAsStateWithLifecycle()
@@ -80,7 +82,7 @@ fun HomeScreen(
     var selectedTab by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
-        // Analytics.logEvent("home_screen_opened")
+        analytics.logEvent("home_screen_opened", null)
         viewModel.loadProjects()
     }
 
@@ -89,7 +91,7 @@ fun HomeScreen(
             onDismissRequest = { showNewProjectDialog = false },
             onConfirm = { name, width, height ->
                 showNewProjectDialog = false
-
+                analytics.logEvent("project_created", mapOf("name" to name))
                 scope.launch {
                     val project = viewModel.createProject(name, width, height)
                     navController.navigate(Destination.Drawing(project.id))
@@ -135,6 +137,7 @@ fun HomeScreen(
                     selectedTab = selectedTab,
                     onTabSelected = { index, route ->
                         selectedTab = index
+                        analytics.logEvent("tab_selected", mapOf("tab_index" to index))
                         if (route != null) {
                             navController.navigate(route)
                         }
@@ -363,9 +366,7 @@ fun ProjectCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onProjectClick(project) },
-        colors = CardDefaults.cardColors(
-
-        ),
+        colors = CardDefaults.cardColors(),
     ) {
         Column {
             Row(

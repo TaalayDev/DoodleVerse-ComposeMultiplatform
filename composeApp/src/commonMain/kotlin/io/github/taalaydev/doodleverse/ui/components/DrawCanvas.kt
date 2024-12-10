@@ -41,6 +41,7 @@ import io.github.taalaydev.doodleverse.core.SelectionHitTestResult
 import io.github.taalaydev.doodleverse.core.SelectionState
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.core.copy
+import io.github.taalaydev.doodleverse.core.distanceTo
 import io.github.taalaydev.doodleverse.core.getTransformedBounds
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.BrushData
@@ -227,13 +228,15 @@ fun DrawCanvas(
                 val y = currentPosition.y.toInt()
                 val replacementColor = currentColor.toArgb()
 
-                DrawRenderer.floodFill(
-                    imageCanvas!!,
-                    bitmap!!,
-                    x,
-                    y,
-                    replacementColor,
-                )
+//                DrawRenderer.floodFill(
+//                    imageCanvas!!,
+//                    bitmap!!,
+//                    x,
+//                    y,
+//                    replacementColor,
+//                )
+                provider.floodFill(x, y)
+
                 drawState.value = DrawState.Idle
                 controller.addState(
                     DrawingPath(
@@ -504,5 +507,4 @@ fun DrawCanvas(
             )
         }
     }
-
 }

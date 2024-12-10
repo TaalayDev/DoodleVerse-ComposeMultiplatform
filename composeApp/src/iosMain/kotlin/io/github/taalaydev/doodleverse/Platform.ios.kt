@@ -21,6 +21,9 @@ import platform.Foundation.isiOSAppOnMac
 import platform.UIKit.UIImageWriteToSavedPhotosAlbum
 import platform.Foundation.NSURL
 import platform.UIKit.UIApplication
+import cocoapods.FirebaseAnalytics.FIRAnalytics
+import platform.Foundation.NSNumber
+import platform.Foundation.NSString
 
 class IOSPlatform: Platform {
     override val name: String = UIDevice.currentDevice.systemName() + " " + UIDevice.currentDevice.systemVersion
@@ -39,6 +42,15 @@ class IOSPlatform: Platform {
     }
 }
 
+class IOSAnalytics: Analytics() {
+    @OptIn(ExperimentalForeignApi::class)
+    override fun logEvent(name: String, params: Map<Any?, Any>?) {
+        FIRAnalytics.logEventWithName(name, parameters = params)
+    }
+
+}
+
+actual fun getAnalytics(): Analytics = IOSAnalytics()
 
 @OptIn(ExperimentalForeignApi::class)
 fun saveBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {

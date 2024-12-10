@@ -8,11 +8,15 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import kotlin.math.max
 import kotlin.math.min
@@ -25,7 +29,8 @@ enum class BrushModifier {
 
 object DrawRenderer {
     internal fun calcOpacity(alpha: Float, brushOpacity: Float): Float {
-        return max(alpha, brushOpacity) - min(alpha, brushOpacity)
+        return (max(alpha, brushOpacity) - min(alpha, brushOpacity))
+            .coerceAtLeast(0f)
     }
 
     internal fun pathPaint(
@@ -142,52 +147,152 @@ object DrawRenderer {
         x: Int,
         y: Int,
         replacement: Int,
+        borderPath: Path? = null,
     ) {
         if (x < 0 || y < 0 || x >= imageBitmap.width || y >= imageBitmap.height) return
 
         val width = imageBitmap.width
         val height = imageBitmap.height
-
         val pixelMap = imageBitmap.toPixelMap()
         val targetColor = pixelMap[x, y].toArgb()
 
         if (targetColor == replacement) return
 
-        val pixels = pixelMap.buffer
+        // Create a boolean array to track visited pixels and those inside the border path
+        val visited = Array(height) { BooleanArray(width) }
 
-        val stack = ArrayDeque<Offset>()
-        stack.add(Offset(x.toFloat(), y.toFloat()))
+        val stack = ArrayDeque<Pair<Int, Int>>()
+        stack.add(Pair(x, y))
 
         while (stack.isNotEmpty()) {
-            val point = stack.removeLast()
-            val px = point.x.toInt()
-            val py = point.y.toInt()
+            val (x, y) = stack.removeLast()
 
-            if (px < 0 || px >= width || py < 0 || py >= height) continue
+            // Skip if outside bounds, already visited, or outside border path
+            if (x < 0 || x >= width || y < 0 || y >= height || visited[y][x]) continue
 
-            val index = py * width + px
-            if (pixels[index] != targetColor) continue
+            // Skip if pixel doesn't match target color
+            if (pixelMap[x, y].toArgb() != targetColor) continue
 
-            pixels[index] = replacement
+            visited[y][x] = true
 
-            stack.add(Offset((px + 1).toFloat(), py.toFloat()))
-            stack.add(Offset((px - 1).toFloat(), py.toFloat()))
-            stack.add(Offset(px.toFloat(), (py + 1).toFloat()))
-            stack.add(Offset(px.toFloat(), (py - 1).toFloat()))
+            // Draw the pixel with the pattern color
+            canvas.nativeCanvas.drawPoint(
+                x.toFloat(),
+                y.toFloat(),
+                Paint().apply {
+                    color = Color(replacement)
+                    style = PaintingStyle.Fill
+                }.asFrameworkPaint()
+            )
+
+            // Add neighboring pixels to stack
+            stack.add(Pair(x + 1, y))
+            stack.add(Pair(x - 1, y))
+            stack.add(Pair(x, y + 1))
+            stack.add(Pair(x, y - 1))
+        }
+    }
+
+    fun getBorderPath(
+        imageBitmap: ImageBitmap,
+        x: Int,
+        y: Int,
+        targetColor: Int,
+    ): Path {
+        val width = imageBitmap.width
+        val height = imageBitmap.height
+        val pixelMap = imageBitmap.toPixelMap()
+
+        // For marking visited border pixels
+        val visited = Array(height) { BooleanArray(width) }
+        val borderPath = Path()
+
+        // Find first border point
+        var startX = x
+        var startY = y
+        while (startY < height && pixelMap[startX, startY].toArgb() == targetColor) {
+            startY++
+        }
+        if (startY == height) return borderPath
+        startY--
+
+        // Define 8-directional movement
+        val directions = listOf(
+            -1 to 0,  // left
+            -1 to 1,  // down-left
+            0 to 1,   // down
+            1 to 1,   // down-right
+            1 to 0,   // right
+            1 to -1,  // up-right
+            0 to -1,  // up
+            -1 to -1  // up-left
+        )
+
+        // Start tracing the border
+        var currentX = startX
+        var currentY = startY
+        var currentDir = 0 // Start moving right
+        borderPath.moveTo(currentX.toFloat(), currentY.toFloat())
+
+        do {
+            visited[currentY][currentX] = true
+
+            // Try all directions, starting from the current direction
+            var found = false
+            for (i in 0 until 8) {
+                val nextDir = (currentDir + i) % 8
+                val (dx, dy) = directions[nextDir]
+                val newX = currentX + dx
+                val newY = currentY + dy
+
+                // Check if the new position is valid and on the border
+                if (newX in 0 until width && newY in 0 until height &&
+                    !visited[newY][newX] &&
+                    isOnBorder(pixelMap, newX, newY, targetColor, width, height)
+                ) {
+                    borderPath.lineTo(newX.toFloat(), newY.toFloat())
+                    currentX = newX
+                    currentY = newY
+                    currentDir = nextDir
+                    found = true
+                    break
+                }
+            }
+
+            if (!found) break
+
+        } while (currentX != startX || currentY != startY)
+
+        borderPath.close()
+        return borderPath
+    }
+
+    private fun isOnBorder(
+        pixelMap: PixelMap,
+        x: Int,
+        y: Int,
+        targetColor: Int,
+        width: Int,
+        height: Int
+    ): Boolean {
+        val current = pixelMap[x, y].toArgb() == targetColor
+
+        // Check if any adjacent pixel has different color (including diagonals)
+        for (dy in -1..1) {
+            for (dx in -1..1) {
+                if (dx == 0 && dy == 0) continue
+
+                val newX = x + dx
+                val newY = y + dy
+
+                if (newX in 0 until width && newY in 0 until height) {
+                    val neighbor = pixelMap[newX, newY].toArgb() == targetColor
+                    if (current != neighbor) return true
+                }
+            }
         }
 
-        canvas.drawPoints(
-            pointMode = androidx.compose.ui.graphics.PointMode.Points,
-            points = pixels.mapIndexed { index, color ->
-                val x = index % width
-                val y = index / width
-                Offset(x.toFloat(), y.toFloat())
-            }.filter { it.x >= 0 && it.y >= 0 && it.x < width && it.y < height && pixels[(it.y.toInt() * width + it.x.toInt())] == replacement },
-            paint = Paint().apply {
-                color = Color(replacement)
-                style = PaintingStyle.Fill
-            }
-        )
+        return false
     }
 
 }

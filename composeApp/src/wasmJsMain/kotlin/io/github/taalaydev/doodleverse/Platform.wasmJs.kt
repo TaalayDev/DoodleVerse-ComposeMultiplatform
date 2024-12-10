@@ -32,6 +32,14 @@ class WasmPlatform: Platform {
     }
 }
 
+class WebAnalytics: Analytics() {
+    override fun logEvent(name: String, params: Map<Any?, Any>?) {
+        // Not implemented
+    }
+}
+
+actual fun getAnalytics(): Analytics = WebAnalytics()
+
 fun saveBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {
     val skiaBitmap = bitmap.asSkiaBitmap()
     val skiaImage = Image.makeFromBitmap(skiaBitmap)

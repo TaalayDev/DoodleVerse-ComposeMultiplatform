@@ -63,8 +63,8 @@ fun ColorPicker(
     }
 
     LaunchedEffect(Unit) {
-        controller.selectByColor(initialColor, false)
-        controller.setAlpha(initialColor.alpha, false)
+        controller.selectByColor(initialColor, true)
+        controller.setAlpha(initialColor.alpha, true)
     }
 
     ModalBottomSheet(
@@ -80,7 +80,7 @@ fun ColorPicker(
                 HsvColorPicker(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(450.dp)
+                        .height(350.dp)
                         .padding(10.dp),
                     controller = controller,
                     onColorChanged = { colorEnvelope: ColorEnvelope ->
@@ -106,7 +106,7 @@ fun ColorPicker(
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(10),
+                    columns = GridCells.Fixed(6),
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

@@ -13,11 +13,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.withSave
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.taalaydev.doodleverse.ImageFormat
+import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.core.SelectionHitTestResult
 import io.github.taalaydev.doodleverse.core.SelectionState
 import io.github.taalaydev.doodleverse.core.SelectionTransform
@@ -116,6 +118,7 @@ interface DrawProvider {
     fun startMove(offset: Offset)
     fun updateMove(offset: Offset)
     fun endMove()
+    fun floodFill(x: Int, y: Int)
 
     suspend fun addLayer(layer: LayerModel): Long
     suspend fun deleteLayer(layer: LayerModel)
@@ -605,7 +608,6 @@ class DrawingController(
     }
 }
 
-// ViewModel for the drawing screen
 class DrawViewModel(
     private val projectRepo: ProjectRepository,
     private val dispatcher: CoroutineDispatcher
@@ -631,6 +633,7 @@ class DrawViewModel(
     private var _currentTool: MutableStateFlow<Tool> = MutableStateFlow(Tool.Brush(BrushData.solid))
     val currentTool: StateFlow<Tool> = _currentTool.asStateFlow()
 
+    private var _lastBrush: BrushData = BrushData.solid
     val currentBrush: Flow<BrushData>
         get() = currentTool.map {
             when (it) {
@@ -706,6 +709,11 @@ class DrawViewModel(
         )
     }
 
+    fun setBrush() {
+        applySelection()
+        _currentTool.value = Tool.Brush(_lastBrush)
+    }
+
     fun setBrush(brush: BrushData) {
         applySelection()
         if (brush.isShape) {
@@ -713,6 +721,7 @@ class DrawViewModel(
         } else if (brush.blendMode == BlendMode.Clear) {
             _currentTool.value = Tool.Eraser(brush)
         } else {
+            _lastBrush = brush
             _currentTool.value = Tool.Brush(brush)
         }
     }
@@ -944,6 +953,18 @@ class DrawViewModel(
             hitTestSelectionHandles(point, _selectionState)
         } else {
             SelectionHitTestResult.Outside
+        }
+    }
+
+    override fun floodFill(x: Int, y: Int) {
+        viewModelScope.launch {
+            DrawRenderer.floodFill(
+                drawingController.imageCanvas.value!!,
+                drawingController.bitmap.value!!,
+                x,
+                y,
+                currentColor.value.toArgb()
+            )
         }
     }
 

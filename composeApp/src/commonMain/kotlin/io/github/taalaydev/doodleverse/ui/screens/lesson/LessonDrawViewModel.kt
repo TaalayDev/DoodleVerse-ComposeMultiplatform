@@ -10,9 +10,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.taalaydev.doodleverse.ImageFormat
+import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.core.SelectionHitTestResult
 import io.github.taalaydev.doodleverse.core.SelectionState
 import io.github.taalaydev.doodleverse.core.SelectionTransform
@@ -386,6 +388,18 @@ class LessonDrawViewModel(
             hitTestSelectionHandles(point, _selectionState)
         } else {
             SelectionHitTestResult.Outside
+        }
+    }
+
+    override fun floodFill(x: Int, y: Int) {
+        viewModelScope.launch {
+            DrawRenderer.floodFill(
+                drawingController.imageCanvas.value!!,
+                drawingController.bitmap.value!!,
+                x,
+                y,
+                currentColor.value.toArgb()
+            )
         }
     }
 }
