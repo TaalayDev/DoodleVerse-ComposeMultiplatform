@@ -29,6 +29,7 @@ fun getRepository(ctx: Context): ProjectRepository {
         frameDao = room.frameDao(),
         layerDao = room.layerDao(),
         drawingPathDao = room.drawingPathDao(),
-        pointDao = room.pointDao()
+        pointDao = room.pointDao(),
+        animationStateDao = room.animationStateDao()
     )
 }

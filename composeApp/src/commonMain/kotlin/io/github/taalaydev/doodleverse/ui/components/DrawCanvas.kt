@@ -362,6 +362,14 @@ fun DrawCanvas(
                                 brushImage
                             )
                         } else {
+                            // first clear the path
+//                            imageCanvas?.drawRect(
+//                                Rect(Offset.Zero, canvasSize),
+//                                Paint().apply {
+//                                    blendMode = BlendMode.Clear
+//                                }
+//                            )
+
                             DrawRenderer.drawPath(
                                 imageCanvas!!,
                                 drawingPath!!,
