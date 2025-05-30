@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.unit.dp
+import io.github.taalaydev.doodleverse.brush.allPremiumBrushes
 import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
@@ -100,7 +101,7 @@ fun BrushPicker(
     onSelected: (BrushData) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
-    val brushes = remember { BrushData.all() }
+    val brushes = remember { BrushData.all() + allPremiumBrushes }
 
     ModalBottomSheet(
         onDismissRequest = { onDismiss() },

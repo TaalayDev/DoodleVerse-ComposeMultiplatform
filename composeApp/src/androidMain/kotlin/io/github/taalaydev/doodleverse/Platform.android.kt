@@ -5,19 +5,18 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
-import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.ktx.Firebase
+import io.github.taalaydev.doodleverse.shared.AndroidDataStorage
+import io.github.taalaydev.doodleverse.shared.storage.DataStorage
 
 fun Map<Any?, Any>.toBundle(): android.os.Bundle {
     val bundle = android.os.Bundle()
@@ -135,3 +134,5 @@ actual fun getColorFromBitmap(bitmap: ImageBitmap, x: Int, y: Int): Int? {
 }
 
 actual fun getPlatformType(): PlatformType = PlatformType.ANDROID
+
+actual fun createDataStorage(): DataStorage = AndroidDataStorage(DoodleVerseApp.instance)

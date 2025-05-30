@@ -94,6 +94,19 @@
     <string name="difficulty_medium">Medium</string>
     <string name="difficulty_hard">Hard</string>
 
+    <string name="extract_colors">Extract Colors</string>
+
+    <string name="copy_layer">Copy Layer</string>
+    <string name="clear_layer">Clear Layer</string>
+    <string name="merge_down">Merge Down</string>
+    <string name="rename_layer">Rename Layer</string>
+    <string name="edit_layer_name">Edit Layer Name</string>
+    <string name="layer_name">Layer Name</string>
+
+    <!-- Layer states -->
+    <string name="empty_layer">Empty Layer</string>
+    <string name="layer_opacity">Opacity: %d%%</string>
+
     <string name="chibi_dog_lesson_title">Dog</string>
     <string name="chibi_dog_lesson_description">Learn how to draw a dog</string>
     <string name="chibi_dog_lesson_1_description">Start by drawing a large circle to form the base shape of the chibi dog's head. This circle will serve as the foundation for the character's face.</string>
@@ -159,4 +172,14 @@
     <string name="simple_frog_lesson_7_description">Add triangular shapes at the ends of the lines representing the back legs to create the feet.</string>
     <string name="simple_frog_lesson_8_description">Draw an oval underneath the frog, representing a mound or lily pad that the frog is sitting on.</string>
     <string name="simple_frog_lesson_9_description">Take a moment to review your drawing and make any necessary adjustments. Erase any unnecessary guidelines and ensure all lines are smooth and polished.</string>
+
+    <string name="anime_eyes_lesson_title">Basic Anime Eye Drawing</string>
+    <string name="anime_eyes_lesson_description">Learn how to draw basic anime eyes</string>
+    <string name="anime_eyes_lesson_1_description">Draw a perfect circle as the foundation for your anime eye. This creates the basic outline and establishes the size and position on your character's face.</string>
+    <string name="anime_eyes_lesson_2_description">Draw the upper and lower eyelid lines. Make the top line thicker and more curved, while the bottom line should be thinner and less curved, creating the almond eye shape.</string>
+    <string name="anime_eyes_lesson_3_description">Erase the top part of your circle, keeping only the upper eyelid line. This creates the foundation for the classic anime eye shape with its distinctive curved upper lid.</string>
+    <string name="anime_eyes_lesson_4_description">Add the iris and pupil by drawing a filled black circle within your eye outline. Include two highlights - a larger unfilled circle and a small white dot - to give the eye depth and a lifelike sparkle.</string>
+    <string name="anime_eyes_lesson_5_description">Add eyelashes by drawing short diagonal lines extending from the upper eyelid. Make them thicker at the base and thinner at the tips for a natural look.</string>
+    <string name="anime_eyes_lesson_6_description">Draw the eyebrow by creating a curved line above the eye. Make it slightly thicker than the top eyelid line and position it at a comfortable distance above the eye to create a natural expression.</string>
+    <string name="anime_eyes_lesson_7_description">Take a moment to review your drawing and make any necessary adjustments. Erase any unnecessary guidelines and ensure all lines are smooth and polished.</string>
 </resources>

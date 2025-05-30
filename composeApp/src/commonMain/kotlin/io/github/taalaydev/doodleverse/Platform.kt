@@ -1,13 +1,9 @@
 package io.github.taalaydev.doodleverse
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Paint
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
+import io.github.taalaydev.doodleverse.shared.storage.DataStorage
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlin.reflect.KClass
 
 interface Platform {
     val name: String
@@ -20,6 +16,8 @@ interface Platform {
     val projectRepo: ProjectRepository
     fun saveImageBitmap(bitmap: ImageBitmap, filename: String, format: ImageFormat) {}
     fun launchUrl(url: String): Boolean
+
+    fun dataStorage(): DataStorage = DataStorageFactory.create()
 }
 
 abstract class Analytics {
@@ -58,3 +56,20 @@ expect fun imageBitmapByteArray(bitmap: ImageBitmap, format: ImageFormat): ByteA
 expect fun imageBitmapFromByteArray(bytes: ByteArray, width: Int, height: Int): ImageBitmap
 
 expect fun getColorFromBitmap(bitmap: ImageBitmap, x: Int, y: Int): Int?
+
+/**
+ * Internal factory responsible for creating the appropriate platform implementation
+ */
+object DataStorageFactory {
+    private var instance: DataStorage? = null
+
+    fun create(): DataStorage {
+        if (instance == null) {
+            instance = createDataStorage()
+        }
+        return instance!!
+    }
+}
+
+
+expect fun createDataStorage(): DataStorage

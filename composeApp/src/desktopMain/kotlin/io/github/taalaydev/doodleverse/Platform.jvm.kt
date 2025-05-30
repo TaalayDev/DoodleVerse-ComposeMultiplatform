@@ -6,7 +6,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import io.github.taalaydev.doodleverse.database.getRepository
+import io.github.taalaydev.doodleverse.shared.DesktopDataStorage
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
+import io.github.taalaydev.doodleverse.shared.storage.DataStorage
 import kotlinx.coroutines.IO
 import org.jetbrains.skia.Image
 import org.jetbrains.skiko.toBufferedImage
@@ -110,3 +112,5 @@ actual fun getColorFromBitmap(bitmap: ImageBitmap, x: Int, y: Int): Int? {
 }
 
 actual fun getPlatformType(): PlatformType = PlatformType.DESKTOP
+
+actual fun createDataStorage(): DataStorage = DesktopDataStorage()

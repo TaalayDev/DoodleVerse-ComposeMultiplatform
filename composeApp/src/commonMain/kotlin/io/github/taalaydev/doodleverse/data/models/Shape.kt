@@ -1,7 +1,9 @@
 package io.github.taalaydev.doodleverse.data.models
 
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.isUnspecified
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
@@ -417,6 +419,344 @@ object Shape {
         }
     )
 
+    val starTool = BrushData(
+        id = 200,
+        name = "Star",
+        stroke = "star_tool",
+        isShape = true,
+        customPainter = { canvas, size, drawingPath ->
+            val startPoint = drawingPath.startPoint
+            val endPoint = drawingPath.endPoint
+            if (startPoint.isUnspecified || endPoint.isUnspecified) return@BrushData
+
+            val rect = Rect(
+                left = minOf(startPoint.x, endPoint.x),
+                top = minOf(startPoint.y, endPoint.y),
+                right = maxOf(startPoint.x, endPoint.x),
+                bottom = maxOf(startPoint.y, endPoint.y)
+            )
+
+            val paint = Paint().apply {
+                color = drawingPath.color
+                style = PaintingStyle.Stroke
+                strokeWidth = drawingPath.size
+            }
+
+            val center = rect.center
+            val outerRadius = minOf(rect.width, rect.height) / 2
+            val innerRadius = outerRadius * 0.4f  // 40% of outer radius for inner points
+            val starPath = Path()
+
+            // Create a 5-pointed star
+            val points = 5
+            for (i in 0 until points * 2) {
+                val radius = if (i % 2 == 0) outerRadius else innerRadius
+                val angle = (PI / points * i - PI / 2).toFloat()  // Start at top (- PI/2)
+                val x = center.x + radius * cos(angle)
+                val y = center.y + radius * sin(angle)
+
+                if (i == 0) {
+                    starPath.moveTo(x, y)
+                } else {
+                    starPath.lineTo(x, y)
+                }
+            }
+            starPath.close()
+
+            canvas.drawPath(starPath, paint)
+        }
+    )
+
+    val triangleTool = BrushData(
+        id = 202,
+        name = "Triangle",
+        stroke = "triangle_tool",
+        isShape = true,
+        customPainter = { canvas, size, drawingPath ->
+            val startPoint = drawingPath.startPoint
+            val endPoint = drawingPath.endPoint
+            if (startPoint.isUnspecified || endPoint.isUnspecified) return@BrushData
+
+            val rect = Rect(
+                left = minOf(startPoint.x, endPoint.x),
+                top = minOf(startPoint.y, endPoint.y),
+                right = maxOf(startPoint.x, endPoint.x),
+                bottom = maxOf(startPoint.y, endPoint.y)
+            )
+
+            val paint = Paint().apply {
+                color = drawingPath.color
+                style = PaintingStyle.Stroke
+                strokeWidth = drawingPath.size
+            }
+
+            val trianglePath = Path().apply {
+                moveTo(rect.center.x, rect.top)  // Top center point
+                lineTo(rect.right, rect.bottom)  // Bottom right point
+                lineTo(rect.left, rect.bottom)   // Bottom left point
+                close()
+            }
+
+            canvas.drawPath(trianglePath, paint)
+        }
+    )
+
+    val hexagonTool = BrushData(
+        id = 203,
+        name = "Hexagon",
+        stroke = "hexagon_tool",
+        isShape = true,
+        customPainter = { canvas, size, drawingPath ->
+            val startPoint = drawingPath.startPoint
+            val endPoint = drawingPath.endPoint
+            if (startPoint.isUnspecified || endPoint.isUnspecified) return@BrushData
+
+            val rect = Rect(
+                left = minOf(startPoint.x, endPoint.x),
+                top = minOf(startPoint.y, endPoint.y),
+                right = maxOf(startPoint.x, endPoint.x),
+                bottom = maxOf(startPoint.y, endPoint.y)
+            )
+
+            val paint = Paint().apply {
+                color = drawingPath.color
+                style = PaintingStyle.Stroke
+                strokeWidth = drawingPath.size
+            }
+
+            val center = rect.center
+            val radius = minOf(rect.width / 2, rect.height / 2)
+            val hexagonPath = Path()
+
+            // Create a hexagon (6 sides)
+            val sides = 6
+            for (i in 0 until sides) {
+                val angle = (2 * PI * i / sides - PI / 2).toFloat() // Start at top (- PI/2)
+                val x = center.x + radius * cos(angle)
+                val y = center.y + radius * sin(angle)
+
+                if (i == 0) {
+                    hexagonPath.moveTo(x, y)
+                } else {
+                    hexagonPath.lineTo(x, y)
+                }
+            }
+            hexagonPath.close()
+
+            canvas.drawPath(hexagonPath, paint)
+        }
+    )
+
+    val diamondTool = BrushData(
+        id = 204,
+        name = "Diamond",
+        stroke = "diamond_tool",
+        isShape = true,
+        customPainter = { canvas, size, drawingPath ->
+            val startPoint = drawingPath.startPoint
+            val endPoint = drawingPath.endPoint
+            if (startPoint.isUnspecified || endPoint.isUnspecified) return@BrushData
+
+            val rect = Rect(
+                left = minOf(startPoint.x, endPoint.x),
+                top = minOf(startPoint.y, endPoint.y),
+                right = maxOf(startPoint.x, endPoint.x),
+                bottom = maxOf(startPoint.y, endPoint.y)
+            )
+
+            val paint = Paint().apply {
+                color = drawingPath.color
+                style = PaintingStyle.Stroke
+                strokeWidth = drawingPath.size
+            }
+
+            val diamondPath = Path().apply {
+                moveTo(rect.center.x, rect.top)       // Top point
+                lineTo(rect.right, rect.center.y)     // Right point
+                lineTo(rect.center.x, rect.bottom)    // Bottom point
+                lineTo(rect.left, rect.center.y)      // Left point
+                close()
+            }
+
+            canvas.drawPath(diamondPath, paint)
+        }
+    )
+
+    val speechBubbleTool = BrushData(
+        id = 205,
+        name = "Speech Bubble",
+        stroke = "speech_bubble_tool",
+        isShape = true,
+        customPainter = { canvas, size, drawingPath ->
+            val startPoint = drawingPath.startPoint
+            val endPoint = drawingPath.endPoint
+            if (startPoint.isUnspecified || endPoint.isUnspecified) return@BrushData
+
+            val rect = Rect(
+                left = minOf(startPoint.x, endPoint.x),
+                top = minOf(startPoint.y, endPoint.y),
+                right = maxOf(startPoint.x, endPoint.x),
+                bottom = maxOf(startPoint.y, endPoint.y)
+            )
+
+            val paint = Paint().apply {
+                color = drawingPath.color
+                style = PaintingStyle.Stroke
+                strokeWidth = drawingPath.size
+            }
+
+            val bubblePath = Path()
+            val cornerRadius = minOf(rect.width, rect.height) * 0.2f
+
+            // Draw rounded rectangle for the bubble
+            bubblePath.addRoundRect(
+                RoundRect(
+                    rect = Rect(
+                        left = rect.left,
+                        top = rect.top,
+                        right = rect.right,
+                        bottom = rect.bottom - rect.height * 0.2f
+                    ),
+                    cornerRadius = CornerRadius(cornerRadius, cornerRadius)
+                )
+            )
+
+            // Add the pointer at the bottom
+            bubblePath.moveTo(rect.center.x - rect.width * 0.1f, rect.bottom - rect.height * 0.2f)
+            bubblePath.lineTo(rect.center.x, rect.bottom)
+            bubblePath.lineTo(rect.center.x + rect.width * 0.1f, rect.bottom - rect.height * 0.2f)
+
+            canvas.drawPath(bubblePath, paint)
+        }
+    )
+
+    val pentagonTool = BrushData(
+        id = 208,
+        name = "Pentagon",
+        stroke = "pentagon_tool",
+        isShape = true,
+        customPainter = { canvas, size, drawingPath ->
+            val startPoint = drawingPath.startPoint
+            val endPoint = drawingPath.endPoint
+            if (startPoint.isUnspecified || endPoint.isUnspecified) return@BrushData
+
+            val rect = Rect(
+                left = minOf(startPoint.x, endPoint.x),
+                top = minOf(startPoint.y, endPoint.y),
+                right = maxOf(startPoint.x, endPoint.x),
+                bottom = maxOf(startPoint.y, endPoint.y)
+            )
+
+            val paint = Paint().apply {
+                color = drawingPath.color
+                style = PaintingStyle.Stroke
+                strokeWidth = drawingPath.size
+            }
+
+            val center = rect.center
+            val radius = minOf(rect.width / 2, rect.height / 2)
+            val pentagonPath = Path()
+
+            // Create a pentagon (5 sides)
+            val sides = 5
+            for (i in 0 until sides) {
+                val angle = (2 * PI * i / sides - PI / 2).toFloat() // Start at top (- PI/2)
+                val x = center.x + radius * cos(angle)
+                val y = center.y + radius * sin(angle)
+
+                if (i == 0) {
+                    pentagonPath.moveTo(x, y)
+                } else {
+                    pentagonPath.lineTo(x, y)
+                }
+            }
+            pentagonPath.close()
+
+            canvas.drawPath(pentagonPath, paint)
+        }
+    )
+
+    val octagonTool = BrushData(
+        id = 209,
+        name = "Octagon",
+        stroke = "octagon_tool",
+        isShape = true,
+        customPainter = { canvas, size, drawingPath ->
+            val startPoint = drawingPath.startPoint
+            val endPoint = drawingPath.endPoint
+            if (startPoint.isUnspecified || endPoint.isUnspecified) return@BrushData
+
+            val rect = Rect(
+                left = minOf(startPoint.x, endPoint.x),
+                top = minOf(startPoint.y, endPoint.y),
+                right = maxOf(startPoint.x, endPoint.x),
+                bottom = maxOf(startPoint.y, endPoint.y)
+            )
+
+            val paint = Paint().apply {
+                color = drawingPath.color
+                style = PaintingStyle.Stroke
+                strokeWidth = drawingPath.size
+            }
+
+            val center = rect.center
+            val radius = minOf(rect.width / 2, rect.height / 2)
+            val octagonPath = Path()
+
+            // Create an octagon (8 sides)
+            val sides = 8
+            for (i in 0 until sides) {
+                val angle = (2 * PI * i / sides).toFloat()
+                val x = center.x + radius * cos(angle)
+                val y = center.y + radius * sin(angle)
+
+                if (i == 0) {
+                    octagonPath.moveTo(x, y)
+                } else {
+                    octagonPath.lineTo(x, y)
+                }
+            }
+            octagonPath.close()
+
+            canvas.drawPath(octagonPath, paint)
+        }
+    )
+
+    val donutTool = BrushData(
+        id = 210,
+        name = "Donut",
+        stroke = "donut_tool",
+        isShape = true,
+        customPainter = { canvas, size, drawingPath ->
+            val startPoint = drawingPath.startPoint
+            val endPoint = drawingPath.endPoint
+            if (startPoint.isUnspecified || endPoint.isUnspecified) return@BrushData
+
+            val rect = Rect(
+                left = minOf(startPoint.x, endPoint.x),
+                top = minOf(startPoint.y, endPoint.y),
+                right = maxOf(startPoint.x, endPoint.x),
+                bottom = maxOf(startPoint.y, endPoint.y)
+            )
+
+            val paint = Paint().apply {
+                color = drawingPath.color
+                style = PaintingStyle.Stroke
+                strokeWidth = drawingPath.size
+            }
+
+            val center = rect.center
+            val outerRadius = minOf(rect.width / 2, rect.height / 2)
+            val innerRadius = outerRadius * 0.6f
+
+            // Draw outer circle
+            canvas.drawCircle(center, outerRadius, paint)
+
+            // Draw inner circle
+            canvas.drawCircle(center, innerRadius, paint)
+        }
+    )
+
     val all = listOf(
         rectangleTool,
         circleTool,
@@ -428,5 +768,14 @@ object Shape {
         perspectiveGridShape,
         symmetryShape,
         ruleOfThirdsShape,
+
+        starTool,
+        triangleTool,
+        hexagonTool,
+        diamondTool,
+        speechBubbleTool,
+        pentagonTool,
+        octagonTool,
+        donutTool
     )
 }

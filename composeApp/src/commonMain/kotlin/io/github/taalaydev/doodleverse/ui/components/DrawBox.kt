@@ -52,12 +52,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.taalaydev.doodleverse.core.DragState
+import io.github.taalaydev.doodleverse.core.DrawProvider
+import io.github.taalaydev.doodleverse.core.DrawingController
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.core.handleDragAndZoomGestures
 import io.github.taalaydev.doodleverse.core.modDetectTransformGestures
 import io.github.taalaydev.doodleverse.data.models.BrushData
-import io.github.taalaydev.doodleverse.ui.screens.draw.DrawProvider
-import io.github.taalaydev.doodleverse.ui.screens.draw.DrawingController
 import org.jetbrains.compose.resources.painterResource
 
 @Composable

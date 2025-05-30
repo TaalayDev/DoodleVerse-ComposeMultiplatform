@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,8 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material3.*
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,6 +56,7 @@ import io.github.taalaydev.doodleverse.navigation.Destination
 import io.github.taalaydev.doodleverse.ui.components.ComposeIcons
 import io.github.taalaydev.doodleverse.ui.components.EditProjectDialog
 import io.github.taalaydev.doodleverse.ui.components.NewProjectDialog
+import io.github.taalaydev.doodleverse.ui.theme.DoodleVerseCardDefaults
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.stringResource
@@ -133,16 +130,21 @@ fun HomeScreen(
                         }
                     }
                 )
-                NavigationBanner(
-                    selectedTab = selectedTab,
-                    onTabSelected = { index, route ->
-                        selectedTab = index
-                        analytics.logEvent("tab_selected", mapOf("tab_index" to index))
-                        if (route != null) {
-                            navController.navigate(route)
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    NavigationBanner(
+                        selectedTab = selectedTab,
+                        onTabSelected = { index, route ->
+                            selectedTab = index
+                            analytics.logEvent("tab_selected", mapOf("tab_index" to index))
+                            if (route != null) {
+                                navController.navigate(route)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     ) { padding ->
@@ -182,7 +184,9 @@ private fun NavigationBanner(
     )
 
     Surface(
-        modifier = modifier.fillMaxWidth().height(80.dp),
+        modifier = modifier
+            .widthIn(max = 400.dp)
+            .fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
@@ -195,7 +199,7 @@ private fun NavigationBanner(
                     item = item,
                     isSelected = selectedTab == index,
                     onClick = { onTabSelected(index, item.route) },
-                    modifier = Modifier.width(80.dp)
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -227,7 +231,7 @@ private fun NavigationItem(
         MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-    Column(
+    Row(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
@@ -237,8 +241,9 @@ private fun NavigationItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 shape = RoundedCornerShape(12.dp)
             )
-            .padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
     ) {
         Icon(
             imageVector = item.icon,
@@ -246,28 +251,11 @@ private fun NavigationItem(
             tint = contentColor,
             modifier = Modifier.size(24.dp)
         )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
         Text(
             text = item.title,
             style = MaterialTheme.typography.labelMedium,
             color = contentColor
         )
-
-        // Animated indicator
-        if (isSelected) {
-            Spacer(modifier = Modifier.height(2.dp))
-            Box(
-                modifier = Modifier
-                    .width(20.dp)
-                    .height(2.dp)
-                    .background(
-                        color = contentColor,
-                        shape = RoundedCornerShape(1.dp)
-                    )
-            )
-        }
     }
 }
 
@@ -366,7 +354,7 @@ fun ProjectCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onProjectClick(project) },
-        colors = CardDefaults.cardColors(),
+        colors = DoodleVerseCardDefaults.primaryCardColors(),
     ) {
         Column {
             Row(

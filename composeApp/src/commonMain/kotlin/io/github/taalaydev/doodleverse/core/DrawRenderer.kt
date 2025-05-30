@@ -62,23 +62,60 @@ object DrawRenderer {
         val canvas = Canvas(bitmap)
 
         paths.forEach { drawingPath ->
-            val paint = pathPaint(drawingPath)
-
-            drawPath(canvas, drawingPath, paint, size)
+            val pathBitmap = renderPathToBitmap(drawingPath, size)
+            canvas.drawImage(pathBitmap, Offset.Zero, Paint())
         }
 
         return bitmap
     }
 
-    private fun calculateTaperFactor(progress: Float): Float {
-        // This function creates a tapered effect at the start and end of the stroke
-        return when {
-            progress < 0.1f -> progress * 10 // Taper at the start
-            progress > 0.9f -> (1 - progress) * 10 // Taper at the end
-            else -> 1f // Full size in the middle
+    /**
+     * FIXED: Renders a single drawing path to ImageBitmap with proper eraser support
+     */
+    fun renderPathToBitmap(
+        drawingPath: DrawingPath,
+        canvasSize: Size,
+        existingBitmap: ImageBitmap? = null
+    ): ImageBitmap {
+        val brush = drawingPath.brush
+
+        // For erasers, we need to work with the existing bitmap directly
+//        if (brush.blendMode == androidx.compose.ui.graphics.BlendMode.Clear) {
+//            val targetBitmap = existingBitmap?.copy()
+//                ?: ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
+//            val canvas = Canvas(targetBitmap)
+//
+//            if (brush.customPainter != null) {
+//                brush.customPainter.invoke(canvas, canvasSize, drawingPath)
+//            } else {
+//                val paint = pathPaint(drawingPath)
+//                canvas.drawPath(drawingPath.path, paint)
+//            }
+//
+//            return targetBitmap
+//        }
+
+        return if (brush.customPainter != null) {
+            val bitmap = ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
+            val canvas = Canvas(bitmap)
+
+            brush.customPainter.invoke(canvas, canvasSize, drawingPath)
+
+            bitmap
+        } else {
+            // Default rendering for non-custom brushes
+            val bitmap = ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
+            val canvas = Canvas(bitmap)
+            val paint = pathPaint(drawingPath)
+
+            canvas.drawPath(drawingPath.path, paint)
+            bitmap
         }
     }
 
+    /**
+     * UPDATED: Now handles ImageBitmap from custom painters with eraser support
+     */
     internal fun drawPath(
         canvas: Canvas,
         drawingPath: DrawingPath,
@@ -87,16 +124,109 @@ object DrawRenderer {
     ) {
         val brush = drawingPath.brush
         if (brush.customPainter != null) {
-            brush.customPainter.invoke(
-                canvas,
-                size,
-                drawingPath,
-            )
+            val bitmap = ImageBitmap(size.width.toInt(), size.height.toInt())
+            val brushCanvas = Canvas(bitmap)
+
+            brush.customPainter.invoke(brushCanvas, size, drawingPath)
+            canvas.drawImage(bitmap, Offset.Zero, Paint())
         } else {
-            canvas.drawPath(
-                drawingPath.path,
-                paint
-            )
+            // Default path drawing
+            canvas.drawPath(drawingPath.path, paint)
+        }
+    }
+
+    /**
+     * FIXED: Creates a preview bitmap for real-time drawing feedback with eraser support
+     */
+    fun createPreviewBitmap(
+        drawingPath: DrawingPath,
+        canvasSize: Size,
+        existingBitmap: ImageBitmap? = null
+    ): ImageBitmap {
+        val brush = drawingPath.brush
+
+        // For erasers, apply directly to existing bitmap
+        if (brush.blendMode == androidx.compose.ui.graphics.BlendMode.Clear) {
+            return renderPathToBitmap(drawingPath, canvasSize, existingBitmap)
+        }
+
+        // For regular brushes, composite with existing content
+        val bitmap = ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
+        val canvas = Canvas(bitmap)
+
+        // Draw existing content if provided
+        existingBitmap?.let { existing ->
+            canvas.drawImage(existing, Offset.Zero, Paint())
+        }
+
+        // Draw the current path
+        val pathBitmap = renderPathToBitmap(drawingPath, canvasSize)
+        canvas.drawImage(pathBitmap, Offset.Zero, Paint())
+
+        return bitmap
+    }
+
+    /**
+     * FIXED: Blends a path bitmap onto an existing bitmap with proper eraser handling
+     */
+    fun blendPathBitmap(
+        pathBitmap: ImageBitmap,
+        targetBitmap: ImageBitmap,
+        blendMode: androidx.compose.ui.graphics.BlendMode = androidx.compose.ui.graphics.BlendMode.SrcOver,
+        isEraser: Boolean = false
+    ): ImageBitmap {
+        // For erasers, the path bitmap should already contain the erased content
+        if (isEraser || blendMode == androidx.compose.ui.graphics.BlendMode.Clear) {
+            return pathBitmap
+        }
+
+        val resultBitmap = targetBitmap.copy()
+        val canvas = Canvas(resultBitmap)
+
+        canvas.drawImage(
+            pathBitmap,
+            Offset.Zero,
+            Paint().apply {
+                this.blendMode = blendMode
+            }
+        )
+
+        return resultBitmap
+    }
+
+    /**
+     * NEW: Method to apply eraser path directly to existing bitmap
+     */
+    fun applyEraserPath(
+        drawingPath: DrawingPath,
+        targetBitmap: ImageBitmap
+    ): ImageBitmap {
+        val resultBitmap = targetBitmap.copy()
+        val canvas = Canvas(resultBitmap)
+
+        val brush = drawingPath.brush
+        if (brush.customPainter != null) {
+            brush.customPainter.invoke(canvas, Size(targetBitmap.width.toFloat(), targetBitmap.height.toFloat()), drawingPath)
+        } else {
+            val paint = Paint().apply {
+                strokeWidth = drawingPath.size
+                strokeCap = brush.strokeCap
+                strokeJoin = brush.strokeJoin
+                style = PaintingStyle.Stroke
+                blendMode = androidx.compose.ui.graphics.BlendMode.Clear
+            }
+            canvas.drawPath(drawingPath.path, paint)
+        }
+
+        return resultBitmap
+    }
+
+    private fun calculateTaperFactor(progress: Float): Float {
+        // This function creates a tapered effect at the start and end of the stroke
+        return when {
+            progress < 0.1f -> progress * 10 // Taper at the start
+            progress > 0.9f -> (1 - progress) * 10 // Taper at the end
+            else -> 1f // Full size in the middle
         }
     }
 
@@ -192,107 +322,4 @@ object DrawRenderer {
             stack.add(Pair(x, y - 1))
         }
     }
-
-    fun getBorderPath(
-        imageBitmap: ImageBitmap,
-        x: Int,
-        y: Int,
-        targetColor: Int,
-    ): Path {
-        val width = imageBitmap.width
-        val height = imageBitmap.height
-        val pixelMap = imageBitmap.toPixelMap()
-
-        // For marking visited border pixels
-        val visited = Array(height) { BooleanArray(width) }
-        val borderPath = Path()
-
-        // Find first border point
-        var startX = x
-        var startY = y
-        while (startY < height && pixelMap[startX, startY].toArgb() == targetColor) {
-            startY++
-        }
-        if (startY == height) return borderPath
-        startY--
-
-        // Define 8-directional movement
-        val directions = listOf(
-            -1 to 0,  // left
-            -1 to 1,  // down-left
-            0 to 1,   // down
-            1 to 1,   // down-right
-            1 to 0,   // right
-            1 to -1,  // up-right
-            0 to -1,  // up
-            -1 to -1  // up-left
-        )
-
-        // Start tracing the border
-        var currentX = startX
-        var currentY = startY
-        var currentDir = 0 // Start moving right
-        borderPath.moveTo(currentX.toFloat(), currentY.toFloat())
-
-        do {
-            visited[currentY][currentX] = true
-
-            // Try all directions, starting from the current direction
-            var found = false
-            for (i in 0 until 8) {
-                val nextDir = (currentDir + i) % 8
-                val (dx, dy) = directions[nextDir]
-                val newX = currentX + dx
-                val newY = currentY + dy
-
-                // Check if the new position is valid and on the border
-                if (newX in 0 until width && newY in 0 until height &&
-                    !visited[newY][newX] &&
-                    isOnBorder(pixelMap, newX, newY, targetColor, width, height)
-                ) {
-                    borderPath.lineTo(newX.toFloat(), newY.toFloat())
-                    currentX = newX
-                    currentY = newY
-                    currentDir = nextDir
-                    found = true
-                    break
-                }
-            }
-
-            if (!found) break
-
-        } while (currentX != startX || currentY != startY)
-
-        borderPath.close()
-        return borderPath
-    }
-
-    private fun isOnBorder(
-        pixelMap: PixelMap,
-        x: Int,
-        y: Int,
-        targetColor: Int,
-        width: Int,
-        height: Int
-    ): Boolean {
-        val current = pixelMap[x, y].toArgb() == targetColor
-
-        // Check if any adjacent pixel has different color (including diagonals)
-        for (dy in -1..1) {
-            for (dx in -1..1) {
-                if (dx == 0 && dy == 0) continue
-
-                val newX = x + dx
-                val newY = y + dy
-
-                if (newX in 0 until width && newY in 0 until height) {
-                    val neighbor = pixelMap[newX, newY].toArgb() == targetColor
-                    if (current != neighbor) return true
-                }
-            }
-        }
-
-        return false
-    }
-
 }

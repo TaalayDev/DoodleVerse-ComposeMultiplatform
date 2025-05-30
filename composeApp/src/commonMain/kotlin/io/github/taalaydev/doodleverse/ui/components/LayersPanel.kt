@@ -22,14 +22,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material.Divider
 import androidx.compose.material.Surface
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,13 +34,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.TextField
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,95 +60,156 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.composables.icons.lucide.Copy
 import com.composables.icons.lucide.Eye
 import com.composables.icons.lucide.EyeOff
 import com.composables.icons.lucide.GripVertical
 import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Merge
 import com.composables.icons.lucide.Plus
 import com.composables.icons.lucide.Trash
+import com.composables.icons.lucide.X
 import doodleverse.composeapp.generated.resources.Res
 import doodleverse.composeapp.generated.resources.add_new_layer
+import doodleverse.composeapp.generated.resources.cancel
+import doodleverse.composeapp.generated.resources.clear_layer
+import doodleverse.composeapp.generated.resources.copy_layer
 import doodleverse.composeapp.generated.resources.delete_layer
 import doodleverse.composeapp.generated.resources.drag_handle
+import doodleverse.composeapp.generated.resources.edit_layer_name
+import doodleverse.composeapp.generated.resources.layer_name
 import doodleverse.composeapp.generated.resources.layer_preview
+import doodleverse.composeapp.generated.resources.merge_down
 import doodleverse.composeapp.generated.resources.opacity
+import doodleverse.composeapp.generated.resources.rename_layer
+import doodleverse.composeapp.generated.resources.save
 import doodleverse.composeapp.generated.resources.toggle_visibility
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawViewModel
-import io.github.taalaydev.doodleverse.ui.screens.draw.layers
 import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import kotlin.random.Random
 
 @Composable
 fun LayersPanel(
     drawViewModel: DrawViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val state by drawViewModel.state
-    val layers = state.layers
-    var list by remember { mutableStateOf(List(layers.size) { it }) }
-    val caches = state.caches
-    val activeLayerIndex = state.currentLayerIndex
+    // Collect state from the refactored architecture
+    val drawingState by drawViewModel.drawingController.state.collectAsStateWithLifecycle()
+    val layers = drawingState.currentFrame.layers
+    val currentLayerIndex = drawingState.currentLayerIndex
 
+    // State for reorderable list
+    var reorderableList by remember { mutableStateOf(layers.indices.toList()) }
     val lazyListState = rememberLazyListState()
     val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        list = list.toMutableList().apply { add(to.index, removeAt(from.index)) }
+        reorderableList = reorderableList.toMutableList().apply {
+            add(to.index, removeAt(from.index))
+        }
         drawViewModel.reorderLayers(from.index, to.index)
     }
 
+    // Update reorderable list when layers change
     LaunchedEffect(layers.size) {
-        list = List(layers.size) { it }
+        reorderableList = layers.indices.toList()
     }
 
     Column(modifier = modifier) {
         Divider()
-        LayersPanelHeader(
-            opacity = state.layers[state.currentLayerIndex].opacity.toFloat(),
-            onOpacityChanged = { drawViewModel.changeLayerOpacity(activeLayerIndex, it) },
-        ) {
-            drawViewModel.addLayer("Layer ${layers.size}")
-        }
-        Divider()
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            state = lazyListState,
-        ) {
-            items(layers, key = { it.id }) { layer ->
-                ReorderableItem(reorderableLazyListState, key = layer.id) { isDragging ->
-                    val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
-                    val index = layers.indexOfFirst { it.id == layer.id }
 
-                    Surface(elevation = elevation) {
-                        LayerTile(
-                            layer = layer,
-                            preview = caches[layer.id],
-                            index = index,
-                            isActive = index == activeLayerIndex,
-                            onLayerSelected = { drawViewModel.selectLayer(it) },
-                            onLayerVisibilityChanged = {
-                                drawViewModel.layerVisibilityChanged(
-                                    index,
-                                    isVisible = !layer.isVisible
-                                )
-                            },
-                            onLayerDeleted = { drawViewModel.deleteLayer(it) },
-                            dragHandle = {
-                                IconButton(
-                                    onClick = { },
-                                    modifier = Modifier.size(24.dp).draggableHandle()
-                                ) {
-                                    Icon(
-                                        imageVector = Lucide.GripVertical,
-                                        contentDescription = stringResource(Res.string.drag_handle),
-                                        modifier = Modifier.size(15.dp)
+        // Header with opacity slider and add button
+        LayersPanelHeader(
+            currentLayer = layers.getOrNull(currentLayerIndex),
+            onOpacityChanged = { opacity ->
+                drawViewModel.changeLayerOpacity(currentLayerIndex, opacity)
+            },
+            onLayerAdded = {
+                drawViewModel.addLayer()
+            }
+        )
+
+        Divider()
+
+        // Layers list
+        if (layers.isNotEmpty()) {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                state = lazyListState,
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                itemsIndexed(
+                    items = layers,
+                    key = { _, layer -> layer.id }
+                ) { index, layer ->
+                    ReorderableItem(
+                        state = reorderableLazyListState,
+                        key = layer.id
+                    ) { isDragging ->
+                        val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
+
+                        Surface(elevation = elevation) {
+                            LayerTile(
+                                layer = layer,
+                                preview = drawViewModel.drawingController.getLayerBitmap(layer.id),
+                                index = index,
+                                isActive = index == currentLayerIndex,
+                                isEmpty = drawViewModel.drawingController.isLayerEmpty(layer.id),
+                                onLayerSelected = { drawViewModel.selectLayer(it) },
+                                onLayerVisibilityChanged = { layerIndex ->
+                                    drawViewModel.layerVisibilityChanged(
+                                        layerIndex,
+                                        !layer.isVisible
                                     )
+                                },
+                                onLayerDeleted = { layerIndex ->
+                                    if (layers.size > 1) { // Prevent deleting the last layer
+                                        drawViewModel.deleteLayer(layerIndex)
+                                    }
+                                },
+                                onLayerDuplicated = { layerIndex ->
+                                    drawViewModel.duplicateLayer(layerIndex)
+                                },
+                                onLayerRenamed = { layerIndex, newName ->
+                                    drawViewModel.updateLayerName(layerIndex, newName)
+                                },
+                                onLayerCleared = { layerIndex ->
+                                    drawViewModel.clearLayer(layerIndex)
+                                },
+                                onMergeDown = { layerIndex ->
+                                    if (layerIndex > 0) {
+                                        drawViewModel.mergeLayerDown(layerIndex)
+                                    }
+                                },
+                                dragHandle = {
+                                    IconButton(
+                                        onClick = { },
+                                        modifier = Modifier.size(24.dp).draggableHandle()
+                                    ) {
+                                        Icon(
+                                            imageVector = Lucide.GripVertical,
+                                            contentDescription = stringResource(Res.string.drag_handle),
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
+            }
+        } else {
+            // Empty state
+            Box(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No layers available",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -155,12 +218,14 @@ fun LayersPanel(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LayersPanelHeader(
-    opacity: Float,
+    currentLayer: LayerModel?,
     onOpacityChanged: (Float) -> Unit = {},
     onLayerAdded: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var showOpacitySlider by remember { mutableStateOf(false) }
+
+    val opacity = currentLayer?.opacity?.toFloat() ?: 1f
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -179,18 +244,19 @@ fun LayersPanelHeader(
             Spacer(modifier = Modifier.width(4.dp))
             Box(
                 modifier = Modifier
-                    .background(Color.White, RoundedCornerShape(4.0.dp))
-                    .border(1.dp, Color.Gray, RoundedCornerShape(4.0.dp))
+                    .background(Color.White, RoundedCornerShape(4.dp))
+                    .border(1.dp, Color.Gray, RoundedCornerShape(4.dp))
                     .padding(horizontal = 8.dp, vertical = 4.dp)
                     .clickable {
                         showOpacitySlider = true
                     }
             ) {
                 Text(
-                    text = (opacity * 100).toInt().toString() + "%",
+                    text = "${(opacity * 100).toInt()}%",
                     fontSize = 12.sp,
                 )
             }
+
             DropdownMenu(
                 expanded = showOpacitySlider,
                 onDismissRequest = {
@@ -198,13 +264,15 @@ fun LayersPanelHeader(
                 },
                 modifier = Modifier.width(200.dp).padding(horizontal = 8.dp)
             ) {
-                Column {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = stringResource(Res.string.opacity),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
                     Slider(
                         value = opacity,
                         onValueChange = onOpacityChanged,
@@ -215,7 +283,7 @@ fun LayersPanelHeader(
                         thumb = { state ->
                             SliderDefaults.Thumb(
                                 interactionSource = interactionSource,
-                                thumbSize = androidx.compose.ui.unit.DpSize(4.dp, 16.dp),
+                                thumbSize = androidx.compose.ui.unit.DpSize(12.dp, 20.dp),
                                 colors = SliderDefaults.colors(),
                             )
                         },
@@ -232,8 +300,9 @@ fun LayersPanelHeader(
                 }
             }
         }
+
         IconButton(
-            onClick = { onLayerAdded() }
+            onClick = onLayerAdded
         ) {
             Icon(
                 Lucide.Plus,
@@ -250,90 +319,354 @@ fun LayerTile(
     preview: ImageBitmap? = null,
     index: Int,
     isActive: Boolean,
+    isEmpty: Boolean = false,
     onLayerSelected: (Int) -> Unit,
     onLayerVisibilityChanged: ((Int) -> Unit)? = null,
     onLayerDeleted: ((Int) -> Unit)? = null,
+    onLayerDuplicated: ((Int) -> Unit)? = null,
+    onLayerRenamed: ((Int, String) -> Unit)? = null,
+    onLayerCleared: ((Int) -> Unit)? = null,
+    onMergeDown: ((Int) -> Unit)? = null,
     dragHandle: @Composable (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val backgroundColor = if (isActive)
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
     else
         MaterialTheme.colorScheme.surface
-    val contentColor = if (isActive) Color.White else Color.Black
+
+    val contentColor = if (isActive)
+        MaterialTheme.colorScheme.primary
+    else
+        MaterialTheme.colorScheme.onSurface
+
+    var showContextMenu by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onLayerSelected(index) }
-            .padding(4.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+            .padding(horizontal = 4.dp, vertical = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isActive) 2.dp else 0.dp
+        )
     ) {
         Row(
             modifier = Modifier
                 .padding(8.dp)
-                .height(40.dp),
+                .height(48.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Drag handle
             dragHandle?.invoke()
-            LayerPreview(preview)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = layer.name,
-                color = contentColor,
-                fontSize = 12.sp,
-                modifier = Modifier.weight(1f).wrapContentHeight(),
+
+            // Layer preview
+            LayerPreview(
+                image = preview,
+                isEmpty = isEmpty,
+                isVisible = layer.isVisible
             )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Layer info
             Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.SpaceAround,
-                modifier = Modifier.fillMaxHeight()
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
             ) {
-                IconButton(
-                    onClick = { onLayerVisibilityChanged?.invoke(index) },
-                    enabled = onLayerVisibilityChanged != null,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = if (layer.isVisible) Lucide.Eye else Lucide.EyeOff,
-                        contentDescription = stringResource(Res.string.toggle_visibility),
-                        tint = contentColor,
-                        modifier = Modifier.size(15.dp)
-                    )
-                }
-                IconButton(
-                    onClick = { onLayerDeleted?.invoke(index) },
-                    enabled = onLayerDeleted != null,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Lucide.Trash,
-                        contentDescription = stringResource(Res.string.delete_layer),
-                        tint = contentColor,
-                        modifier = Modifier.size(15.dp)
+                Text(
+                    text = layer.name,
+                    color = contentColor,
+                    fontSize = 14.sp,
+                    fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal,
+                    maxLines = 1
+                )
+
+                if (layer.opacity < 1.0 || isEmpty) {
+                    Text(
+                        text = buildString {
+                            if (layer.opacity < 1.0) {
+                                append("${(layer.opacity * 100).toInt()}%")
+                            }
+                            if (isEmpty) {
+                                if (layer.opacity < 1.0) append(" • ")
+                                append("Empty")
+                            }
+                        },
+                        color = contentColor.copy(alpha = 0.7f),
+                        fontSize = 11.sp
                     )
                 }
             }
 
+            // Layer controls
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Visibility toggle
+                IconButton(
+                    onClick = { onLayerVisibilityChanged?.invoke(index) },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = if (layer.isVisible) Lucide.Eye else Lucide.EyeOff,
+                        contentDescription = stringResource(Res.string.toggle_visibility),
+                        tint = if (layer.isVisible) contentColor else contentColor.copy(alpha = 0.5f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                // Context menu
+                Box {
+                    IconButton(
+                        onClick = { showContextMenu = true },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Layer options",
+                            tint = contentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    LayerContextMenu(
+                        expanded = showContextMenu,
+                        onDismiss = { showContextMenu = false },
+                        canDelete = onLayerDeleted != null,
+                        canMergeDown = onMergeDown != null && index > 0,
+                        onRename = {
+                            showContextMenu = false
+                            showRenameDialog = true
+                        },
+                        onDuplicate = {
+                            showContextMenu = false
+                            onLayerDuplicated?.invoke(index)
+                        },
+                        onClear = {
+                            showContextMenu = false
+                            onLayerCleared?.invoke(index)
+                        },
+                        onMergeDown = {
+                            showContextMenu = false
+                            onMergeDown?.invoke(index)
+                        },
+                        onDelete = {
+                            showContextMenu = false
+                            onLayerDeleted?.invoke(index)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    // Rename dialog
+    if (showRenameDialog) {
+        LayerRenameDialog(
+            currentName = layer.name,
+            onDismiss = { showRenameDialog = false },
+            onConfirm = { newName ->
+                onLayerRenamed?.invoke(index, newName)
+                showRenameDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun LayerPreview(
+    image: ImageBitmap?,
+    isEmpty: Boolean = false,
+    isVisible: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(40.dp)
+            .background(
+                if (isEmpty) Color.Transparent else Color.White.copy(alpha = 0.8f),
+                RoundedCornerShape(4.dp)
+            )
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                RoundedCornerShape(4.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            isEmpty -> {
+                Icon(
+                    imageVector = Lucide.X,
+                    contentDescription = "Empty layer",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            image != null -> {
+                Image(
+                    bitmap = image,
+                    contentDescription = stringResource(Res.string.layer_preview),
+                    contentScale = ContentScale.Crop,
+                    alpha = if (isVisible) 1f else 0.5f,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(4.dp))
+                )
+            }
+            else -> {
+                // Loading or placeholder state
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            RoundedCornerShape(4.dp)
+                        )
+                )
+            }
         }
     }
 }
 
 @Composable
-fun LayerPreview(image: ImageBitmap?) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .background(Color.White.copy(alpha = 0.8f))
-            .border(1.dp, Color.White)
+fun LayerContextMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    canDelete: Boolean = true,
+    canMergeDown: Boolean = false,
+    onRename: () -> Unit,
+    onDuplicate: () -> Unit,
+    onClear: () -> Unit,
+    onMergeDown: () -> Unit,
+    onDelete: () -> Unit
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss
     ) {
-        if (image != null) {
-            Image(
-                bitmap = image,
-                contentDescription = stringResource(Res.string.layer_preview),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+        DropdownMenuItem(
+            text = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
+                    Text(stringResource(Res.string.rename_layer))
+                }
+            },
+            onClick = onRename
+        )
+
+        DropdownMenuItem(
+            text = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Lucide.Copy, null, modifier = Modifier.size(16.dp))
+                    Text(stringResource(Res.string.copy_layer))
+                }
+            },
+            onClick = onDuplicate
+        )
+
+        DropdownMenuItem(
+            text = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Lucide.X, null, modifier = Modifier.size(16.dp))
+                    Text(stringResource(Res.string.clear_layer))
+                }
+            },
+            onClick = onClear
+        )
+
+        if (canMergeDown) {
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Lucide.Merge, null, modifier = Modifier.size(16.dp))
+                        Text(stringResource(Res.string.merge_down))
+                    }
+                },
+                onClick = onMergeDown
+            )
+        }
+
+        if (canDelete) {
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Lucide.Trash,
+                            null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            stringResource(Res.string.delete_layer),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                onClick = onDelete
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LayerRenameDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var newName by remember { mutableStateOf(currentName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(stringResource(Res.string.edit_layer_name))
+        },
+        text = {
+            OutlinedTextField(
+                value = newName,
+                onValueChange = { newName = it },
+                label = { Text(stringResource(Res.string.layer_name)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (newName.isNotBlank()) {
+                        onConfirm(newName.trim())
+                    }
+                },
+                enabled = newName.isNotBlank() && newName.trim() != currentName
+            ) {
+                Text(stringResource(Res.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.cancel))
+            }
+        }
+    )
 }

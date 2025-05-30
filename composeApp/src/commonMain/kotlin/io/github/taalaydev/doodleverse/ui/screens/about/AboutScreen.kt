@@ -34,6 +34,7 @@ import doodleverse.composeapp.generated.resources.logo
 import doodleverse.composeapp.generated.resources.version_number
 import doodleverse.composeapp.generated.resources.visit_website
 import io.github.taalaydev.doodleverse.Platform
+import io.github.taalaydev.doodleverse.ui.theme.DoodleVerseCardDefaults
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
@@ -119,7 +120,8 @@ fun AboutScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .scale(animatedProgress.value)
+                    .scale(animatedProgress.value),
+                colors = DoodleVerseCardDefaults.primaryCardColors()
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp)
@@ -152,7 +154,8 @@ fun AboutScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .alpha(animatedProgress.value)
+                    .alpha(animatedProgress.value),
+                colors = DoodleVerseCardDefaults.primaryCardColors()
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp)
@@ -174,7 +177,8 @@ fun AboutScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .alpha(animatedProgress.value)
+                    .alpha(animatedProgress.value),
+                colors = DoodleVerseCardDefaults.primaryCardColors()
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp)

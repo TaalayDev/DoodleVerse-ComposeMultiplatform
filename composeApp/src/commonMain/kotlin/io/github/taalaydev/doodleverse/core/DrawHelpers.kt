@@ -348,9 +348,3 @@ internal fun Offset.distanceTo(other: Offset): Float {
 internal fun distanceBetween(a: Offset, b: Offset) = sqrt((a.x - b.x).pow(2) + (a.y - b.y).pow(2))
 internal fun centerOf(a: Offset, b: Offset) = Offset((a.x + b.x) / 2, (a.y + b.y) / 2)
 
-sealed interface DrawState {
-    data object Idle : DrawState
-    data object Started : DrawState
-    data object Drag : DrawState
-    data object End : DrawState
-}

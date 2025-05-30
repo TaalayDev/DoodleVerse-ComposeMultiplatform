@@ -13,6 +13,9 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.ui.util.lerp
+import doodleverse.composeapp.generated.resources.brush2
+import doodleverse.composeapp.generated.resources.brush6
+import doodleverse.composeapp.generated.resources.stamp_marker
 import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.core.getDensityOffsetBetweenPoints
 import org.jetbrains.compose.resources.DrawableResource
@@ -46,7 +49,7 @@ data class BrushData(
     val sizeRandom: List<Int> = listOf(0, 0),
     val rotationRandomness: Float = 0f,
     val pathEffect: ((width: Float) -> PathEffect?)? = null,
-    val customPainter: ((canvas: Canvas, size: Size, path: DrawingPath) -> Unit)? = null,
+    val customPainter: ((canvas: Canvas, size: Size, drawingPath: DrawingPath) -> Unit)? = null,
     val isShape: Boolean = false,
 ) {
     internal fun sizeInPixels(brushSize: Float): Int {
@@ -64,33 +67,7 @@ data class BrushData(
             stroke = "solid",
             strokeCap = StrokeCap.Round,
             strokeJoin = StrokeJoin.Round,
-            customPainter = { canvas, size, drawingPath ->
-                val paint = Paint().apply {
-                    color = drawingPath.color
-                    strokeWidth = drawingPath.size
-                    strokeCap = StrokeCap.Round
-                    strokeJoin = StrokeJoin.Round
-                    style = PaintingStyle.Stroke
-                    alpha = drawingPath.color.alpha
-                }
 
-                val path = drawingPath.path
-                val metrics = PathMeasure().apply { setPath(path, false) }
-                val length = metrics.length
-
-                val brushSize = drawingPath.size
-                val delta = min(brushSize * 0.2f, 10f)
-
-                var i = 0f
-                while (i < length) {
-                    val point = metrics.getPosition(i)
-                    val nextPoint = metrics.getPosition(i + delta)
-
-                    canvas.drawLine(point, nextPoint, paint)
-
-                    i += delta
-                }
-            }
         )
 
         val pencil = BrushData(
@@ -111,82 +88,93 @@ data class BrushData(
             opacityDiff = 0.5f,
             blendMode = BlendMode.Multiply,
             customPainter = { canvas, size, drawingPath ->
-                val paint = Paint().apply {
-                    color = drawingPath.color.copy(alpha = 0.4f)
-                    strokeWidth = drawingPath.size * 1.2f
-                    strokeCap = StrokeCap.Round
-                    strokeJoin = StrokeJoin.Round
-                    style = PaintingStyle.Stroke
-                    alpha = calcOpacity(drawingPath.color.alpha, drawingPath.brush.opacityDiff)
-                }
+                    val paint = Paint().apply {
+                        color = drawingPath.color.copy(alpha = 0.4f)
+                        strokeWidth = drawingPath.size * 1.2f
+                        strokeCap = StrokeCap.Round
+                        strokeJoin = StrokeJoin.Round
+                        style = PaintingStyle.Stroke
+                        alpha = calcOpacity(drawingPath.color.alpha, drawingPath.brush.opacityDiff)
+                    }
 
-                val path = drawingPath.path
-                val measure = PathMeasure().apply { setPath(path, false) }
-                val length = measure.length
+                    val path = drawingPath.path
+                    val measure = PathMeasure().apply { setPath(path, false) }
+                    val length = measure.length
 
-                val brushSize = drawingPath.size
-                val delta = min(brushSize * 0.2f, 8f)
+                    val brushSize = drawingPath.size
+                    val delta = min(brushSize * 0.2f, 8f)
 
-                // Main stroke
-                canvas.drawPath(path, paint)
+                    // Main stroke
+                    canvas.drawPath(path, paint)
 
-                // Create marker texture effect
-                var i = 0f
-                while (i < length) {
-                    val point = measure.getPosition(i)
+                    // Create marker texture effect
+                    var i = 0f
+                    while (i < length) {
+                        val point = measure.getPosition(i)
 
-                    // Create parallel strokes for marker texture
-                    for (j in -1..1) {
-                        val texturePoint = point + Offset(
-                            drawingPath.getRandom(listOf(i, point.x, j, 1)) * brushSize * 0.1f,
-                            j * brushSize * 0.15f
-                        )
-
-                        val nextPoint = if (i + delta < length) {
-                            measure.getPosition(i + delta)
-                        } else {
-                            measure.getPosition(length)
-                        }
-
-                        val texturePaint = paint.apply {
-                            strokeWidth = drawingPath.size * 0.3f
-                            alpha = (alpha * 0.5f)
-                        }
-
-                        canvas.drawLine(
-                            texturePoint,
-                            nextPoint + Offset(
-                                drawingPath.getRandom(listOf(i + delta, nextPoint.x, j, 1)) * brushSize * 0.1f,
+                        // Create parallel strokes for marker texture
+                        for (j in -1..1) {
+                            val texturePoint = point + Offset(
+                                drawingPath.getRandom(listOf(i, point.x, j, 1)) * brushSize * 0.1f,
                                 j * brushSize * 0.15f
-                            ),
-                            texturePaint
+                            )
+
+                            val nextPoint = if (i + delta < length) {
+                                measure.getPosition(i + delta)
+                            } else {
+                                measure.getPosition(length)
+                            }
+
+                            val texturePaint = paint.apply {
+                                strokeWidth = drawingPath.size * 0.3f
+                                alpha = (alpha * 0.5f)
+                            }
+
+                            canvas.drawLine(
+                                texturePoint,
+                                nextPoint + Offset(
+                                    drawingPath.getRandom(
+                                        listOf(
+                                            i + delta,
+                                            nextPoint.x,
+                                            j,
+                                            1
+                                        )
+                                    ) * brushSize * 0.1f,
+                                    j * brushSize * 0.15f
+                                ),
+                                texturePaint
+                            )
+                        }
+
+                        i += delta
+                    }
+
+                    // Add slight variation in pressure
+                    var pressureI = 0f
+                    val pressureDelta = brushSize * 0.5f
+                    while (pressureI < length) {
+                        val point = measure.getPosition(pressureI)
+
+                        val pressurePaint = paint.apply {
+                            strokeWidth = drawingPath.size * 0.8f
+                            alpha = (alpha * 0.3f)
+                        }
+
+                        val pressureOffset = Offset(
+                            drawingPath.getRandom(listOf(pressureI, point.x, 1)) * brushSize * 0.05f,
+                            drawingPath.getRandom(listOf(pressureI, point.y, 2)) * brushSize * 0.05f
                         )
+
+                        val offset = point + pressureOffset
+                        canvas.nativeCanvas.drawPoint(
+                            offset.x,
+                            offset.y,
+                            pressurePaint.asFrameworkPaint()
+                        )
+
+                        pressureI += pressureDelta
                     }
-
-                    i += delta
-                }
-
-                // Add slight variation in pressure
-                var pressureI = 0f
-                val pressureDelta = brushSize * 0.5f
-                while (pressureI < length) {
-                    val point = measure.getPosition(pressureI)
-
-                    val pressurePaint = paint.apply {
-                        strokeWidth = drawingPath.size * 0.8f
-                        alpha = (alpha * 0.3f)
-                    }
-
-                    val pressureOffset = Offset(
-                        drawingPath.getRandom(listOf(pressureI, point.x, 1)) * brushSize * 0.05f,
-                        drawingPath.getRandom(listOf(pressureI, point.y, 2)) * brushSize * 0.05f
-                    )
-
-                    val offset = point + pressureOffset
-                    canvas.nativeCanvas.drawPoint(offset.x, offset.y, pressurePaint.asFrameworkPaint())
-
-                    pressureI += pressureDelta
-                }
             }
         )
 
@@ -324,10 +312,10 @@ data class BrushData(
                     val point = metrics.getPosition(i)
 
                     for (j in 0..3) {
-                        val random1 = Random.nextFloat()
-                        val random2 = Random.nextFloat()
-                        val random3 = Random.nextFloat()
-                        val random4 = Random.nextFloat()
+                        val random1 = drawingPath.getRandom(listOf(i, point.x, point.y, j, 1))
+                        val random2 = drawingPath.getRandom(listOf(i, point.x, point.y, j, 2))
+                        val random3 = drawingPath.getRandom(listOf(i, point.x, point.y, j, 3))
+                        val random4 = drawingPath.getRandom(listOf(i, point.x, point.y, j, 4))
 
                         val offset = Offset(
                             (random1 - 0.5f) * drawingPath.size * 0.5f,
@@ -338,8 +326,8 @@ data class BrushData(
                         val controlPoint = point + offset
                         val endPoint = point +
                                 Offset(
-                                (random3 - 0.5f) * 10.0f,
-                                (random4 - 0.5f) * 10.0f,
+                                    (random3 - 0.5f) * 10.0f,
+                                    (random4 - 0.5f) * 10.0f,
                                 )
 
                         // Draw sketchy lines between the points
@@ -434,7 +422,6 @@ data class BrushData(
                     val nextPoint = measure.getPosition(i.toFloat() + step)
                     canvas.drawLine(point, nextPoint, paint)
                 }
-
             }
         )
 
@@ -515,9 +502,11 @@ data class BrushData(
                 // Simulate blur effect by drawing multiple paths with slight offsets
                 val blurRadius = 20f
                 for (i in 0 until 10) {
+                    val rand1 = drawingPath.getRandom(listOf(i, 1))
+                    val rand2 = drawingPath.getRandom(listOf(i, 2))
                     val offset = Offset(
-                        (Random.nextFloat() * 2 - 1) * blurRadius,
-                        (Random.nextFloat() * 2 - 1) * blurRadius
+                        (rand1 * 2 - 1) * blurRadius,
+                        (rand2 * 2 - 1) * blurRadius
                     )
                     canvas.save()
                     canvas.translate(offset.x, offset.y)
@@ -614,9 +603,13 @@ data class BrushData(
                     }
 
                     for (i in 0 until 20) {
-                        val dx = point.x + (Random.nextDouble() - 0.5) * drawingPath.size * 4
-                        val dy = point.y + (Random.nextDouble() - 0.5) * drawingPath.size * 4
-                        val radius = Random.nextDouble() * 1.5f
+                        val rand1 = drawingPath.getRandom(listOf(distance.toInt(), point.x.toInt(), point.y.toInt(), i, 1))
+                        val rand2 = drawingPath.getRandom(listOf(distance.toInt(), point.x.toInt(), point.y.toInt(), i, 2))
+                        val rand3 = drawingPath.getRandom(listOf(distance.toInt(), point.x.toInt(), point.y.toInt(), i, 3))
+
+                        val dx = point.x + (rand1 - 0.5) * drawingPath.size * 4
+                        val dy = point.y + (rand2 - 0.5) * drawingPath.size * 4
+                        val radius = rand3 * 1.5f
 
                         canvas.drawCircle(
                             Offset(dx.toFloat(), dy.toFloat()),
@@ -692,9 +685,12 @@ data class BrushData(
                 // Simulate blur effect
                 val blurRadius = 10f
                 for (i in 0 until 10) {
+                    val random1 = drawingPath.getRandom(listOf(i, 1))
+                    val random2 = drawingPath.getRandom(listOf(i, 2))
+
                     val offset = Offset(
-                        (Random.nextFloat() * 2 - 1) * blurRadius,
-                        (Random.nextFloat() * 2 - 1) * blurRadius
+                        (random1 * 2 - 1) * blurRadius,
+                        (random2 * 2 - 1) * blurRadius
                     )
                     canvas.save()
                     canvas.translate(offset.x, offset.y)
@@ -728,9 +724,30 @@ data class BrushData(
                         continue
                     }
 
-                    val random1 = drawingPath.getRandom(listOf(j, firstPoint.x.toInt(), firstPoint.y.toInt(), 1))
-                    val random2 = drawingPath.getRandom(listOf(j, firstPoint.y.toInt(), firstPoint.x.toInt(), 2))
-                    val random3 = drawingPath.getRandom(listOf(j, firstPoint.x.toInt(), firstPoint.y.toInt(), 3))
+                    val random1 = drawingPath.getRandom(
+                        listOf(
+                            j,
+                            firstPoint.x.toInt(),
+                            firstPoint.y.toInt(),
+                            1
+                        )
+                    )
+                    val random2 = drawingPath.getRandom(
+                        listOf(
+                            j,
+                            firstPoint.y.toInt(),
+                            firstPoint.x.toInt(),
+                            2
+                        )
+                    )
+                    val random3 = drawingPath.getRandom(
+                        listOf(
+                            j,
+                            firstPoint.x.toInt(),
+                            firstPoint.y.toInt(),
+                            3
+                        )
+                    )
 
                     paint.strokeWidth = drawingPath.size * (0.5f + random1 * 0.5f)
 
@@ -751,10 +768,42 @@ data class BrushData(
                             continue
                         }
 
-                        val random4 = drawingPath.getRandom(listOf(distance.toInt(), point.x.toInt(), point.y.toInt(), j, 4))
-                        val random5 = drawingPath.getRandom(listOf(distance.toInt(), point.y.toInt(), point.x.toInt(), j, 5))
-                        val random6 = drawingPath.getRandom(listOf(distance.toInt(), point.x.toInt(), point.y.toInt(), j, 6))
-                        val random7 = drawingPath.getRandom(listOf(distance.toInt(), point.y.toInt(), point.x.toInt(), j, 7))
+                        val random4 = drawingPath.getRandom(
+                            listOf(
+                                distance.toInt(),
+                                point.x.toInt(),
+                                point.y.toInt(),
+                                j,
+                                4
+                            )
+                        )
+                        val random5 = drawingPath.getRandom(
+                            listOf(
+                                distance.toInt(),
+                                point.y.toInt(),
+                                point.x.toInt(),
+                                j,
+                                5
+                            )
+                        )
+                        val random6 = drawingPath.getRandom(
+                            listOf(
+                                distance.toInt(),
+                                point.x.toInt(),
+                                point.y.toInt(),
+                                j,
+                                6
+                            )
+                        )
+                        val random7 = drawingPath.getRandom(
+                            listOf(
+                                distance.toInt(),
+                                point.y.toInt(),
+                                point.x.toInt(),
+                                j,
+                                7
+                            )
+                        )
 
                         path.quadraticBezierTo(
                             prevPoint.x + (random4 - 0.5f) * drawingPath.size * 0.5f,
@@ -783,7 +832,10 @@ data class BrushData(
                 val length = measure.length
 
                 var distance = 0f
-                val step = min(drawingPath.size / 2, 10f)  // Adjust this value to change the density of glitter
+                val step = min(
+                    drawingPath.size / 2,
+                    10f
+                )  // Adjust this value to change the density of glitter
 
                 while (distance <= length) {
                     val point = measure.getPosition(distance)
@@ -830,7 +882,8 @@ data class BrushData(
                 val length = measure.length
 
                 var distance = 0f
-                val step = drawingPath.size / 2  // Adjust this value to change the density of grass blades
+                val step =
+                    drawingPath.size / 2  // Adjust this value to change the density of grass blades
 
                 while (distance <= length) {
                     val point = measure.getPosition(distance)
@@ -839,10 +892,14 @@ data class BrushData(
                         continue
                     }
 
-                    val randomLength = drawingPath.getRandom(listOf(point.x.toInt(), point.y.toInt(), 1))
-                    val randomAngle = drawingPath.getRandom(listOf(point.y.toInt(), point.x.toInt(), 2))
-                    val randomCurvature = drawingPath.getRandom(listOf(point.x.toInt(), point.y.toInt(), 3))
-                    val randomColorVariation = drawingPath.getRandom(listOf(point.y.toInt(), point.x.toInt(), 4))
+                    val randomLength =
+                        drawingPath.getRandom(listOf(point.x.toInt(), point.y.toInt(), 1))
+                    val randomAngle =
+                        drawingPath.getRandom(listOf(point.y.toInt(), point.x.toInt(), 2))
+                    val randomCurvature =
+                        drawingPath.getRandom(listOf(point.x.toInt(), point.y.toInt(), 3))
+                    val randomColorVariation =
+                        drawingPath.getRandom(listOf(point.y.toInt(), point.x.toInt(), 4))
 
                     val paint = Paint().apply {
                         color = drawingPath.color.copy(alpha = randomColorVariation)
@@ -947,7 +1004,8 @@ data class BrushData(
                 val length = measure.length
 
                 var distance = 0f
-                val step = drawingPath.size * 0.75f  // Adjust this value to change the density of mosaic tiles
+                val step =
+                    drawingPath.size * 0.75f  // Adjust this value to change the density of mosaic tiles
 
                 while (distance <= length) {
                     val point = measure.getPosition(distance)
@@ -1005,7 +1063,8 @@ data class BrushData(
                 val length = measure.length
 
                 var distance = 0f
-                val step = drawingPath.size * 2  // Adjust this value to change the density of splats
+                val step =
+                    drawingPath.size * 2  // Adjust this value to change the density of splats
 
                 while (distance <= length) {
                     val center = measure.getPosition(distance)
@@ -1086,7 +1145,8 @@ data class BrushData(
                 val length = measure.length
 
                 var distance = 0f
-                val step = drawingPath.size * 2  // Adjust this value to change the density of galaxy effects
+                val step =
+                    drawingPath.size * 2  // Adjust this value to change the density of galaxy effects
 
                 while (distance <= length) {
                     val center = measure.getPosition(distance)
@@ -1160,7 +1220,8 @@ data class BrushData(
                 val length = measure.length
 
                 var distance = 0f
-                val step = drawingPath.size / 2  // Adjust this value to change the density of flames
+                val step =
+                    drawingPath.size / 2  // Adjust this value to change the density of flames
 
                 while (distance <= length) {
                     val point = measure.getPosition(distance)
@@ -1169,10 +1230,38 @@ data class BrushData(
                         continue
                     }
 
-                    val randomSize = drawingPath.getRandom(listOf(distance.toInt(), point.x.toInt(), point.y.toInt(), 1))
-                    val randomAngle = drawingPath.getRandom(listOf(distance.toInt(), point.y.toInt(), point.x.toInt(), 2))
-                    val randomOpacity = drawingPath.getRandom(listOf(distance.toInt(), point.x.toInt(), point.y.toInt(), 3))
-                    val randomColorVariation = drawingPath.getRandom(listOf(distance.toInt(), point.y.toInt(), point.x.toInt(), 4))
+                    val randomSize = drawingPath.getRandom(
+                        listOf(
+                            distance.toInt(),
+                            point.x.toInt(),
+                            point.y.toInt(),
+                            1
+                        )
+                    )
+                    val randomAngle = drawingPath.getRandom(
+                        listOf(
+                            distance.toInt(),
+                            point.y.toInt(),
+                            point.x.toInt(),
+                            2
+                        )
+                    )
+                    val randomOpacity = drawingPath.getRandom(
+                        listOf(
+                            distance.toInt(),
+                            point.x.toInt(),
+                            point.y.toInt(),
+                            3
+                        )
+                    )
+                    val randomColorVariation = drawingPath.getRandom(
+                        listOf(
+                            distance.toInt(),
+                            point.y.toInt(),
+                            point.x.toInt(),
+                            4
+                        )
+                    )
 
                     val flameHeight = drawingPath.size * (1.0f + randomSize)
                     val flameWidth = drawingPath.size * (0.5f + randomSize * 0.5f)
@@ -1229,7 +1318,8 @@ data class BrushData(
                 val length = measure.length
 
                 var distance = 0f
-                val step = drawingPath.size * 1.5f  // Adjust this value to change the density of snowflakes
+                val step =
+                    drawingPath.size * 1.5f  // Adjust this value to change the density of snowflakes
 
                 while (distance <= length) {
                     val point = measure.getPosition(distance)
@@ -1238,9 +1328,30 @@ data class BrushData(
                         continue
                     }
 
-                    val randomSize = drawingPath.getRandom(listOf(distance.toInt(), point.x.toInt(), point.y.toInt(), 1))
-                    val randomRotation = drawingPath.getRandom(listOf(distance.toInt(), point.y.toInt(), point.x.toInt(), 2))
-                    val randomOpacity = drawingPath.getRandom(listOf(distance.toInt(), point.x.toInt(), point.y.toInt(), 3))
+                    val randomSize = drawingPath.getRandom(
+                        listOf(
+                            distance.toInt(),
+                            point.x.toInt(),
+                            point.y.toInt(),
+                            1
+                        )
+                    )
+                    val randomRotation = drawingPath.getRandom(
+                        listOf(
+                            distance.toInt(),
+                            point.y.toInt(),
+                            point.x.toInt(),
+                            2
+                        )
+                    )
+                    val randomOpacity = drawingPath.getRandom(
+                        listOf(
+                            distance.toInt(),
+                            point.x.toInt(),
+                            point.y.toInt(),
+                            3
+                        )
+                    )
 
                     val size = drawingPath.size * (0.5f + randomSize * 1.0f)
 
@@ -2808,10 +2919,12 @@ data class BrushData(
             name = "Clean Eraser",
             stroke = "clean_eraser_stroke",
             densityOffset = 1.0,
+            blendMode = BlendMode.Clear,
             customPainter = { canvas, size, drawingPath ->
                 canvas.drawPath(
                     drawingPath.path,
                     Paint().apply {
+                        color = Color.White
                         strokeWidth = drawingPath.size
                         strokeCap = StrokeCap.Round
                         strokeJoin = StrokeJoin.Round

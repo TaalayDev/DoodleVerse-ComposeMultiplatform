@@ -5,6 +5,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
+import io.github.taalaydev.doodleverse.shared.WebDataStorage
+import io.github.taalaydev.doodleverse.shared.storage.DataStorage
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.jetbrains.skia.Bitmap
@@ -85,3 +87,5 @@ actual fun getColorFromBitmap(bitmap: ImageBitmap, x: Int, y: Int): Int? {
 }
 
 actual fun getPlatformType(): PlatformType = PlatformType.WEB
+
+actual fun createDataStorage(): DataStorage = WebDataStorage()

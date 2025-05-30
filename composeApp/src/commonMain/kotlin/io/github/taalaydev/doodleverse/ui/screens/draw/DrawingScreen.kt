@@ -2,12 +2,9 @@ package io.github.taalaydev.doodleverse.ui.screens.draw
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +13,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,23 +41,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.pointer.isCtrlPressed
-import androidx.compose.ui.input.pointer.isMetaPressed
-import androidx.compose.ui.input.pointer.isScrollLockOn
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -72,7 +53,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -100,32 +80,19 @@ import doodleverse.composeapp.generated.resources.zoom
 import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.core.DragState
 import io.github.taalaydev.doodleverse.core.Tool
-import io.github.taalaydev.doodleverse.core.handleDrawing
+import io.github.taalaydev.doodleverse.core.color.ColorPaletteGenerator
 import io.github.taalaydev.doodleverse.data.models.BrushData
-import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.Shape
-import io.github.taalaydev.doodleverse.imageBitmapFromByteArray
-import io.github.taalaydev.doodleverse.navigation.Destination
 import io.github.taalaydev.doodleverse.ui.components.BrushGrid
 import io.github.taalaydev.doodleverse.ui.components.BrushPicker
-import io.github.taalaydev.doodleverse.ui.components.CircularFloatingActionMenu
 import io.github.taalaydev.doodleverse.ui.components.ColorPalettePanel
 import io.github.taalaydev.doodleverse.ui.components.ColorPicker
 import io.github.taalaydev.doodleverse.ui.components.DraggableSlider
 import io.github.taalaydev.doodleverse.ui.components.DrawBox
-import io.github.taalaydev.doodleverse.ui.components.DrawCanvas
+import io.github.taalaydev.doodleverse.ui.components.EnhancedColorPickerSheet
 import io.github.taalaydev.doodleverse.ui.components.LayersPanel
-import io.github.taalaydev.doodleverse.ui.components.NewProjectDialog
-import io.github.taalaydev.doodleverse.ui.components.SelectionOverlay
-import io.github.taalaydev.doodleverse.ui.components.StyledDropdownMenu
-import io.github.vinceglb.filekit.core.FileKit
-import io.github.vinceglb.filekit.core.PickerMode
-import io.github.vinceglb.filekit.core.PickerType
-import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.stringResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 data class DpSize(val width: Dp, val height: Dp)
 
@@ -156,6 +123,7 @@ fun DrawingScreen(
             navController = navController,
             modifier = Modifier.fillMaxSize(),
             viewModel = viewModel,
+            platform = platform,
         )
     } else {
         Scaffold(
@@ -186,6 +154,7 @@ private fun DrawScreenBody(
     navController: NavController = rememberNavController(),
     viewModel: DrawViewModel,
     modifier: Modifier = Modifier,
+    platform: Platform,
 ) {
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -214,6 +183,10 @@ private fun DrawScreenBody(
     val size = calculateWindowSizeClass()
     val isMobile = when (size.widthSizeClass) {
         WindowWidthSizeClass.Compact -> true
+        else -> false
+    }
+    val isTablet = when (size.widthSizeClass) {
+        WindowWidthSizeClass.Medium -> true
         else -> false
     }
 
@@ -374,7 +347,7 @@ private fun DrawScreenBody(
                         aspectRatio = projectModel.aspectRatioValue,
                     )
 
-                    DrawControls(
+                    DrawControlsWithAIPalette(
                         viewModel = viewModel,
                         tool = currentTool,
                         brushSize = brushSize,
@@ -467,7 +440,7 @@ private fun DrawScreenBody(
                     }
                 }
             }
-            if (!isMobile) {
+            if (!isMobile && !isTablet) {
                 Column(
                     modifier = Modifier.fillMaxHeight()
                         .width(250.dp)
@@ -492,7 +465,100 @@ private fun DrawScreenBody(
     }
 }
 
+/**
+ * Extension of DrawControls with AI Color Palette functionality
+ */
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DrawControlsWithAIPalette(
+    viewModel: DrawViewModel,
+    tool: Tool,
+    brushSize: Float,
+    brush: BrushData,
+    color: Color,
+    isFloating: Boolean = false,
+    isTablet: Boolean = false,
+    onBrushSelected: (BrushData) -> Unit = {},
+    onColorSelected: (Color) -> Unit = {},
+    onSizeSelected: (Float) -> Unit = {},
+    onToolSelected: (Tool) -> Unit = {},
+) {
+    val scope = rememberCoroutineScope()
+
+    // For AI Color Palette
+    val colorPickerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showEnhancedColorPicker by remember { mutableStateOf(false) }
+    var lastExtractedImage by remember { mutableStateOf<ImageBitmap?>(null) }
+    var extractedPalette by remember { mutableStateOf<ColorPaletteGenerator.Palette?>(null) }
+    val colorPaletteGenerator = remember { ColorPaletteGenerator() }
+
+    LaunchedEffect(lastExtractedImage) {
+        if (lastExtractedImage != null) {
+            extractedPalette = colorPaletteGenerator.extractPaletteFromImage(lastExtractedImage!!)
+        }
+    }
+
+    // Show the color picker
+    if (showEnhancedColorPicker) {
+//        ColorPaletteDialog(
+//            initialColor = color,
+//            onDismiss = { showEnhancedColorPicker = false },
+//            onColorSelected = { color ->
+//                onColorSelected(color)
+//                showEnhancedColorPicker = false
+//            }
+//        )
+        EnhancedColorPickerSheet(
+            initialColor = color,
+            onColorSelected = onColorSelected,
+            bottomSheetState = colorPickerSheetState,
+            onDismiss = { showEnhancedColorPicker = false }
+        )
+    }
+
+    LaunchedEffect(showEnhancedColorPicker) {
+        if (showEnhancedColorPicker) {
+            colorPickerSheetState.show()
+        } else {
+            colorPickerSheetState.hide()
+        }
+    }
+
+    // Original DrawControls content
+    DrawControls(
+        viewModel = viewModel,
+        tool = tool,
+        brushSize = brushSize,
+        brush = brush,
+        color = color,
+        isFloating = isFloating,
+        onBrushSelected = onBrushSelected,
+        onColorSelected = onColorSelected,
+        onSizeSelected = onSizeSelected,
+        onToolSelected = onToolSelected,
+    )
+}
+
+/**
+ * A single color swatch for palette display
+ */
+@Composable
+private fun ColorSwatch(
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.foundation.Canvas(
+        modifier = modifier
+            .padding(4.dp)
+            .width(24.dp)
+            .clickable(onClick = onClick)
+    ) {
+        drawCircle(color = color, radius = size.minDimension / 2)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun DrawControls(
     viewModel: DrawViewModel,
@@ -508,6 +574,12 @@ fun DrawControls(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
+    val size = calculateWindowSizeClass()
+
+    val isTablet = when (size.widthSizeClass) {
+        WindowWidthSizeClass.Medium -> true
+        else -> false
+    }
 
     var showBrushPicker by remember { mutableStateOf(false) }
     val brushPickerBottomSheetState = rememberModalBottomSheetState(
@@ -909,6 +981,33 @@ fun DrawControls(
                         modifier = Modifier.size(20.dp)
                     )
                 }
+            }
+
+            if (isTablet) {
+                VerticalDivider()
+                IconButton(onClick = { showColorPicker = true }) {
+                    Icon(
+                        Lucide.Palette,
+                        contentDescription = stringResource(Res.string.color),
+                        tint = color
+                    )
+                }
+                IconButton(
+                    onClick = { showLayersSheet = true },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (showLayersSheet) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        Lucide.Layers,
+                        contentDescription = stringResource(Res.string.layers),
+                        tint = if (showLayersSheet) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
             }
         }
     }

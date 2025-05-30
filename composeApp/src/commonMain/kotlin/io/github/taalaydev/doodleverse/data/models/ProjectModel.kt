@@ -37,6 +37,7 @@ data class AnimationStateModel(
     val duration: Long,
     val frames: List<FrameModel>,
     val projectId: Long,
+    val fps: Int = 12
 )
 
 data class FrameModel(

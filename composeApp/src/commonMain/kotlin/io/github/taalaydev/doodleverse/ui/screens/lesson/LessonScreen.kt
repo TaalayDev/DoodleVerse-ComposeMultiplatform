@@ -1,14 +1,14 @@
 package io.github.taalaydev.doodleverse.ui.screens.lesson
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
@@ -20,14 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.PaintingStyle
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,7 +30,6 @@ import com.composables.icons.lucide.*
 import doodleverse.composeapp.generated.resources.Res
 import doodleverse.composeapp.generated.resources.back
 import doodleverse.composeapp.generated.resources.completed
-import doodleverse.composeapp.generated.resources.days_ago
 import doodleverse.composeapp.generated.resources.eraser
 import doodleverse.composeapp.generated.resources.more_options
 import doodleverse.composeapp.generated.resources.next
@@ -54,21 +46,15 @@ import doodleverse.composeapp.generated.resources.step_count_of
 import doodleverse.composeapp.generated.resources.undo
 import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.core.DragState
-import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.core.Tool
-import io.github.taalaydev.doodleverse.core.handleDrawing
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.LessonModel
 import io.github.taalaydev.doodleverse.data.models.LessonPartModel
 import io.github.taalaydev.doodleverse.navigation.Destination
 import io.github.taalaydev.doodleverse.ui.components.BrushPicker
-import io.github.taalaydev.doodleverse.ui.components.DraggableSlider
 import io.github.taalaydev.doodleverse.ui.components.DrawBox
-import io.github.taalaydev.doodleverse.ui.components.DrawState
-import io.github.taalaydev.doodleverse.ui.screens.draw.DrawControls
 import io.github.taalaydev.doodleverse.ui.screens.draw.ShapePickerSheet
 import org.jetbrains.compose.resources.imageResource
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
@@ -88,6 +74,11 @@ fun LessonDetailScreen(
     val scope = rememberCoroutineScope()
     var showStartDrawing by remember { mutableStateOf(false) }
     var currentPage by remember { mutableStateOf(0) }
+    var showDescription by remember { mutableStateOf(true) }
+
+    LaunchedEffect(currentPage) {
+        // showDescription = true
+    }
 
     val brushSize by viewModel.brushSize.collectAsStateWithLifecycle()
     val currentColor by viewModel.currentColor.collectAsStateWithLifecycle()
@@ -332,20 +323,62 @@ fun LessonDetailScreen(
                 }
 
                 // Step description overlay
-                Box(
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = showDescription,
+                    enter = fadeIn() + slideInVertically { it },
+                    exit = fadeOut() + slideOutVertically { it },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 16.dp)
+                        .padding(bottom = 16.dp),
                 ) {
                     Surface(
                         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                         shape = RoundedCornerShape(12.dp),
                         tonalElevation = 2.dp
                     ) {
-                        Text(
-                            text = stringResource(lesson.parts[currentPage].description),
-                            style = MaterialTheme.typography.bodyMedium,
+                        Box(
                             modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(lesson.parts[currentPage].description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(end = 24.dp)
+                            )
+
+                            IconButton(
+                                onClick = { showDescription = false },
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .align(Alignment.TopEnd)
+                            ) {
+                                Icon(
+                                    Lucide.X,
+                                    contentDescription = "Close description",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Button to show description again if it's hidden
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = !showDescription,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp)
+                ) {
+                    FloatingActionButton(
+                        onClick = { showDescription = true },
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            Lucide.Info,
+                            contentDescription = "Show description",
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }

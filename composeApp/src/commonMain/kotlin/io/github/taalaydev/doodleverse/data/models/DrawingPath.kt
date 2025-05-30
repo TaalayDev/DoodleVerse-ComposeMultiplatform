@@ -16,7 +16,10 @@ data class DrawingPath(
     private val randoms: MutableMap<String, Float> = HashMap()
 ) {
     fun getRandom(list: List<Number>): Float {
-        return Random.nextFloat()
+        val seed = list.fold(1) { acc, input ->
+            acc * 31 + input.toInt()
+        }
+        return Random(seed).nextFloat()
     }
 
     fun randomsString(): String {

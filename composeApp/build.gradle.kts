@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
+import org.jetbrains.kotlin.compose.compiler.gradle.ComposeFeatureFlag
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -13,6 +14,7 @@ plugins {
     // Android specific plugins
     alias(libs.plugins.google.playServices)
     alias(libs.plugins.firebase.crashlytics)
+    alias(libs.plugins.composeHotReload)
 }
 
 kotlin {
@@ -90,6 +92,8 @@ kotlin {
 
             implementation(libs.reorderable)
 
+            implementation(libs.cachemap)
+
             implementation(project(":shared"))
         }
         desktopMain.dependencies {
@@ -102,6 +106,10 @@ kotlin {
             implementation(project(":database"))
         }
     }
+}
+
+composeCompiler {
+    featureFlags.add(ComposeFeatureFlag.OptimizeNonSkippingGroups)
 }
 
 android {

@@ -22,6 +22,8 @@ import platform.UIKit.UIImageWriteToSavedPhotosAlbum
 import platform.Foundation.NSURL
 import platform.UIKit.UIApplication
 import cocoapods.FirebaseAnalytics.FIRAnalytics
+import io.github.taalaydev.doodleverse.shared.IOSDataStorage
+import io.github.taalaydev.doodleverse.shared.storage.DataStorage
 import platform.Foundation.NSNumber
 import platform.Foundation.NSString
 
@@ -110,3 +112,5 @@ actual fun getColorFromBitmap(bitmap: ImageBitmap, x: Int, y: Int): Int? {
 }
 
 actual fun getPlatformType(): PlatformType = PlatformType.IOS
+
+actual fun createDataStorage(): DataStorage = IOSDataStorage()

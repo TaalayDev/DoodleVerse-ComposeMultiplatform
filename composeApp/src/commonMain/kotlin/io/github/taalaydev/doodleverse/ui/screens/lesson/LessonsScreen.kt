@@ -31,6 +31,7 @@ import io.github.taalaydev.doodleverse.data.models.LessonDifficulty
 import io.github.taalaydev.doodleverse.data.models.LessonModel
 import io.github.taalaydev.doodleverse.getAnalytics
 import io.github.taalaydev.doodleverse.navigation.Destination
+import io.github.taalaydev.doodleverse.ui.theme.DoodleVerseCardDefaults
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -140,14 +141,12 @@ fun LessonCard(
             .fillMaxWidth()
             .height(280.dp)
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = DoodleVerseCardDefaults.primaryCardColors(),
     ) {
         Column {
             // Preview image
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
+                modifier = Modifier.fillMaxWidth().weight(1f)
             ) {
                 Image(
                     painter = painterResource(lesson.preview),
