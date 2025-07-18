@@ -9,13 +9,12 @@ import io.github.taalaydev.doodleverse.data.models.LayerModel
 
 class BitmapCache {
     private val cache = mutableMapOf<Long, ImageBitmap>()
-    private val maxCacheSize = 50 // Limit cache size
+    private val maxCacheSize = 50
 
     fun get(layerId: Long): ImageBitmap? = cache[layerId]
 
     fun put(layerId: Long, bitmap: ImageBitmap) {
         if (cache.size >= maxCacheSize) {
-            // Remove oldest entries
             val keysToRemove = cache.keys.take(cache.size - maxCacheSize + 1)
             keysToRemove.forEach { cache.remove(it) }
         }
@@ -30,16 +29,10 @@ class BitmapCache {
         cache.clear()
     }
 
-    /**
-     * ADDED: Method to get all cached bitmaps for undo/redo snapshots
-     */
     fun getAllBitmaps(): Map<Long, ImageBitmap> {
         return cache.mapValues { (_, bitmap) -> bitmap.copy() }
     }
 
-    /**
-     * ADDED: Method to restore cache from a snapshot
-     */
     fun restoreFromSnapshot(bitmaps: Map<Long, ImageBitmap>) {
         clear()
         bitmaps.forEach { (layerId, bitmap) ->

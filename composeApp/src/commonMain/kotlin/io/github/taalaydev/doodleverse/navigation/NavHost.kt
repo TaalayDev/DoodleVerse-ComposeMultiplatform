@@ -18,6 +18,7 @@ import io.github.taalaydev.doodleverse.features.animation.AnimationStudioScreen
 import io.github.taalaydev.doodleverse.ui.screens.about.AboutScreen
 import io.github.taalaydev.doodleverse.ui.screens.bridge.BridgeGame
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawingScreen
+import io.github.taalaydev.doodleverse.ui.screens.draw.PixelArtDrawingScreen
 import io.github.taalaydev.doodleverse.ui.screens.home.HomeScreen
 import io.github.taalaydev.doodleverse.ui.screens.lesson.LessonDetailScreen
 import io.github.taalaydev.doodleverse.ui.screens.lesson.LessonsScreen

@@ -15,7 +15,9 @@ import kotlin.math.sin
 import androidx.compose.ui.util.lerp
 import doodleverse.composeapp.generated.resources.brush2
 import doodleverse.composeapp.generated.resources.brush6
+import doodleverse.composeapp.generated.resources.brush_1
 import doodleverse.composeapp.generated.resources.stamp_marker
+import doodleverse.composeapp.generated.resources.watercolor
 import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.core.getDensityOffsetBetweenPoints
 import org.jetbrains.compose.resources.DrawableResource
@@ -67,17 +69,16 @@ data class BrushData(
             stroke = "solid",
             strokeCap = StrokeCap.Round,
             strokeJoin = StrokeJoin.Round,
-
         )
 
         val pencil = BrushData(
             id = 1,
             name = "Pencil",
             stroke = "pencil",
-            brush = Res.drawable.stamp_pencil,
+            brush = Res.drawable.watercolor,
             opacityDiff = 0.5f,
             densityOffset = 10.0,
-            rotationRandomness = 15f,
+            // rotationRandomness = 15f,
             useBrushWidthDensity = true
         )
 
@@ -2924,7 +2925,7 @@ data class BrushData(
                 canvas.drawPath(
                     drawingPath.path,
                     Paint().apply {
-                        color = Color.White
+                        color = drawingPath.color
                         strokeWidth = drawingPath.size
                         strokeCap = StrokeCap.Round
                         strokeJoin = StrokeJoin.Round

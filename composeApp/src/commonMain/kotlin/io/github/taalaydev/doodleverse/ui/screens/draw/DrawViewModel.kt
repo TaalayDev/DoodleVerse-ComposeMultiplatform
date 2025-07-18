@@ -221,7 +221,6 @@ class DrawViewModel(
         _brushSize.value = size
     }
 
-    // Drawing operations
     override fun undo() {
         endSelection()
         drawingController.undo()
@@ -232,7 +231,6 @@ class DrawViewModel(
         drawingController.redo()
     }
 
-    // Selection operations - delegate to controller
     override fun startSelection(offset: Offset) {
         if (selectionState.isActive) {
             applySelection()
@@ -251,7 +249,6 @@ class DrawViewModel(
     override fun endSelection() {
         val bounds = drawingController.endSelection()
         if (bounds != null && bounds.width > 1 && bounds.height > 1) {
-            // Capture selection area
             captureSelection(bounds)
         }
     }
@@ -269,7 +266,6 @@ class DrawViewModel(
     }
 
     override fun updateSelectionTransform(centroid: Offset, pan: Offset, zoom: Float, rotation: Float) {
-        // Handle multi-touch transform if needed
         updateSelectionTransform(pan)
     }
 
@@ -277,7 +273,6 @@ class DrawViewModel(
         val currentState = drawingController.state.value
         val layerBitmap = drawingController.getLayerBitmap(currentState.currentLayer.id) ?: return
 
-        // Create selection bitmap
         val selectionBitmap = ImageBitmap(bounds.width.toInt(), bounds.height.toInt())
         val canvas = Canvas(selectionBitmap)
 
@@ -289,14 +284,12 @@ class DrawViewModel(
             paint = Paint()
         )
 
-        // Clear selected area from original layer
         val layerCanvas = Canvas(layerBitmap)
         layerCanvas.drawRect(
             bounds,
             Paint().apply { blendMode = BlendMode.Clear }
         )
 
-        // Update selection state
         drawingController.updateSelectionState(
             SelectionState(
                 bounds = bounds,
@@ -307,7 +300,6 @@ class DrawViewModel(
         )
     }
 
-    // Movement operations
     override fun startMove(offset: Offset) {
         val currentTool = _currentTool.value
         if (currentTool is Tool.Drag) {
@@ -321,8 +313,6 @@ class DrawViewModel(
             val deltaX = offset.x - moveStartPoint.x
             val deltaY = offset.y - moveStartPoint.y
 
-            // Handle layer movement - this could be implemented in the controller
-            // For now, just update the start point
             moveStartPoint = offset
         }
     }
@@ -333,12 +323,10 @@ class DrawViewModel(
         }
     }
 
-    // Fill operation
     override fun floodFill(x: Int, y: Int) {
         drawingController.floodFill(x, y, _currentColor.value)
     }
 
-    // Layer operations - delegate to controller
     fun addLayer(name: String = "Layer ${state.value.layers.size + 1}") {
         applySelection()
         drawingController.addLayer(name)
@@ -355,7 +343,6 @@ class DrawViewModel(
                     layers = currentState.currentFrame.layers + layer.copy(id = layerId)
                 )
 
-                // Update controller state directly
                 drawingController.loadFrame(newFrame, emptyMap())
 
             } catch (e: Exception) {
@@ -393,11 +380,9 @@ class DrawViewModel(
                 val currentLayer = currentState.layers[index]
                 val updatedLayer = updater(currentLayer)
 
-                // Update layer in repository
                 val bitmap = drawingController.getLayerBitmap(updatedLayer.id)
                 drawingOperations.updateLayer(updatedLayer, bitmap)
 
-                // Update local state
                 val newLayers = currentState.layers.toMutableList()
                 newLayers[index] = updatedLayer
 
@@ -476,7 +461,6 @@ class DrawViewModel(
         }
     }
 
-    // Additional layer utility functions
     fun duplicateLayer(index: Int) {
         applySelection()
         val currentState = drawingController.state.value
@@ -484,20 +468,17 @@ class DrawViewModel(
 
         val layerToDuplicate = currentState.layers[index]
         val duplicatedLayer = layerToDuplicate.copy(
-            id = 0, // Will be assigned by database
+            id = 0,
             name = "${layerToDuplicate.name} Copy"
         )
 
         viewModelScope.launch {
             try {
-                // Get the bitmap for the layer to duplicate
                 val originalBitmap = drawingController.getLayerBitmap(layerToDuplicate.id)
 
-                // Add the new layer
                 val layerId = drawingOperations.addLayer(duplicatedLayer)
                 val newLayer = duplicatedLayer.copy(id = layerId)
 
-                // Update the drawing controller
                 val newFrame = currentState.currentFrame.copy(
                     layers = currentState.layers.toMutableList().apply {
                         add(index + 1, newLayer)
@@ -510,13 +491,11 @@ class DrawViewModel(
                             put(layer.id, bitmap)
                         }
                     }
-                    // Add the duplicated bitmap
                     originalBitmap?.let { put(layerId, it.copy()) }
                 }
 
                 drawingController.loadFrame(newFrame, layerBitmaps)
 
-                // Update the duplicated layer in repository with bitmap
                 originalBitmap?.let { bitmap ->
                     drawingOperations.updateLayer(newLayer, bitmap)
                 }
@@ -549,7 +528,6 @@ class DrawViewModel(
                 val lowerBitmap = drawingController.getLayerBitmap(lowerLayer.id)
 
                 if (upperBitmap != null && lowerBitmap != null) {
-                    // Create merged bitmap
                     val mergedBitmap = lowerBitmap.copy()
                     val canvas = Canvas(mergedBitmap)
                     canvas.drawImage(
@@ -558,16 +536,14 @@ class DrawViewModel(
                         Paint().apply { alpha = upperLayer.opacity.toFloat() }
                     )
 
-                    // Update the lower layer with merged content
                     val mergedLayer = lowerLayer.copy(
                         name = "${lowerLayer.name} + ${upperLayer.name}",
-                        opacity = 1.0 // Reset opacity since it's now baked in
+                        opacity = 1.0
                     )
 
-                    // Remove upper layer and update lower layer
                     val newLayers = currentState.layers.toMutableList()
-                    newLayers.removeAt(index) // Remove upper layer
-                    newLayers[index - 1] = mergedLayer // Update lower layer
+                    newLayers.removeAt(index)
+                    newLayers[index - 1] = mergedLayer
 
                     val newFrame = currentState.currentFrame.copy(layers = newLayers)
 
@@ -585,7 +561,6 @@ class DrawViewModel(
 
                     drawingController.loadFrame(newFrame, layerBitmaps)
 
-                    // Update repository
                     drawingOperations.deleteLayer(upperLayer)
                     drawingOperations.updateLayer(mergedLayer, mergedBitmap)
                 }
@@ -606,16 +581,13 @@ class DrawViewModel(
                 val currentLayer = currentState.layers[index]
                 val clearedLayer = currentLayer.copy(paths = emptyList())
 
-                // Create empty bitmap
                 val emptyBitmap = ImageBitmap(
                     drawingController.canvasSize.width.toInt(),
                     drawingController.canvasSize.height.toInt()
                 )
 
-                // Update layer
                 updateLayer(index) { clearedLayer }
 
-                // Update bitmap cache
                 val layerBitmaps = buildMap {
                     currentState.layers.forEachIndexed { i, layer ->
                         if (i == index) {
@@ -650,7 +622,6 @@ class DrawViewModel(
         }
     }
 
-    // Image operations
     fun saveAsPng() {
         val image = drawingController.getCombinedBitmap() ?: return
         val bytes = imageBitmapByteArray(image.withBackground(Color.White), ImageFormat.PNG)
@@ -686,10 +657,8 @@ class DrawViewModel(
         viewModelScope.launch {
             drawingController.addLayer(layerName)
 
-            // Wait for layer to be added
             delay(100)
 
-            // Set up selection with imported image
             drawingController.updateSelectionState(
                 SelectionState(
                     bounds = Rect(Offset.Zero, Size(width.toFloat(), height.toFloat())),
@@ -701,7 +670,6 @@ class DrawViewModel(
         }
     }
 
-    // Legacy interface methods - kept for compatibility but redirected to controller
     override fun updateCurrentTool(tool: Tool) = setTool(tool)
 
     override fun onCleared() {

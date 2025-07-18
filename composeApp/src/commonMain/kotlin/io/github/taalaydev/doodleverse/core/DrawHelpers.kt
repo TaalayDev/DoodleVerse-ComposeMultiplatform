@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.runtime.MutableState
+import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.changedToUp
@@ -97,6 +98,85 @@ internal suspend fun PointerInputScope.handleDrawing(
         } while (drag != null && drag.pressed)
 
         onEnd()
+    }
+}
+
+internal suspend fun PointerInputScope.handleSmoothDrawing(
+    isActive: Boolean = true,
+    onStart: (Offset, Float) -> Unit = { _, _ -> },
+    onDrag: (Offset, Float) -> Unit = { _, _ -> },
+    onEnd: () -> Unit = {},
+    interpolationDensity: Float = 2.0f
+) {
+    if (!isActive) return
+
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        var lastPosition = down.position
+        var isDrawing = false
+
+        onStart(down.position, down.pressure)
+        down.consume()
+        isDrawing = true
+
+        var drag: PointerInputChange?
+        do {
+            val event = awaitPointerEvent()
+            drag = event.changes.firstOrNull { it.id == down.id }
+
+            drag?.let { change ->
+                if (change.positionChanged()) {
+                    // Use optimized interpolation for pixel art
+                    val distance = (change.position - lastPosition).getDistance()
+
+                    if (distance > interpolationDensity) {
+                        // Interpolate points between last and current position
+                        val steps = (distance / interpolationDensity).toInt().coerceAtLeast(1)
+
+                        for (i in 1..steps) {
+                            val t = i.toFloat() / steps
+                            val interpolatedPoint = lerp(lastPosition, change.position, t)
+                            onDrag(interpolatedPoint, change.pressure)
+                        }
+                    } else {
+                        onDrag(change.position, change.pressure)
+                    }
+
+                    lastPosition = change.position
+                    change.consume()
+                }
+            }
+        } while (drag != null && drag.pressed)
+
+        if (isDrawing) {
+            onEnd()
+        }
+    }
+}
+
+private fun interpolatePoints(
+    start: Offset,
+    end: Offset,
+    density: Float,
+    onPoint: (Offset) -> Unit
+) {
+    val dx = end.x - start.x
+    val dy = end.y - start.y
+    val distance = sqrt(dx * dx + dy * dy)
+
+    if (distance <= density) {
+        onPoint(end)
+        return
+    }
+
+    val steps = (distance / density).toInt().coerceAtLeast(1)
+    val stepX = dx / steps
+    val stepY = dy / steps
+
+    for (i in 1..steps) {
+        val x = start.x + stepX * i
+        val y = start.y + stepY * i
+        onPoint(Offset(x, y))
     }
 }
 

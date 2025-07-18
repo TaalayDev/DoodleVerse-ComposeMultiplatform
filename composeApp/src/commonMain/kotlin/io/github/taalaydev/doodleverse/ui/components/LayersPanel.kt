@@ -12,40 +12,37 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
 import androidx.compose.material.Divider
 import androidx.compose.material.Surface
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -96,12 +93,10 @@ fun LayersPanel(
     drawViewModel: DrawViewModel,
     modifier: Modifier = Modifier,
 ) {
-    // Collect state from the refactored architecture
     val drawingState by drawViewModel.drawingController.state.collectAsStateWithLifecycle()
     val layers = drawingState.currentFrame.layers
     val currentLayerIndex = drawingState.currentLayerIndex
 
-    // State for reorderable list
     var reorderableList by remember { mutableStateOf(layers.indices.toList()) }
     val lazyListState = rememberLazyListState()
     val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -111,7 +106,6 @@ fun LayersPanel(
         drawViewModel.reorderLayers(from.index, to.index)
     }
 
-    // Update reorderable list when layers change
     LaunchedEffect(layers.size) {
         reorderableList = layers.indices.toList()
     }
@@ -119,7 +113,6 @@ fun LayersPanel(
     Column(modifier = modifier) {
         Divider()
 
-        // Header with opacity slider and add button
         LayersPanelHeader(
             currentLayer = layers.getOrNull(currentLayerIndex),
             onOpacityChanged = { opacity ->
@@ -132,7 +125,6 @@ fun LayersPanel(
 
         Divider()
 
-        // Layers list
         if (layers.isNotEmpty()) {
             LazyColumn(
                 modifier = Modifier.weight(1f),
@@ -164,7 +156,7 @@ fun LayersPanel(
                                     )
                                 },
                                 onLayerDeleted = { layerIndex ->
-                                    if (layers.size > 1) { // Prevent deleting the last layer
+                                    if (layers.size > 1) {
                                         drawViewModel.deleteLayer(layerIndex)
                                     }
                                 },
@@ -200,7 +192,6 @@ fun LayersPanel(
                 }
             }
         } else {
-            // Empty state
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentAlignment = Alignment.Center
@@ -348,21 +339,16 @@ fun LayerTile(
             .fillMaxWidth()
             .clickable { onLayerSelected(index) }
             .padding(horizontal = 4.dp, vertical = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isActive) 2.dp else 0.dp
         )
     ) {
         Row(
-            modifier = Modifier
-                .padding(8.dp)
-                .height(48.dp),
+            modifier = Modifier.height(48.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Drag handle
             dragHandle?.invoke()
 
-            // Layer preview
             LayerPreview(
                 image = preview,
                 isEmpty = isEmpty,
@@ -371,7 +357,6 @@ fun LayerTile(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Layer info
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center
@@ -401,12 +386,10 @@ fun LayerTile(
                 }
             }
 
-            // Layer controls
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Visibility toggle
                 IconButton(
                     onClick = { onLayerVisibilityChanged?.invoke(index) },
                     modifier = Modifier.size(28.dp)
@@ -419,7 +402,6 @@ fun LayerTile(
                     )
                 }
 
-                // Context menu
                 Box {
                     IconButton(
                         onClick = { showContextMenu = true },
@@ -464,7 +446,6 @@ fun LayerTile(
         }
     }
 
-    // Rename dialog
     if (showRenameDialog) {
         LayerRenameDialog(
             currentName = layer.name,
@@ -519,7 +500,6 @@ fun LayerPreview(
                 )
             }
             else -> {
-                // Loading or placeholder state
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

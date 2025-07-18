@@ -42,9 +42,6 @@ data class DrawingState(
         get() = currentFrame.layers
 }
 
-/**
- * ADDED: Data class to store bitmap cache snapshots for undo/redo
- */
 data class BitmapCacheSnapshot(
     val bitmaps: Map<Long, ImageBitmap>
 ) {
@@ -62,13 +59,29 @@ data class BitmapCacheSnapshot(
     }
 }
 
-/**
- * ADDED: Enhanced state that includes bitmap cache for proper undo/redo
- */
 data class DrawingStateWithCache(
     val drawingState: DrawingState,
     val bitmapCache: BitmapCacheSnapshot
 )
+
+data class DrawingCanvasState(
+    val bitmap: ImageBitmap,
+    val canvas: Canvas,
+    val isActive: Boolean = false
+) {
+    fun clear() {
+        canvas.drawRect(
+            left = 0f,
+            top = 0f,
+            right = bitmap.width.toFloat(),
+            bottom = bitmap.height.toFloat(),
+            paint = Paint().apply {
+                color = Color.Transparent
+                blendMode = BlendMode.Clear
+            }
+        )
+    }
+}
 
 class DrawingController(
     private val operations: DrawingOperations,
@@ -115,21 +128,52 @@ class DrawingController(
     private val _canRedo = MutableStateFlow(false)
     val canRedo: StateFlow<Boolean> = _canRedo.asStateFlow()
 
-    // Canvas state
     var currentPath by mutableStateOf<DrawingPath?>(null)
     var canvasSize by mutableStateOf(Size.Zero)
 
-    // Selection state
+    private var drawingCanvasState by mutableStateOf<DrawingCanvasState?>(null)
+
     val selectionState: SelectionState get() = selectionManager.selectionState
 
-    /**
-     * FIXED: Enhanced addDrawingPath that handles ImageBitmap directly with proper eraser support
-     */
+    fun getOrCreateDrawingCanvas(): DrawingCanvasState {
+        val currentState = drawingCanvasState
+        return if (currentState != null &&
+            currentState.bitmap.width == canvasSize.width.toInt() &&
+            currentState.bitmap.height == canvasSize.height.toInt()) {
+            currentState
+        } else {
+            val bitmap = ImageBitmap(
+                canvasSize.width.toInt().coerceAtLeast(1),
+                canvasSize.height.toInt().coerceAtLeast(1)
+            )
+            val canvas = Canvas(bitmap)
+            val newState = DrawingCanvasState(bitmap, canvas, false)
+            drawingCanvasState = newState
+            newState
+        }
+    }
+
+    fun startDrawingSession(): DrawingCanvasState {
+        val canvasState = getOrCreateDrawingCanvas()
+        canvasState.clear() // Clear any previous drawing
+        drawingCanvasState = canvasState.copy(isActive = true)
+        return drawingCanvasState!!
+    }
+
+    fun endDrawingSession(commit: Boolean = true): ImageBitmap? {
+        val canvasState = drawingCanvasState ?: return null
+        val resultBitmap = if (commit) canvasState.bitmap.copy() else null
+
+        drawingCanvasState = canvasState.copy(isActive = false)
+        canvasState.clear()
+
+        return resultBitmap
+    }
+
     fun addDrawingPath(path: DrawingPath, finalBitmap: ImageBitmap) {
         val currentState = _state.value
         saveStateToHistory(currentState)
 
-        // Update bitmap cache directly with the final bitmap
         bitmapCache.put(currentState.currentLayer.id, finalBitmap)
 
         val newFrame = layerManager.addPathToLayer(
@@ -147,30 +191,59 @@ class DrawingController(
         updateUndoRedoState()
     }
 
-    /**
-     * FIXED: Method to get preview bitmap for real-time drawing with eraser support
-     */
-    fun getPreviewBitmap(path: DrawingPath): ImageBitmap? {
+    fun commitDrawingBitmap(drawingBitmap: ImageBitmap, drawingPath: DrawingPath) {
         val currentState = _state.value
-        if (canvasSize == Size.Zero) return null
+        saveStateToHistory(currentState)
 
         val existingBitmap = bitmapCache.get(currentState.currentLayer.id)
+            ?: ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
 
-        // Handle erasers specially
-        if (path.brush.blendMode == BlendMode.Clear) {
-            return DrawRenderer.renderPathToBitmap(path, canvasSize, existingBitmap)
+        val finalBitmap = combineDrawingBitmapWithLayer(
+            drawingBitmap = drawingBitmap,
+            layerBitmap = existingBitmap,
+            blendMode = drawingPath.brush.blendMode
+        )
+
+        bitmapCache.put(currentState.currentLayer.id, finalBitmap)
+
+        val newFrame = layerManager.addPathToLayer(
+            currentState.currentFrame,
+            currentState.currentLayerIndex,
+            drawingPath,
+            finalBitmap
+        )
+
+        _state.value = currentState.copy(
+            currentFrame = newFrame,
+            isModified = true
+        )
+
+        updateUndoRedoState()
+    }
+
+    private fun combineDrawingBitmapWithLayer(
+        drawingBitmap: ImageBitmap,
+        layerBitmap: ImageBitmap,
+        blendMode: BlendMode = BlendMode.SrcOver
+    ): ImageBitmap {
+        val resultBitmap = layerBitmap.copy()
+        val canvas = Canvas(resultBitmap)
+
+        val paint = Paint().apply {
+            this.blendMode = blendMode
         }
 
-        return DrawRenderer.createPreviewBitmap(
-            drawingPath = path,
-            canvasSize = canvasSize,
-            existingBitmap = existingBitmap
+        canvas.drawImage(drawingBitmap, Offset.Zero, paint)
+        return resultBitmap
+    }
+
+    fun createEmptyBitmap(): ImageBitmap {
+        return ImageBitmap(
+            canvasSize.width.toInt().coerceAtLeast(1),
+            canvasSize.height.toInt().coerceAtLeast(1)
         )
     }
 
-    /**
-     * Method to render a path to bitmap without adding it to the layer
-     */
     fun renderPathToBitmap(path: DrawingPath): ImageBitmap {
         val existingBitmap = bitmapCache.get(_state.value.currentLayer.id)
         return DrawRenderer.renderPathToBitmap(path, canvasSize, existingBitmap)
@@ -190,11 +263,7 @@ class DrawingController(
 
             val layerId = operations.addLayer(newLayer)
 
-            // Initialize empty bitmap for new layer
-            val emptyBitmap = ImageBitmap(
-                canvasSize.width.toInt().coerceAtLeast(1),
-                canvasSize.height.toInt().coerceAtLeast(1)
-            )
+            val emptyBitmap = createEmptyBitmap()
             bitmapCache.put(layerId, emptyBitmap)
 
             val newFrame = currentState.currentFrame.copy(
@@ -222,7 +291,7 @@ class DrawingController(
 
     fun deleteLayer(index: Int) {
         val currentState = _state.value
-        if (currentState.layers.size <= 1) return // Keep at least one layer
+        if (currentState.layers.size <= 1) return
 
         saveStateToHistory(currentState)
 
@@ -274,7 +343,6 @@ class DrawingController(
         updateUndoRedoState()
     }
 
-    // FIXED: Undo/Redo operations with proper bitmap cache restoration
     fun undo() {
         val currentState = _state.value
         val currentSnapshot = createStateSnapshot(currentState)
@@ -300,7 +368,6 @@ class DrawingController(
         updateUndoRedoState()
     }
 
-    // Selection operations
     fun startSelection(offset: Offset) {
         selectionManager.startSelection(offset)
     }
@@ -318,7 +385,6 @@ class DrawingController(
     }
 
     fun applySelection() {
-        // Apply selection transformations to the current layer
         if (selectionState.isActive && selectionState.transformedBitmap != null) {
             saveStateToHistory(_state.value)
             applySelectionToLayer(selectionState)
@@ -331,7 +397,6 @@ class DrawingController(
         selectionManager.clearSelection()
     }
 
-    // Bitmap operations
     fun getLayerBitmap(layerId: Long): ImageBitmap? = bitmapCache.get(layerId)
 
     fun getCombinedBitmap(): ImageBitmap? {
@@ -351,7 +416,6 @@ class DrawingController(
             canvasSize = canvasSize
         )
 
-        // Load bitmaps into cache
         layerBitmaps.forEach { (layerId, bitmap) ->
             bitmapCache.put(layerId, bitmap)
         }
@@ -360,23 +424,19 @@ class DrawingController(
         updateUndoRedoState()
     }
 
-    // FIXED: Flood fill with proper bitmap handling and undo support
     fun floodFill(x: Int, y: Int, color: Color) {
         val currentState = _state.value
         val existingBitmap = bitmapCache.get(currentState.currentLayer.id) ?: return
 
         saveStateToHistory(currentState)
 
-        // Create a copy to modify
         val modifiedBitmap = existingBitmap.copy()
         val canvas = Canvas(modifiedBitmap)
 
         DrawRenderer.floodFill(canvas, modifiedBitmap, x, y, color.toArgb())
 
-        // Update bitmap cache
         bitmapCache.put(currentState.currentLayer.id, modifiedBitmap)
 
-        // Create a dummy path to represent this operation for layer tracking
         val fillPath = DrawingPath(
             brush = BrushData.solid,
             color = color,
@@ -386,7 +446,6 @@ class DrawingController(
             endPoint = Offset(x.toFloat(), y.toFloat())
         )
 
-        // Update the layer with the new path (for consistency)
         val newFrame = layerManager.addPathToLayer(
             currentState.currentFrame,
             currentState.currentLayerIndex,
@@ -414,9 +473,10 @@ class DrawingController(
         bitmapCache.clear()
         undoRedoManager.clear()
         selectionManager.clearSelection()
+        drawingCanvasState?.clear()
+        drawingCanvasState = null
     }
 
-    // FIXED: Private helper methods for proper undo/redo state management
     private fun saveStateToHistory(state: DrawingState) {
         val snapshot = createStateSnapshot(state)
         undoRedoManager.saveState(snapshot)
@@ -444,13 +504,11 @@ class DrawingController(
         val bounds = selectionState.bounds
         val bitmap = selectionState.transformedBitmap ?: return
 
-        // Get existing layer bitmap
         val layerBitmap = bitmapCache.get(currentState.currentLayer.id)?.copy()
-            ?: ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
+            ?: createEmptyBitmap()
 
         val canvas = Canvas(layerBitmap)
 
-        // Apply transformation and draw
         canvas.withSave {
             val offset = selectionState.offset
             canvas.translate(offset.x + bounds.center.x, offset.y + bounds.center.y)
@@ -461,10 +519,8 @@ class DrawingController(
             canvas.drawImage(bitmap, bounds.topLeft, Paint())
         }
 
-        // Update bitmap cache
         bitmapCache.put(currentState.currentLayer.id, layerBitmap)
 
-        // Create a dummy path to represent this operation for layer tracking
         val selectionPath = DrawingPath(
             brush = BrushData.solid,
             color = Color.Black,
@@ -474,7 +530,6 @@ class DrawingController(
             endPoint = bounds.bottomRight
         )
 
-        // Update the layer
         val newFrame = layerManager.addPathToLayer(
             currentState.currentFrame,
             currentState.currentLayerIndex,

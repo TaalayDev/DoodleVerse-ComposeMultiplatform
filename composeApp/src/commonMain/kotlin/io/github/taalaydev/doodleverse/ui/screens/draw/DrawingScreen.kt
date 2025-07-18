@@ -485,7 +485,6 @@ fun DrawControlsWithAIPalette(
 ) {
     val scope = rememberCoroutineScope()
 
-    // For AI Color Palette
     val colorPickerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showEnhancedColorPicker by remember { mutableStateOf(false) }
     var lastExtractedImage by remember { mutableStateOf<ImageBitmap?>(null) }
@@ -498,7 +497,6 @@ fun DrawControlsWithAIPalette(
         }
     }
 
-    // Show the color picker
     if (showEnhancedColorPicker) {
 //        ColorPaletteDialog(
 //            initialColor = color,
@@ -524,7 +522,6 @@ fun DrawControlsWithAIPalette(
         }
     }
 
-    // Original DrawControls content
     DrawControls(
         viewModel = viewModel,
         tool = tool,

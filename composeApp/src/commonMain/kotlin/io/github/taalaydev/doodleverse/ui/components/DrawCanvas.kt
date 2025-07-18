@@ -25,16 +25,20 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.withSave
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.taalaydev.doodleverse.core.DrawProvider
 import io.github.taalaydev.doodleverse.core.DrawRenderer
@@ -50,10 +54,82 @@ import io.github.taalaydev.doodleverse.getPlatformType
 import org.jetbrains.compose.resources.imageResource
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
-// Simplified drawing states
 private enum class CanvasDrawState {
-    Idle, Drawing, Ended
+    Idle, Start, Drawing, Ended
+}
+
+private data class DrawingState(
+    val points: MutableList<Offset> = mutableListOf(),
+    val path: Path = Path(),
+    var prevPosition: Offset = Offset.Zero,
+    var currentPosition: Offset = Offset.Zero,
+    var lastDrawnIndex: Int = 0
+) {
+    fun addPoint(point: Offset): Boolean {
+        if (points.isEmpty() || points.last().getDistance(point) > 5f) {
+            points.add(point)
+            return true
+        }
+        return false
+    }
+
+    fun reset() {
+        points.clear()
+        lastDrawnIndex = 0
+    }
+
+    fun pathReset() {
+        path.reset()
+        points.clear()
+        lastDrawnIndex = 0
+    }
+
+    fun createIncrementalPath(callback: (Path) -> Unit = {}) {
+        val lerpX = lerp(prevPosition.x, currentPosition.x, 0.5f)
+        val lerpY = lerp(prevPosition.y, currentPosition.y, 0.5f)
+
+        if (lastDrawnIndex == 0) {
+            path.moveTo(prevPosition.x, prevPosition.y)
+        }
+
+        path.quadraticBezierTo(
+            prevPosition.x,
+            prevPosition.y,
+            lerpX,
+            lerpY
+        )
+
+        callback(path)
+
+        path.reset()
+        path.moveTo(lerpX, lerpY)
+
+        prevPosition = currentPosition
+        lastDrawnIndex = points.size - 1
+    }
+}
+
+private data class DrawingBitmapState(
+    val bitmap: ImageBitmap,
+    val canvas: Canvas,
+    val currentPath: DrawingPath? = null,
+    val drawingState: DrawingState = DrawingState(),
+    val lastPoint: Offset? = null
+) {
+    fun updatePath(newPath: DrawingPath): DrawingBitmapState {
+        return copy(currentPath = newPath)
+    }
+
+    fun addPoint(point: Offset): DrawingBitmapState {
+        drawingState.addPoint(point)
+        return copy(lastPoint = point)
+    }
+
+    fun reset() {
+        drawingState.reset()
+    }
 }
 
 @Composable
@@ -69,44 +145,39 @@ fun DrawCanvas(
     referenceImage: ImageBitmap? = null,
     modifier: Modifier = Modifier,
 ) {
-    val scope = rememberCoroutineScope()
 
-    // Collect state from the refactored controller
     val drawingState by controller.state.collectAsStateWithLifecycle()
     val layers = drawingState.currentFrame.layers
     val currentLayer = drawingState.currentLayer
     val currentLayerIndex = drawingState.currentLayerIndex
 
-    // Canvas drawing state with better reactivity
     var canvasDrawState by remember { mutableStateOf(CanvasDrawState.Idle) }
     var currentPosition by remember { mutableStateOf(Offset.Zero) }
     var eyedropperColor by remember { mutableStateOf<Color?>(null) }
+    var currentPressure by remember { mutableStateOf(1f) }
 
-    // NEW: Preview bitmap system
-    var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-    var currentDrawingPath by remember { mutableStateOf<DrawingPath?>(null) }
+    var drawingBitmapState by remember { mutableStateOf<DrawingBitmapState?>(null) }
+    var canvasSize by remember { mutableStateOf(Size.Zero) }
 
-    // Brush image for custom brushes
     val brushImage = if (currentBrush.brush != null) {
         imageResource(currentBrush.brush)
     } else {
         null
     }
 
-    // Canvas size tracking
-    var canvasSize by remember { mutableStateOf(Size.Zero) }
-
-    // Update canvas size in controller when it changes
     LaunchedEffect(canvasSize) {
         if (canvasSize != Size.Zero) {
             controller.canvasSize = canvasSize
         }
     }
 
-    // FIXED: Update preview bitmap when drawing path changes with eraser support
-    LaunchedEffect(currentDrawingPath, canvasSize) {
-        if (canvasDrawState == CanvasDrawState.Drawing && currentDrawingPath != null && canvasSize != Size.Zero) {
-            previewBitmap = DrawRenderer.createPreviewBitmap(currentDrawingPath!!, canvasSize)
+    LaunchedEffect(canvasSize) {
+        if (canvasSize != Size.Zero && drawingBitmapState?.bitmap?.let {
+                it.width != canvasSize.width.toInt() || it.height != canvasSize.height.toInt()
+            } != false) {
+            val bitmap = ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
+            val canvas = Canvas(bitmap)
+            drawingBitmapState = DrawingBitmapState(bitmap, canvas)
         }
     }
 
@@ -144,60 +215,17 @@ fun DrawCanvas(
                             handleDrawing(
                                 onStart = { offset, pressure ->
                                     currentPosition = offset
-                                    canvasDrawState = CanvasDrawState.Drawing
-
-                                    if (!tool.isEyedropper) {
-                                        // Create initial drawing path
-                                        val path = Path().apply {
-                                            moveTo(offset.x, offset.y)
-                                        }
-
-                                        currentDrawingPath = DrawingPath(
-                                            brush = currentBrush,
-                                            color = currentColor,
-                                            size = brushSize,
-                                            path = path,
-                                            startPoint = offset,
-                                            endPoint = offset,
-                                            points = mutableListOf(PointModel(offset.x, offset.y))
-                                        )
-                                    }
+                                    currentPressure = pressure
+                                    canvasDrawState = CanvasDrawState.Start
                                 },
                                 onDrag = { _, new, pressure ->
+                                    val distance = if (brushImage != null || currentBrush.isShape) 0f else 50f
+                                    if (currentPosition.getDistance(new) < distance) return@handleDrawing
                                     currentPosition = new
+                                    currentPressure = pressure
 
-                                    if (!tool.isEyedropper && canvasDrawState == CanvasDrawState.Drawing) {
-                                        // Update drawing path
-                                        currentDrawingPath?.let { currentPath ->
-                                            val newPoints = currentPath.points.toMutableList().apply {
-                                                add(PointModel(new.x, new.y))
-                                            }
-
-                                            val newPath = if (currentBrush.isShape) {
-                                                // For shapes, recreate path with start and end points
-                                                Path().apply {
-                                                    moveTo(currentPath.startPoint.x, currentPath.startPoint.y)
-                                                    lineTo(new.x, new.y)
-                                                }
-                                            } else {
-                                                // For brushes, create new path with all points
-                                                Path().apply {
-                                                    if (newPoints.isNotEmpty()) {
-                                                        moveTo(newPoints.first().x, newPoints.first().y)
-                                                        newPoints.drop(1).forEach { point ->
-                                                            lineTo(point.x, point.y)
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                                            // Create new DrawingPath to trigger recomposition
-                                            currentDrawingPath = currentPath.copy(
-                                                path = newPath,
-                                                endPoint = new,
-                                                points = newPoints
-                                            )
-                                        }
+                                    if (canvasDrawState == CanvasDrawState.Start) {
+                                        canvasDrawState = CanvasDrawState.Drawing
                                     }
                                 },
                                 onEnd = {
@@ -206,11 +234,6 @@ fun DrawCanvas(
                                             onColorPicked(color)
                                         }
                                         eyedropperColor = null
-                                    } else if (canvasDrawState == CanvasDrawState.Drawing && currentDrawingPath != null) {
-                                        // Finish drawing and commit to controller
-                                        finishDrawingPath(controller, currentDrawingPath!!, canvasSize)
-                                        currentDrawingPath = null
-                                        previewBitmap = null
                                     }
 
                                     canvasDrawState = CanvasDrawState.Ended
@@ -220,18 +243,16 @@ fun DrawCanvas(
                     }
                 }
         ) {
-            // Update canvas size
             if (canvasSize != size) {
                 canvasSize = size
             }
 
-            // Handle drawing operations
             when {
                 tool.isFill && canvasDrawState == CanvasDrawState.Drawing -> {
                     handleFloodFill(
                         position = currentPosition,
                         color = currentColor,
-                        provider = provider
+                        controller = controller
                     )
                     canvasDrawState = CanvasDrawState.Idle
                 }
@@ -247,23 +268,64 @@ fun DrawCanvas(
                         canvasDrawState = CanvasDrawState.Idle
                     }
                 }
+
+                (tool.isEraser || tool.isBrush || tool.isShape) && canvasDrawState == CanvasDrawState.Start -> {
+                    startDrawing(
+                        offset = currentPosition,
+                        pressure = currentPressure,
+                        brush = currentBrush,
+                        color = currentColor,
+                        size = brushSize,
+                        canvasSize = canvasSize,
+                        cache = controller.getLayerBitmap(currentLayer.id),
+                        onStateUpdate = { newState ->
+                            drawingBitmapState = newState
+                        }
+                    )
+                }
+
+                (tool.isEraser || tool.isBrush || tool.isShape) && canvasDrawState == CanvasDrawState.Drawing -> {
+                    continueDrawing(
+                        offset = currentPosition,
+                        pressure = currentPressure,
+                        currentState = drawingBitmapState,
+                        canvasSize = canvasSize,
+                        brushImage = brushImage,
+                        onStateUpdate = { newState ->
+                            drawingBitmapState = newState
+                        }
+                    )
+                }
+
+                (tool.isEraser || tool.isBrush || tool.isShape) && canvasDrawState == CanvasDrawState.Ended -> {
+                    finishDrawing(
+                        drawingState = drawingBitmapState,
+                        controller = controller,
+                        canvasSize = canvasSize,
+                        brushImage = brushImage,
+                        onComplete = {
+                            drawingBitmapState?.let { state ->
+                                clearDrawingBitmap(state.canvas, canvasSize)
+                                state.reset()
+                            }
+                        }
+                    )
+                }
             }
 
             renderLayers(
                 layers = layers,
                 currentLayerIndex = currentLayerIndex,
                 controller = controller,
-                previewBitmap = previewBitmap,
-                drawContext = this
+                canvasDrawState = canvasDrawState,
+                drawingBitmapState = drawingBitmapState,
             )
 
-            // Render selection overlay
             renderSelectionOverlay(
                 provider = provider,
                 drawContext = this
             )
 
-            // Render reference image if present
             referenceImage?.let { refImage ->
                 renderReferenceImage(
                     image = refImage,
@@ -272,7 +334,6 @@ fun DrawCanvas(
                 )
             }
 
-            // Render eyedropper feedback
             eyedropperColor?.let { color ->
                 renderEyedropperFeedback(
                     position = currentPosition,
@@ -282,7 +343,6 @@ fun DrawCanvas(
             }
         }
 
-        // Selection overlay UI (handles, etc.)
         if (provider.selectionState.isActive) {
             SelectionOverlay(
                 state = provider.selectionState,
@@ -293,7 +353,6 @@ fun DrawCanvas(
                     provider.updateSelectionTransform(offset)
                 },
                 onTransformEnd = {
-                    // Selection transform completed
                 },
                 onTapOutside = {
                     provider.applySelection()
@@ -305,83 +364,220 @@ fun DrawCanvas(
     }
 }
 
-// FIXED: Improved drawing path finishing using ImageBitmap approach with eraser support
-private fun finishDrawingPath(
-    controller: DrawingController,
-    drawingPath: DrawingPath,
-    canvasSize: Size
+private fun DrawScope.startDrawing(
+    offset: Offset,
+    pressure: Float,
+    brush: BrushData,
+    color: Color,
+    size: Float,
+    canvasSize: Size,
+    cache: ImageBitmap? = null,
+    onStateUpdate: (DrawingBitmapState) -> Unit
 ) {
-    // Get the existing layer bitmap
-    val existingBitmap = controller.getLayerBitmap(
-        controller.state.value.currentLayer.id
-    ) ?: ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
+    val bitmap = cache?.copy() ?: ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
+    val canvas = Canvas(bitmap)
 
-    val finalBitmap = if (drawingPath.brush.blendMode == BlendMode.Clear) {
-        // For erasers, apply directly to the existing bitmap
-        DrawRenderer.applyEraserPath(drawingPath, existingBitmap)
-    } else {
-        // For regular brushes, render the path and blend with existing content
-        val pathBitmap = DrawRenderer.renderPathToBitmap(drawingPath, canvasSize)
-        DrawRenderer.blendPathBitmap(
-            pathBitmap = pathBitmap,
-            targetBitmap = existingBitmap,
-            blendMode = drawingPath.brush.blendMode
+    val path = Path().apply { moveTo(offset.x, offset.y) }
+    val drawingPath = DrawingPath(
+        brush = brush,
+        color = color,
+        size = size,
+        path = path,
+        startPoint = offset,
+        endPoint = offset,
+        points = mutableListOf(PointModel(offset.x, offset.y))
+    )
+    val drawingState = DrawingState(
+        points = mutableListOf(offset),
+        prevPosition = offset,
+        currentPosition = offset
+    )
+    val initialState = DrawingBitmapState(
+        bitmap = bitmap,
+        canvas = canvas,
+        currentPath = drawingPath,
+        drawingState = drawingState,
+        lastPoint = offset
+    )
+
+    initialState.drawingState.addPoint(offset)
+    initialState.drawingState.createIncrementalPath { path ->
+        val updatedPath = drawingPath.copy(
+            path = path,
+            endPoint = offset
         )
+
+        // clearDrawingBitmap(canvas, canvasSize)
+        // drawPathToCanvas(canvas, updatedPath, canvasSize)
+
+        onStateUpdate(initialState.copy(currentPath = updatedPath))
+    }
+}
+
+private fun DrawScope.continueDrawing(
+    offset: Offset,
+    pressure: Float,
+    currentState: DrawingBitmapState?,
+    canvasSize: Size,
+    brushImage: ImageBitmap? = null,
+    onStateUpdate: (DrawingBitmapState) -> Unit
+) {
+    val state = currentState ?: return
+    val currentPath = state.currentPath ?: return
+    state.drawingState.currentPosition = offset
+
+    if (!state.drawingState.addPoint(offset)) {
+        return
     }
 
-    // Add to controller
-    controller.addDrawingPath(drawingPath, finalBitmap)
+    val newPoints = currentPath.points.toMutableList().apply {
+        add(PointModel(offset.x, offset.y))
+    }
+
+    state.drawingState.createIncrementalPath { path ->
+        val updatedPath = currentPath.copy(
+            path = path,
+            endPoint = offset,
+            points = newPoints
+        )
+
+        if (updatedPath.brush.isShape) {
+            clearDrawingBitmap(state.canvas, canvasSize)
+        }
+        drawPathToCanvas(state.canvas, updatedPath, canvasSize, brushImage)
+
+        val newState = state.copy(
+            currentPath = updatedPath,
+            lastPoint = offset
+        )
+
+        onStateUpdate(newState)
+    }
+}
+
+private fun DrawScope.finishDrawing(
+    drawingState: DrawingBitmapState?,
+    controller: DrawingController,
+    canvasSize: Size,
+    brushImage: ImageBitmap? = null,
+    onComplete: () -> Unit
+) {
+    val state = drawingState ?: return
+    val currentPath = state.currentPath ?: return
+
+    state.drawingState.createIncrementalPath { path ->
+        val finalPath = currentPath.copy(path = path)
+
+        drawPathToCanvas(state.canvas, finalPath, canvasSize, brushImage)
+
+        val existingBitmap = controller.getLayerBitmap(
+            controller.state.value.currentLayer.id
+        ) ?: ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
+
+        val finalBitmap = combineDrawingWithLayer(
+            drawingBitmap = state.bitmap,
+            layerBitmap = existingBitmap,
+            brush = finalPath.brush
+        )
+
+        controller.addDrawingPath(finalPath, finalBitmap)
+
+        onComplete()
+    }
+}
+
+private fun drawPathToCanvas(
+    canvas: Canvas,
+    drawingPath: DrawingPath,
+    size: Size,
+    brushImage: ImageBitmap? = null,
+) {
+    DrawRenderer.renderPathCanvas(
+        canvas,
+        drawingPath,
+        size,
+        useSmoothing = true,
+        brushImage = brushImage
+    )
+}
+
+private fun clearDrawingBitmap(canvas: Canvas, canvasSize: Size) {
+    canvas.drawRect(
+        left = 0f,
+        top = 0f,
+        right = canvasSize.width,
+        bottom = canvasSize.height,
+        paint = Paint().apply {
+            color = Color.Transparent
+            blendMode = BlendMode.Clear
+        }
+    )
+}
+
+private fun combineDrawingWithLayer(
+    drawingBitmap: ImageBitmap,
+    layerBitmap: ImageBitmap,
+    brush: BrushData
+): ImageBitmap {
+    val resultBitmap = layerBitmap.copy()
+    val canvas = Canvas(resultBitmap)
+
+    val paint = Paint()
+
+    canvas.drawImage(drawingBitmap, Offset.Zero, paint)
+    return resultBitmap
+}
+
+private fun Offset.getDistance(other: Offset): Float {
+    val dx = x - other.x
+    val dy = y - other.y
+    return sqrt(dx * dx + dy * dy)
 }
 
 private fun handleFloodFill(
     position: Offset,
     color: Color,
-    provider: DrawProvider
+    controller: DrawingController
 ) {
     val x = position.x.toInt()
     val y = position.y.toInt()
-    provider.floodFill(x, y)
+    controller.floodFill(x, y, color)
 }
 
 private fun handleEyedropper(
     position: Offset,
     controller: DrawingController,
-    drawContext: androidx.compose.ui.graphics.drawscope.DrawScope
+    drawContext: DrawScope
 ): Color? {
     val x = position.x.toInt()
     val y = position.y.toInt()
 
-    // Get combined bitmap of all visible layers
     val combinedBitmap = controller.getCombinedBitmap() ?: return null
     val colorArgb = getColorFromBitmap(combinedBitmap, x, y) ?: return null
 
     return Color(colorArgb).takeIf { it.alpha > 0 } ?: Color.White
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderLayers(
+private fun DrawScope.renderLayers(
     layers: List<io.github.taalaydev.doodleverse.data.models.LayerModel>,
     currentLayerIndex: Int,
     controller: DrawingController,
-    previewBitmap: ImageBitmap? = null,
-    drawContext: androidx.compose.ui.graphics.drawscope.DrawScope
+    canvasDrawState: CanvasDrawState,
+    drawingBitmapState: DrawingBitmapState? = null,
 ) {
     layers.forEachIndexed { index, layer ->
         if (!layer.isVisible || layer.opacity <= 0.0) return@forEachIndexed
 
-        val layerBitmap = controller.getLayerBitmap(layer.id)
-        layerBitmap?.let { bitmap ->
+        if (index == currentLayerIndex && drawingBitmapState?.bitmap != null && canvasDrawState == CanvasDrawState.Drawing) {
             drawImage(
-                image = bitmap,
-                alpha = layer.opacity.toFloat()
+                image = drawingBitmapState.bitmap,
+                alpha = 1.0f
             )
-        }
-
-        // FIXED: Only show preview on current layer
-        if (index == currentLayerIndex) {
-            previewBitmap?.let { preview ->
+        } else {
+            controller.getLayerBitmap(layer.id)?.let { bitmap ->
                 drawImage(
-                    image = preview,
-                    alpha = 1.0f
+                    image = bitmap,
+                    alpha = layer.opacity.toFloat()
                 )
             }
         }
@@ -396,7 +592,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderSelectionOver
         val bounds = provider.selectionState.bounds
         val transformedBounds = provider.selectionState.getTransformedBounds()
 
-        // Draw selection bounds
         drawContext.drawContext.canvas.withSave {
             val offset = provider.selectionState.offset
             val center = transformedBounds.center
@@ -408,7 +603,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderSelectionOver
                 }
             }
 
-            // Draw selection rectangle
             drawRect(
                 topLeft = transformedBounds.topLeft,
                 size = transformedBounds.size,
@@ -416,7 +610,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderSelectionOver
                 style = Stroke(width = 2.dp.toPx())
             )
 
-            // Draw selected content if available
             provider.selectionState.transformedBitmap?.let { bitmap ->
                 drawImage(
                     image = bitmap,
@@ -438,7 +631,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderReferenceImag
         srcOffset = IntOffset(0, 0),
         srcSize = IntSize(image.width, image.height),
         dstSize = IntSize(canvasSize.width.toInt(), canvasSize.height.toInt()),
-        colorFilter = ColorFilter.tint(Color(0x40FF0000)), // Semi-transparent red overlay
+        colorFilter = ColorFilter.tint(Color(0x40FF0000)),
         alpha = 0.5f
     )
 }
@@ -452,14 +645,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderEyedropperFee
     val previewSize = 40f
     val previewOffset = Offset(position.x + 20, position.y - 50)
 
-    // Draw color preview circle
     drawCircle(
         color = color,
         radius = previewSize / 2,
         center = previewOffset
     )
 
-    // Draw preview circle border
     drawCircle(
         color = Color.Black,
         radius = previewSize / 2,
@@ -467,7 +658,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderEyedropperFee
         style = Stroke(width = 2.dp.toPx())
     )
 
-    // Draw crosshairs
     drawLine(
         color = Color.Black,
         start = Offset(position.x, position.y - crosshairSize),
@@ -483,7 +673,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderEyedropperFee
     )
 }
 
-// Extension function for cleaner bounds access
 private fun io.github.taalaydev.doodleverse.core.SelectionState.getTransformedBounds(): androidx.compose.ui.geometry.Rect {
     val matrix = androidx.compose.ui.graphics.Matrix()
     val center = bounds.center
