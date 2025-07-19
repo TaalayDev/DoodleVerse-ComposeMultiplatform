@@ -216,7 +216,20 @@ fun DrawCanvas(
                                 onStart = { offset, pressure ->
                                     currentPosition = offset
                                     currentPressure = pressure
-                                    canvasDrawState = CanvasDrawState.Start
+                                    canvasDrawState = CanvasDrawState.Drawing
+
+                                    startDrawing(
+                                        offset = currentPosition,
+                                        pressure = currentPressure,
+                                        brush = currentBrush,
+                                        color = currentColor,
+                                        size = brushSize,
+                                        canvasSize = canvasSize,
+                                        cache = controller.getLayerBitmap(currentLayer.id),
+                                        onStateUpdate = { newState ->
+                                            drawingBitmapState = newState
+                                        }
+                                    )
                                 },
                                 onDrag = { _, new, pressure ->
                                     val distance = if (brushImage != null || currentBrush.isShape) 0f else 50f
@@ -224,8 +237,17 @@ fun DrawCanvas(
                                     currentPosition = new
                                     currentPressure = pressure
 
-                                    if (canvasDrawState == CanvasDrawState.Start) {
-                                        canvasDrawState = CanvasDrawState.Drawing
+                                    if (canvasDrawState == CanvasDrawState.Drawing) {
+                                        continueDrawing(
+                                            offset = currentPosition,
+                                            pressure = currentPressure,
+                                            currentState = drawingBitmapState,
+                                            canvasSize = canvasSize,
+                                            brushImage = brushImage,
+                                            onStateUpdate = { newState ->
+                                                drawingBitmapState = newState
+                                            }
+                                        )
                                     }
                                 },
                                 onEnd = {
@@ -235,6 +257,19 @@ fun DrawCanvas(
                                         }
                                         eyedropperColor = null
                                     }
+
+                                    finishDrawing(
+                                        drawingState = drawingBitmapState,
+                                        controller = controller,
+                                        canvasSize = canvasSize,
+                                        brushImage = brushImage,
+                                        onComplete = {
+                                            drawingBitmapState?.let { state ->
+                                                clearDrawingBitmap(state.canvas, canvasSize)
+                                                state.reset()
+                                            }
+                                        }
+                                    )
 
                                     canvasDrawState = CanvasDrawState.Ended
                                 }
@@ -267,49 +302,6 @@ fun DrawCanvas(
                     if (canvasDrawState == CanvasDrawState.Ended) {
                         canvasDrawState = CanvasDrawState.Idle
                     }
-                }
-
-                (tool.isEraser || tool.isBrush || tool.isShape) && canvasDrawState == CanvasDrawState.Start -> {
-                    startDrawing(
-                        offset = currentPosition,
-                        pressure = currentPressure,
-                        brush = currentBrush,
-                        color = currentColor,
-                        size = brushSize,
-                        canvasSize = canvasSize,
-                        cache = controller.getLayerBitmap(currentLayer.id),
-                        onStateUpdate = { newState ->
-                            drawingBitmapState = newState
-                        }
-                    )
-                }
-
-                (tool.isEraser || tool.isBrush || tool.isShape) && canvasDrawState == CanvasDrawState.Drawing -> {
-                    continueDrawing(
-                        offset = currentPosition,
-                        pressure = currentPressure,
-                        currentState = drawingBitmapState,
-                        canvasSize = canvasSize,
-                        brushImage = brushImage,
-                        onStateUpdate = { newState ->
-                            drawingBitmapState = newState
-                        }
-                    )
-                }
-
-                (tool.isEraser || tool.isBrush || tool.isShape) && canvasDrawState == CanvasDrawState.Ended -> {
-                    finishDrawing(
-                        drawingState = drawingBitmapState,
-                        controller = controller,
-                        canvasSize = canvasSize,
-                        brushImage = brushImage,
-                        onComplete = {
-                            drawingBitmapState?.let { state ->
-                                clearDrawingBitmap(state.canvas, canvasSize)
-                                state.reset()
-                            }
-                        }
-                    )
                 }
             }
 
@@ -364,7 +356,7 @@ fun DrawCanvas(
     }
 }
 
-private fun DrawScope.startDrawing(
+private fun startDrawing(
     offset: Offset,
     pressure: Float,
     brush: BrushData,
@@ -414,7 +406,7 @@ private fun DrawScope.startDrawing(
     }
 }
 
-private fun DrawScope.continueDrawing(
+private fun continueDrawing(
     offset: Offset,
     pressure: Float,
     currentState: DrawingBitmapState?,
@@ -455,7 +447,7 @@ private fun DrawScope.continueDrawing(
     }
 }
 
-private fun DrawScope.finishDrawing(
+private fun finishDrawing(
     drawingState: DrawingBitmapState?,
     controller: DrawingController,
     canvasSize: Size,
@@ -480,7 +472,7 @@ private fun DrawScope.finishDrawing(
             brush = finalPath.brush
         )
 
-        controller.addDrawingPath(finalPath, finalBitmap)
+        controller.addDrawingPath(finalPath, state.bitmap)
 
         onComplete()
     }
