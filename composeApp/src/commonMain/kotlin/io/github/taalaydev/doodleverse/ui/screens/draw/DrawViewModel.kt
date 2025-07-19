@@ -1,9 +1,5 @@
 package io.github.taalaydev.doodleverse.ui.screens.draw
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -12,21 +8,17 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.taalaydev.doodleverse.ImageFormat
 import io.github.taalaydev.doodleverse.core.DrawProvider
 import io.github.taalaydev.doodleverse.core.DrawingController
-import io.github.taalaydev.doodleverse.core.DrawRenderer
 import io.github.taalaydev.doodleverse.core.DrawingOperations
 import io.github.taalaydev.doodleverse.core.DrawingState
-import io.github.taalaydev.doodleverse.core.SelectionHitTestResult
 import io.github.taalaydev.doodleverse.core.SelectionState
 import io.github.taalaydev.doodleverse.core.SelectionTransform
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.core.copy
-import io.github.taalaydev.doodleverse.core.hitTestSelectionHandles
 import io.github.taalaydev.doodleverse.core.toIntOffset
 import io.github.taalaydev.doodleverse.core.toIntSize
 import io.github.taalaydev.doodleverse.core.withBackground

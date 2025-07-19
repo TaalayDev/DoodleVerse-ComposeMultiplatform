@@ -425,6 +425,12 @@ internal fun Offset.distanceTo(other: Offset): Float {
     return sqrt((this.x - other.x).pow(2) + (this.y - other.y).pow(2))
 }
 
+internal fun Offset.getDistance(other: Offset): Float {
+    val dx = x - other.x
+    val dy = y - other.y
+    return sqrt(dx * dx + dy * dy)
+}
+
 internal fun distanceBetween(a: Offset, b: Offset) = sqrt((a.x - b.x).pow(2) + (a.y - b.y).pow(2))
 internal fun centerOf(a: Offset, b: Offset) = Offset((a.x + b.x) / 2, (a.y + b.y) / 2)
 

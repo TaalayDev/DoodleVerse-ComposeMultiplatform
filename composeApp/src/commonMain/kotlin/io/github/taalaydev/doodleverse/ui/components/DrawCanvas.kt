@@ -1,17 +1,15 @@
 package io.github.taalaydev.doodleverse.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -23,16 +21,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.withSave
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
@@ -41,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.taalaydev.doodleverse.core.DrawProvider
-import io.github.taalaydev.doodleverse.core.DrawRenderer
+import io.github.taalaydev.doodleverse.core.rendering.DrawRenderer
 import io.github.taalaydev.doodleverse.core.DrawingController
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.core.copy
@@ -52,86 +46,16 @@ import io.github.taalaydev.doodleverse.data.models.PointModel
 import io.github.taalaydev.doodleverse.getColorFromBitmap
 import io.github.taalaydev.doodleverse.getPlatformType
 import org.jetbrains.compose.resources.imageResource
-import kotlin.math.max
-import kotlin.math.min
+import io.github.taalaydev.doodleverse.core.CanvasDrawState
+import io.github.taalaydev.doodleverse.core.CanvasDrawingState
+import io.github.taalaydev.doodleverse.core.DrawingBitmapState
+import io.github.taalaydev.doodleverse.core.VelocityTracker
+import io.github.taalaydev.doodleverse.core.distanceTo
 import kotlin.math.sqrt
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
-private enum class CanvasDrawState {
-    Idle, Start, Drawing, Ended
-}
-
-private data class DrawingState(
-    val points: MutableList<Offset> = mutableListOf(),
-    val path: Path = Path(),
-    var prevPosition: Offset = Offset.Zero,
-    var currentPosition: Offset = Offset.Zero,
-    var lastDrawnIndex: Int = 0
-) {
-    fun addPoint(point: Offset): Boolean {
-        if (points.isEmpty() || points.last().getDistance(point) > 5f) {
-            points.add(point)
-            return true
-        }
-        return false
-    }
-
-    fun reset() {
-        points.clear()
-        lastDrawnIndex = 0
-    }
-
-    fun pathReset() {
-        path.reset()
-        points.clear()
-        lastDrawnIndex = 0
-    }
-
-    fun createIncrementalPath(callback: (Path) -> Unit = {}) {
-        val lerpX = lerp(prevPosition.x, currentPosition.x, 0.5f)
-        val lerpY = lerp(prevPosition.y, currentPosition.y, 0.5f)
-
-        if (lastDrawnIndex == 0) {
-            path.moveTo(prevPosition.x, prevPosition.y)
-        }
-
-        path.quadraticBezierTo(
-            prevPosition.x,
-            prevPosition.y,
-            lerpX,
-            lerpY
-        )
-
-        callback(path)
-
-        path.reset()
-        path.moveTo(lerpX, lerpY)
-
-        prevPosition = currentPosition
-        lastDrawnIndex = points.size - 1
-    }
-}
-
-private data class DrawingBitmapState(
-    val bitmap: ImageBitmap,
-    val canvas: Canvas,
-    val currentPath: DrawingPath? = null,
-    val drawingState: DrawingState = DrawingState(),
-    val lastPoint: Offset? = null
-) {
-    fun updatePath(newPath: DrawingPath): DrawingBitmapState {
-        return copy(currentPath = newPath)
-    }
-
-    fun addPoint(point: Offset): DrawingBitmapState {
-        drawingState.addPoint(point)
-        return copy(lastPoint = point)
-    }
-
-    fun reset() {
-        drawingState.reset()
-    }
-}
-
+@OptIn(ExperimentalTime::class)
 @Composable
 fun DrawCanvas(
     provider: DrawProvider,
@@ -154,10 +78,12 @@ fun DrawCanvas(
     var canvasDrawState by remember { mutableStateOf(CanvasDrawState.Idle) }
     var currentPosition by remember { mutableStateOf(Offset.Zero) }
     var eyedropperColor by remember { mutableStateOf<Color?>(null) }
-    var currentPressure by remember { mutableStateOf(1f) }
+    var currentPressure by remember { mutableFloatStateOf(1f) }
 
     var drawingBitmapState by remember { mutableStateOf<DrawingBitmapState?>(null) }
     var canvasSize by remember { mutableStateOf(Size.Zero) }
+
+    var velocityTracker by remember { mutableStateOf(VelocityTracker()) }
 
     val brushImage = if (currentBrush.brush != null) {
         imageResource(currentBrush.brush)
@@ -218,6 +144,9 @@ fun DrawCanvas(
                                     currentPressure = pressure
                                     canvasDrawState = CanvasDrawState.Drawing
 
+                                    velocityTracker.reset()
+                                    velocityTracker.updateVelocity(offset, Clock.System.now().toEpochMilliseconds())
+
                                     startDrawing(
                                         offset = currentPosition,
                                         pressure = currentPressure,
@@ -225,15 +154,19 @@ fun DrawCanvas(
                                         color = currentColor,
                                         size = brushSize,
                                         canvasSize = canvasSize,
-                                        cache = controller.getLayerBitmap(currentLayer.id),
+                                        cache = if (!currentBrush.isShape) controller.getLayerBitmap(currentLayer.id) else null,
                                         onStateUpdate = { newState ->
                                             drawingBitmapState = newState
                                         }
                                     )
                                 },
                                 onDrag = { _, new, pressure ->
-                                    val distance = if (brushImage != null || currentBrush.isShape) 0f else 50f
-                                    if (currentPosition.getDistance(new) < distance) return@handleDrawing
+                                    val currentTime = Clock.System.now().toEpochMilliseconds()
+                                    velocityTracker.updateVelocity(new, currentTime)
+                                    val dynamicDistance = velocityTracker.calculateDynamicDistance(brushImage, currentBrush.isShape)
+
+                                    if (currentPosition.distanceTo(new) < dynamicDistance) return@handleDrawing
+
                                     currentPosition = new
                                     currentPressure = pressure
 
@@ -265,12 +198,13 @@ fun DrawCanvas(
                                         brushImage = brushImage,
                                         onComplete = {
                                             drawingBitmapState?.let { state ->
-                                                clearDrawingBitmap(state.canvas, canvasSize)
+                                                // clearDrawingBitmap(state.canvas, canvasSize)
                                                 state.reset()
                                             }
                                         }
                                     )
 
+                                    velocityTracker.reset()
                                     canvasDrawState = CanvasDrawState.Ended
                                 }
                             )
@@ -379,7 +313,7 @@ private fun startDrawing(
         endPoint = offset,
         points = mutableListOf(PointModel(offset.x, offset.y))
     )
-    val drawingState = DrawingState(
+    val drawingState = CanvasDrawingState(
         points = mutableListOf(offset),
         prevPosition = offset,
         currentPosition = offset
@@ -466,13 +400,17 @@ private fun finishDrawing(
             controller.state.value.currentLayer.id
         ) ?: ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
 
-        val finalBitmap = combineDrawingWithLayer(
-            drawingBitmap = state.bitmap,
-            layerBitmap = existingBitmap,
-            brush = finalPath.brush
-        )
+        val finalBitmap = if (finalPath.brush.isShape) {
+            combineDrawingWithLayer(
+                drawingBitmap = state.bitmap,
+                layerBitmap = existingBitmap,
+                brush = finalPath.brush
+            )
+        } else {
+            state.bitmap
+        }
 
-        controller.addDrawingPath(finalPath, state.bitmap)
+        controller.addDrawingPath(finalPath, finalBitmap)
 
         onComplete()
     }
@@ -520,12 +458,6 @@ private fun combineDrawingWithLayer(
     return resultBitmap
 }
 
-private fun Offset.getDistance(other: Offset): Float {
-    val dx = x - other.x
-    val dy = y - other.y
-    return sqrt(dx * dx + dy * dy)
-}
-
 private fun handleFloodFill(
     position: Offset,
     color: Color,
@@ -561,24 +493,32 @@ private fun DrawScope.renderLayers(
         if (!layer.isVisible || layer.opacity <= 0.0) return@forEachIndexed
 
         if (index == currentLayerIndex && drawingBitmapState?.bitmap != null && canvasDrawState == CanvasDrawState.Drawing) {
-            drawImage(
-                image = drawingBitmapState.bitmap,
-                alpha = 1.0f
-            )
-        } else {
-            controller.getLayerBitmap(layer.id)?.let { bitmap ->
-                drawImage(
-                    image = bitmap,
-                    alpha = layer.opacity.toFloat()
-                )
+            if (drawingBitmapState.currentPath?.brush?.isShape == true) {
+                drawLayerBitmap(layer = layer, controller = controller)
             }
+
+            drawImage(image = drawingBitmapState.bitmap, alpha = 1.0f)
+        } else {
+            drawLayerBitmap(layer = layer, controller = controller)
         }
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderSelectionOverlay(
+private fun DrawScope.drawLayerBitmap(
+    layer: io.github.taalaydev.doodleverse.data.models.LayerModel,
+    controller: DrawingController,
+) {
+    controller.getLayerBitmap(layer.id)?.let { bitmap ->
+        drawImage(
+            image = bitmap,
+            alpha = layer.opacity.toFloat()
+        )
+    }
+}
+
+private fun DrawScope.renderSelectionOverlay(
     provider: DrawProvider,
-    drawContext: androidx.compose.ui.graphics.drawscope.DrawScope
+    drawContext: DrawScope
 ) {
     if (provider.selectionState.isActive) {
         val bounds = provider.selectionState.bounds

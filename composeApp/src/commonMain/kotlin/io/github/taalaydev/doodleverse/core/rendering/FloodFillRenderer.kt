@@ -1,16 +1,12 @@
-package io.github.taalaydev.doodleverse.core
+package io.github.taalaydev.doodleverse.core.rendering
 
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import kotlin.math.max
 import kotlin.math.min
 

@@ -7,26 +7,19 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.isUnspecified
 import androidx.compose.ui.graphics.*
 import doodleverse.composeapp.generated.resources.Res
-import doodleverse.composeapp.generated.resources.stamp_pencil
 import io.github.taalaydev.doodleverse.core.PathEffects
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.ui.util.lerp
-import doodleverse.composeapp.generated.resources.brush2
-import doodleverse.composeapp.generated.resources.brush6
-import doodleverse.composeapp.generated.resources.brush_1
-import doodleverse.composeapp.generated.resources.stamp_marker
 import doodleverse.composeapp.generated.resources.watercolor
-import io.github.taalaydev.doodleverse.core.DrawRenderer
+import io.github.taalaydev.doodleverse.core.rendering.DrawRenderer
 import io.github.taalaydev.doodleverse.core.getDensityOffsetBetweenPoints
 import org.jetbrains.compose.resources.DrawableResource
-import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.sqrt
-import kotlin.random.Random
 
 private fun calcOpacity(alpha: Float, brushOpacity: Float): Float {
     return DrawRenderer.calcOpacity(alpha, brushOpacity)
