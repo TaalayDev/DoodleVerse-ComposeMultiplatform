@@ -16,7 +16,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material3.BottomSheetDefaults
@@ -45,6 +45,8 @@ import io.github.taalaydev.doodleverse.core.rendering.DrawRenderer
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.Shape
+import io.github.taalaydev.doodleverse.engine.tool.Brush
+import io.github.taalaydev.doodleverse.engine.components.BrushPreview
 import org.jetbrains.compose.resources.imageResource
 
 private fun createPreviewBrushPath(width: Float, height: Float): Path {
@@ -92,7 +94,7 @@ private fun createPreviewShapePath(width: Float, height: Float): Path {
 fun BrushPicker(
     bottomSheetState: SheetState,
     selectedBrush: BrushData? = null,
-    onSelected: (BrushData) -> Unit = {},
+    onBrushSelected: (BrushData) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     val brushes = remember { BrushData.all() + allPremiumBrushes }
@@ -106,7 +108,7 @@ fun BrushPicker(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(400.dp),
-            color = MaterialTheme.colors.surface,
+            color = MaterialTheme.colorScheme.surface,
         ) {
             Box(
                 modifier = Modifier.fillMaxWidth(),
@@ -115,7 +117,41 @@ fun BrushPicker(
                 BrushGrid(
                     brushes = brushes,
                     selectedBrush = selectedBrush,
-                    onSelected = onSelected,
+                    onSelected = onBrushSelected,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BrushPicker(
+    bottomSheetState: SheetState,
+    brushes: List<Brush>,
+    selectedBrush: Brush? = null,
+    onBrushSelected: (Brush) -> Unit = {},
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = { onDismiss() },
+        sheetState = bottomSheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp),
+            color = MaterialTheme.colorScheme.surface,
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                BrushGrid(
+                    brushes = brushes,
+                    selectedBrush = selectedBrush,
+                    onSelected = onBrushSelected,
                 )
             }
         }
@@ -158,6 +194,93 @@ fun BrushGrid(
 }
 
 @Composable
+fun BrushGrid(
+    brushes: List<Brush>,
+    selectedBrush: Brush? = null,
+    onSelected: (Brush) -> Unit = {},
+) {
+    val listState = rememberLazyGridState()
+
+    LaunchedEffect(Unit) {
+        val index = brushes.indexOf(selectedBrush)
+        if (index != -1) {
+            listState.scrollToItem(index)
+        }
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(bottom = 16.dp, top = 16.dp, start = 16.dp, end = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        state = listState,
+    ) {
+        items(brushes.size) { index ->
+            BrushPreview(
+                brushes[index],
+                isSelected = selectedBrush == brushes[index],
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onSelected(brushes[index]) },
+            )
+        }
+    }
+}
+
+@Composable
+fun BrushList(
+    brushes: List<BrushData>,
+    selectedBrush: BrushData? = null,
+    onSelected: (BrushData) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(bottom = 16.dp, top = 16.dp, start = 16.dp, end = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(brushes.size) { index ->
+            BrushPreview(
+                brush = brushes[index],
+                isSelected = selectedBrush?.id == brushes[index].id,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onSelected(brushes[index]) },
+            )
+        }
+    }
+}
+
+@Composable
+fun BrushList(
+    brushes: List<Brush>,
+    selectedBrush: Brush? = null,
+    onSelected: (Brush) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(bottom = 16.dp, top = 16.dp, start = 16.dp, end = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(brushes.size) { index ->
+            BrushPreview(
+                brush = brushes[index],
+                isSelected = selectedBrush == brushes[index],
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onSelected(brushes[index]) },
+            )
+        }
+    }
+}
+
+@Composable
 fun BrushPreview(
     brush: BrushData,
     isSelected: Boolean = false,
@@ -190,7 +313,7 @@ fun BrushPreview(
                 .height(100.dp)
                 .border(
                     width = if (isSelected) 2.dp else 1.dp,
-                    color = if (isSelected) MaterialTheme.colors.primary else Color.LightGray,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.LightGray,
                     shape = RoundedCornerShape(8.dp)
                 )
                 .clip(RoundedCornerShape(8.dp))
@@ -248,6 +371,6 @@ fun BrushPreview(
                 }
             }
         }
-        Text(text = brush.name)
+        Text(text = brush.name, color = MaterialTheme.colorScheme.onSurface)
     }
 }

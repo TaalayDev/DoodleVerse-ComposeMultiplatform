@@ -13,21 +13,21 @@ import androidx.lifecycle.viewModelScope
 import io.github.taalaydev.doodleverse.ImageFormat
 import io.github.taalaydev.doodleverse.core.DrawProvider
 import io.github.taalaydev.doodleverse.core.DrawingController
-import io.github.taalaydev.doodleverse.core.DrawingOperations
-import io.github.taalaydev.doodleverse.core.DrawingState
-import io.github.taalaydev.doodleverse.core.SelectionState
-import io.github.taalaydev.doodleverse.core.SelectionTransform
+import io.github.taalaydev.doodleverse.engine.controller.DrawOperations
+import io.github.taalaydev.doodleverse.engine.controller.SelectionState
+import io.github.taalaydev.doodleverse.engine.controller.SelectionTransform
 import io.github.taalaydev.doodleverse.core.Tool
-import io.github.taalaydev.doodleverse.core.copy
+import io.github.taalaydev.doodleverse.engine.copy
 import io.github.taalaydev.doodleverse.core.toIntOffset
 import io.github.taalaydev.doodleverse.core.toIntSize
-import io.github.taalaydev.doodleverse.core.withBackground
+import io.github.taalaydev.doodleverse.engine.withBackground
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.ToolsData
 import io.github.taalaydev.doodleverse.data.models.toEntity
 import io.github.taalaydev.doodleverse.data.models.toModel
+import io.github.taalaydev.doodleverse.engine.DrawingState
 import io.github.taalaydev.doodleverse.imageBitmapByteArray
 import io.github.taalaydev.doodleverse.imageBitmapFromByteArray
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
@@ -54,7 +54,7 @@ class DrawViewModel(
     private val _tools = MutableStateFlow<ToolsData?>(null)
     val tools: StateFlow<ToolsData?> = _tools.asStateFlow()
 
-    private val drawingOperations = object : DrawingOperations {
+    private val drawingOperations = object : DrawOperations {
         override suspend fun addLayer(layer: LayerModel): Long {
             return projectRepo.insertLayer(layer.toEntity())
         }
@@ -99,6 +99,7 @@ class DrawViewModel(
             is Tool.Brush -> tool.brush
             is Tool.Eraser -> tool.brush
             is Tool.Shape -> tool.brush
+            is Tool.Curve -> tool.brush
             else -> BrushData.solid
         }
     }
@@ -191,6 +192,10 @@ class DrawViewModel(
         when {
             brush.isShape -> _currentTool.value = Tool.Shape(brush)
             brush.blendMode == BlendMode.Clear -> _currentTool.value = Tool.Eraser(brush)
+            _currentTool.value.isCurve -> {
+                _lastBrush = brush
+                _currentTool.value = Tool.Curve(brush)
+            }
             else -> {
                 _lastBrush = brush
                 _currentTool.value = Tool.Brush(brush)

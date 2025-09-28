@@ -1,6 +1,7 @@
 package io.github.taalaydev.doodleverse.ui.screens.lesson
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.composables.icons.lucide.ArrowLeft
 import com.composables.icons.lucide.BookOpen
@@ -31,7 +33,14 @@ import io.github.taalaydev.doodleverse.data.models.LessonDifficulty
 import io.github.taalaydev.doodleverse.data.models.LessonModel
 import io.github.taalaydev.doodleverse.getAnalytics
 import io.github.taalaydev.doodleverse.navigation.Destination
+import io.github.taalaydev.doodleverse.purchase.PurchaseViewModel
+import io.github.taalaydev.doodleverse.ui.components.premium.BadgeSize
+import io.github.taalaydev.doodleverse.ui.components.premium.PremiumBadge
+import io.github.taalaydev.doodleverse.ui.components.premium.PremiumUpgradeDialog
+import io.github.taalaydev.doodleverse.ui.theme.AnimatedScaffold
 import io.github.taalaydev.doodleverse.ui.theme.DoodleVerseCardDefaults
+import io.github.taalaydev.doodleverse.ui.theme.ThemeManager
+import io.github.taalaydev.doodleverse.ui.theme.rememberThemeManager
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -40,13 +49,20 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun LessonsScreen(
     navController: NavController,
+    analytics: Analytics = getAnalytics(),
+    themeManager: ThemeManager = rememberThemeManager(),
+    purchaseViewModel: PurchaseViewModel,
     modifier: Modifier = Modifier,
-    analytics: Analytics = getAnalytics()
 ) {
     var selectedCategory by remember { mutableStateOf<LessonCategory?>(null) }
     var selectedDifficulty by remember { mutableStateOf<LessonDifficulty?>(null) }
+    var showPremiumDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
+    val premiumStatus by purchaseViewModel.premiumStatus.collectAsStateWithLifecycle()
+    val uiState by purchaseViewModel.uiState.collectAsStateWithLifecycle()
+
+    AnimatedScaffold(
+        themeManager = themeManager,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.lessons)) },
@@ -57,7 +73,8 @@ fun LessonsScreen(
                             contentDescription = stringResource(Res.string.back)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
         modifier = modifier
@@ -117,7 +134,13 @@ fun LessonsScreen(
                 items(filteredLessons) { lesson ->
                     LessonCard(
                         lesson = lesson,
+                        isLocked = lesson.isPremium && !premiumStatus.isPremium,
                         onClick = {
+                            if (lesson.isPremium && !premiumStatus.isPremium) {
+                                showPremiumDialog = true
+                                return@LessonCard
+                            }
+
                             navController.navigate(Destination.LessonDetail(lesson.id))
 
                             analytics.logEvent("lesson_opened", mapOf("lesson_title" to lesson.title))
@@ -126,13 +149,31 @@ fun LessonsScreen(
                 }
             }
         }
+
+        if (showPremiumDialog) {
+            PremiumUpgradeDialog(
+                onDismiss = { showPremiumDialog = false },
+                onUpgradeClick = {
+                    showPremiumDialog = false
+                    // Navigate to purchase screen or trigger purchase
+                    val premiumProduct = purchaseViewModel.getPremiumProduct()
+                    premiumProduct?.let {
+                        purchaseViewModel.handleEvent(
+                            io.github.taalaydev.doodleverse.purchase.PurchaseUiEvent.PurchaseProduct(it.id)
+                        )
+                    }
+                },
+                premiumProduct = purchaseViewModel.getPremiumProduct(),
+                isLoading = uiState.purchaseInProgress != null
+            )
+        }
     }
 }
 
-@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun LessonCard(
     lesson: LessonModel,
+    isLocked: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -144,7 +185,6 @@ fun LessonCard(
         colors = DoodleVerseCardDefaults.primaryCardColors(),
     ) {
         Column {
-            // Preview image
             Box(
                 modifier = Modifier.fillMaxWidth().weight(1f)
             ) {
@@ -152,10 +192,14 @@ fun LessonCard(
                     painter = painterResource(lesson.preview),
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize().background(Color.White)
+                        .let { mod ->
+                            if (isLocked) {
+                                mod.background(Color.Black.copy(alpha = 0.3f))
+                            } else mod
+                        }
                 )
 
-                // Difficulty badge
                 Surface(
                     color = when (lesson.difficulty) {
                         LessonDifficulty.EASY -> Color(0xFF4CAF50)
@@ -173,7 +217,6 @@ fun LessonCard(
                     )
                 }
 
-                // Category badge
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(bottomStart = 8.dp),
@@ -185,9 +228,18 @@ fun LessonCard(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
+
+                if (isLocked) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(8.dp)
+                    ) {
+                        PremiumBadge(size = BadgeSize.Small)
+                    }
+                }
             }
 
-            // Lesson info
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

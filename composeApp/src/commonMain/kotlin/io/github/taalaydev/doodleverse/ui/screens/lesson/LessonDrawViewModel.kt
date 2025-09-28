@@ -1,8 +1,5 @@
 package io.github.taalaydev.doodleverse.ui.screens.lesson
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
@@ -13,9 +10,9 @@ import androidx.lifecycle.viewModelScope
 import io.github.taalaydev.doodleverse.ImageFormat
 import io.github.taalaydev.doodleverse.core.DrawProvider
 import io.github.taalaydev.doodleverse.core.DrawingController
-import io.github.taalaydev.doodleverse.core.DrawingOperations
-import io.github.taalaydev.doodleverse.core.SelectionState
-import io.github.taalaydev.doodleverse.core.SelectionTransform
+import io.github.taalaydev.doodleverse.engine.controller.DrawOperations
+import io.github.taalaydev.doodleverse.engine.controller.SelectionState
+import io.github.taalaydev.doodleverse.engine.controller.SelectionTransform
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.data.models.AnimationStateModel
 import io.github.taalaydev.doodleverse.data.models.BrushData
@@ -23,6 +20,8 @@ import io.github.taalaydev.doodleverse.data.models.FrameModel
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.toEntity
+import io.github.taalaydev.doodleverse.engine.DrawingState
+import io.github.taalaydev.doodleverse.engine.controller.DrawEngineController
 import io.github.taalaydev.doodleverse.imageBitmapByteArray
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -41,32 +40,22 @@ class LessonDrawViewModel(
     private val dispatcher: CoroutineDispatcher
 ) : ViewModel(), DrawProvider {
 
-    // Drawing operations implementation for lesson mode
     @OptIn(ExperimentalTime::class)
-    private val drawingOperations = object : DrawingOperations {
+    private val drawingOperations = object : DrawOperations {
         override suspend fun addLayer(layer: LayerModel): Long {
-            // For lesson mode, we can create temporary IDs
             return kotlin.time.Clock.System.now().toEpochMilliseconds()
         }
-
-        override suspend fun deleteLayer(layer: LayerModel) {
-            // In lesson mode, layers are temporary - no persistence needed
-        }
-
-        override suspend fun updateLayer(layer: LayerModel, bitmap: ImageBitmap?) {
-            // In lesson mode, layers are temporary - no persistence needed
-        }
-
-        override suspend fun saveProject() {
-            // Handled by createProject function
-        }
+        override suspend fun deleteLayer(layer: LayerModel) {}
+        override suspend fun updateLayer(layer: LayerModel, bitmap: ImageBitmap?) {}
+        override suspend fun saveProject() {}
     }
 
     // Drawing controller with focused responsibilities
-    val drawingController = DrawingController(
+    val drawController = DrawEngineController(
         operations = drawingOperations,
         scope = viewModelScope,
-        dispatcher = dispatcher
+        dispatcher = dispatcher,
+        initialBrushSize = 5f
     )
 
     // Tool and drawing state
@@ -85,15 +74,16 @@ class LessonDrawViewModel(
             is Tool.Brush -> tool.brush
             is Tool.Eraser -> tool.brush
             is Tool.Shape -> tool.brush
+            is Tool.Curve -> tool.brush
             else -> BrushData.solid
         }
     }
 
     // Delegate properties to controller
-    val state: StateFlow<io.github.taalaydev.doodleverse.core.DrawingState> = drawingController.state
-    val canUndo: StateFlow<Boolean> = drawingController.canUndo
-    val canRedo: StateFlow<Boolean> = drawingController.canRedo
-    override val selectionState: SelectionState get() = drawingController.selectionState
+    val state: StateFlow<DrawingState> = drawController.state
+    val canUndo: StateFlow<Boolean> = drawController.canUndo
+    val canRedo: StateFlow<Boolean> = drawController.canRedo
+    override val selectionState: SelectionState get() = drawController.selectionState
 
     private var _lastBrush: BrushData = BrushData.solid
 
@@ -115,7 +105,7 @@ class LessonDrawViewModel(
         viewModelScope.launch(dispatcher) {
             try {
                 // Get the current drawing bitmap
-                val combinedBitmap = drawingController.getCombinedBitmap()
+                val combinedBitmap = drawController.getCombinedBitmap()
                 val thumbnailBytes = combinedBitmap?.let {
                     imageBitmapByteArray(it, ImageFormat.PNG)
                 }
@@ -243,12 +233,12 @@ class LessonDrawViewModel(
     // Drawing operations
     override fun undo() {
         endSelection()
-        drawingController.undo()
+        drawController.undo()
     }
 
     override fun redo() {
         applySelection()
-        drawingController.redo()
+        drawController.redo()
     }
 
     override fun addLayer(layer: LayerModel) {
@@ -256,14 +246,14 @@ class LessonDrawViewModel(
         viewModelScope.launch {
             try {
                 val layerId = drawingOperations.addLayer(layer)
-                val currentState = drawingController.state.value
+                val currentState = drawController.state.value
 
                 val newFrame = currentState.currentFrame.copy(
                     layers = currentState.currentFrame.layers + layer.copy(id = layerId)
                 )
 
                 // Update controller state directly
-                drawingController.loadFrame(newFrame, emptyMap())
+                drawController.loadFrame(newFrame, emptyMap())
 
             } catch (e: Exception) {
                 println("Error adding layer: ${e.message}")
@@ -274,20 +264,20 @@ class LessonDrawViewModel(
     // Layer operations - delegate to controller
     fun addLayer(name: String = "Layer ${state.value.layers.size + 1}") {
         applySelection()
-        drawingController.addLayer(name)
+        drawController.addLayer(name)
     }
 
     fun deleteLayer(index: Int) {
         applySelection()
-        val currentState = drawingController.state.value
+        val currentState = drawController.state.value
         if (currentState.layers.size > 1) { // Keep at least one layer
-            drawingController.deleteLayer(index)
+            drawController.deleteLayer(index)
         }
     }
 
     override fun deleteLayer(layerId: Long) {
         applySelection()
-        val currentState = drawingController.state.value
+        val currentState = drawController.state.value
         val layerIndex = currentState.layers.indexOfFirst { it.id == layerId }
         if (layerIndex >= 0) {
             deleteLayer(layerIndex)
@@ -298,48 +288,48 @@ class LessonDrawViewModel(
 
     fun selectLayer(index: Int) {
         applySelection()
-        drawingController.selectLayer(index)
+        drawController.selectLayer(index)
     }
 
     fun layerVisibilityChanged(index: Int, isVisible: Boolean) {
         applySelection()
-        drawingController.updateLayerVisibility(index, isVisible)
+        drawController.updateLayerVisibility(index, isVisible)
     }
 
     fun reorderLayers(from: Int, to: Int) {
         applySelection()
-        drawingController.reorderLayers(from, to)
+        drawController.reorderLayers(from, to)
     }
 
     fun changeLayerOpacity(index: Int, opacity: Float) {
         applySelection()
-        drawingController.updateLayerOpacity(index, opacity)
+        drawController.updateLayerOpacity(index, opacity)
     }
 
     // Additional layer utility functions for lessons
     fun getCurrentLayer(): LayerModel {
-        return drawingController.state.value.currentLayer
+        return drawController.state.value.currentLayer
     }
 
     fun getCurrentLayerIndex(): Int {
-        return drawingController.state.value.currentLayerIndex
+        return drawController.state.value.currentLayerIndex
     }
 
     fun getTotalLayers(): Int {
-        return drawingController.state.value.layers.size
+        return drawController.state.value.layers.size
     }
 
     fun getLayerBitmap(layerId: Long): ImageBitmap? {
-        return drawingController.getLayerBitmap(layerId)
+        return drawController.getLayerBitmap(layerId)
     }
 
     fun getCurrentLayerBitmap(): ImageBitmap? {
         val currentLayer = getCurrentLayer()
-        return drawingController.getLayerBitmap(currentLayer.id)
+        return drawController.getLayerBitmap(currentLayer.id)
     }
 
     fun getCombinedBitmap(): ImageBitmap? {
-        return drawingController.getCombinedBitmap()
+        return drawController.getCombinedBitmap()
     }
 
     // Selection operations - delegate to controller
@@ -347,46 +337,38 @@ class LessonDrawViewModel(
         if (selectionState.isActive) {
             applySelection()
         }
-        drawingController.startSelection(offset)
+        drawController.startSelection(offset)
     }
 
     override fun updateSelection(offset: Offset) {
-        drawingController.updateSelection(offset)
+        drawController.updateSelection(offset)
     }
 
     override fun updateSelection(state: SelectionState) {
-        drawingController.updateSelectionState(state)
+        drawController.updateSelectionState(state)
     }
 
-    override fun endSelection() {
-        val bounds = drawingController.endSelection()
-        if (bounds != null && bounds.width > 1 && bounds.height > 1) {
-            // Capture selection area if valid
-            captureSelection(bounds)
-        }
-    }
+    override fun endSelection() {}
 
     override fun applySelection() {
-        drawingController.applySelection()
+        drawController.applySelection()
     }
 
     override fun startTransform(transform: SelectionTransform, point: Offset) {
-        // For lesson mode, we can use a simplified transform approach
-        drawingController.startTransform(transform)
+        drawController.startTransform(transform)
     }
 
     override fun updateSelectionTransform(pan: Offset) {
-        drawingController.updateTransform(pan)
+        drawController.updateTransform(pan)
     }
 
     override fun updateSelectionTransform(centroid: Offset, pan: Offset, zoom: Float, rotation: Float) {
-        // Handle multi-touch transform if needed
         updateSelectionTransform(pan)
     }
 
     private fun captureSelection(bounds: androidx.compose.ui.geometry.Rect) {
-        val currentState = drawingController.state.value
-        val layerBitmap = drawingController.getLayerBitmap(currentState.currentLayer.id) ?: return
+        val currentState = drawController.state.value
+        val layerBitmap = drawController.getLayerBitmap(currentState.currentLayer.id) ?: return
 
         // Create selection bitmap
         val selectionBitmap = ImageBitmap(bounds.width.toInt(), bounds.height.toInt())
@@ -401,7 +383,7 @@ class LessonDrawViewModel(
         )
 
         // Update selection state
-        drawingController.updateSelectionState(
+        drawController.updateSelectionState(
             SelectionState(
                 bounds = bounds,
                 originalBitmap = selectionBitmap,
@@ -413,7 +395,7 @@ class LessonDrawViewModel(
 
     fun cancelSelection() {
         if (selectionState.isActive) {
-            drawingController.clearSelection()
+            drawController.clearSelection()
             selectionStartPoint = null
         }
     }
@@ -443,7 +425,7 @@ class LessonDrawViewModel(
 
     // Fill operation
     override fun floodFill(x: Int, y: Int) {
-        drawingController.floodFill(x, y, _currentColor.value)
+        drawController.floodFill(x, y, _currentColor.value)
     }
 
     // Legacy interface methods - kept for compatibility
@@ -452,7 +434,7 @@ class LessonDrawViewModel(
     // Lesson-specific utility functions
     fun clearCanvas() {
         // Clear all layers
-        val currentState = drawingController.state.value
+        val currentState = drawController.state.value
         currentState.layers.indices.reversed().forEach { index ->
             if (index > 0) { // Keep the first layer
                 deleteLayer(index)
@@ -466,7 +448,7 @@ class LessonDrawViewModel(
                     currentState.layers.first().copy(paths = emptyList())
                 )
             )
-            drawingController.loadFrame(emptyFrame, emptyMap())
+            drawController.loadFrame(emptyFrame, emptyMap())
         }
     }
 
@@ -480,11 +462,11 @@ class LessonDrawViewModel(
         clearCanvas()
 
         // Clear undo/redo history
-        drawingController.cleanup()
+        drawController.cleanup()
     }
 
     fun isCanvasEmpty(): Boolean {
-        val currentState = drawingController.state.value
+        val currentState = drawController.state.value
         return currentState.layers.all { layer ->
             layer.paths.isEmpty()
         }
@@ -496,6 +478,6 @@ class LessonDrawViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        drawingController.cleanup()
+        drawController.cleanup()
     }
 }

@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.composables.icons.lucide.*
 import androidx.compose.material3.*
@@ -41,6 +42,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -78,12 +81,13 @@ import doodleverse.composeapp.generated.resources.shapes
 import doodleverse.composeapp.generated.resources.undo
 import doodleverse.composeapp.generated.resources.zoom
 import io.github.taalaydev.doodleverse.Platform
-import io.github.taalaydev.doodleverse.core.DragState
+import io.github.taalaydev.doodleverse.engine.DragState
 import io.github.taalaydev.doodleverse.core.Tool
 import io.github.taalaydev.doodleverse.core.color.ColorPaletteGenerator
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
 import io.github.taalaydev.doodleverse.data.models.Shape
+import io.github.taalaydev.doodleverse.purchase.PurchaseViewModel
 import io.github.taalaydev.doodleverse.ui.components.BrushGrid
 import io.github.taalaydev.doodleverse.ui.components.BrushPicker
 import io.github.taalaydev.doodleverse.ui.components.ColorPalettePanel
@@ -92,6 +96,13 @@ import io.github.taalaydev.doodleverse.ui.components.DraggableSlider
 import io.github.taalaydev.doodleverse.ui.components.DrawBox
 import io.github.taalaydev.doodleverse.ui.components.EnhancedColorPickerSheet
 import io.github.taalaydev.doodleverse.ui.components.LayersPanel
+import io.github.taalaydev.doodleverse.ui.components.ShapePickerSheet
+import io.github.taalaydev.doodleverse.ui.components.SizeSelector
+import io.github.taalaydev.doodleverse.ui.components.ToolPanel
+import io.github.taalaydev.doodleverse.ui.theme.AnimatedScaffold
+import io.github.taalaydev.doodleverse.ui.theme.ThemeManager
+import io.github.taalaydev.doodleverse.ui.theme.rememberThemeManager
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 data class DpSize(val width: Dp, val height: Dp)
@@ -100,10 +111,12 @@ data class DpSize(val width: Dp, val height: Dp)
 fun DrawingScreen(
     projectId: Long,
     navController: NavHostController = rememberNavController(),
+    themeManager: ThemeManager = rememberThemeManager(),
     platform: Platform,
     viewModel: DrawViewModel = viewModel {
         DrawViewModel(platform.projectRepo, platform.dispatcherIO)
     },
+    purchaseViewModel: PurchaseViewModel,
 ) {
     val projectModel by viewModel.project.collectAsStateWithLifecycle()
 
@@ -121,6 +134,7 @@ fun DrawingScreen(
         DrawScreenBody(
             projectModel = projectModel!!,
             navController = navController,
+            themeManager = themeManager,
             modifier = Modifier.fillMaxSize(),
             viewModel = viewModel,
             platform = platform,
@@ -152,14 +166,11 @@ inline fun toDp(value: Float, density: Density): Dp {
 private fun DrawScreenBody(
     projectModel: ProjectModel,
     navController: NavController = rememberNavController(),
+    themeManager: ThemeManager = rememberThemeManager(),
     viewModel: DrawViewModel,
     modifier: Modifier = Modifier,
     platform: Platform,
 ) {
-    val scope = rememberCoroutineScope()
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
-
     val brushSize by viewModel.brushSize.collectAsStateWithLifecycle()
     val currentColor by viewModel.currentColor.collectAsStateWithLifecycle()
     val currentTool by viewModel.currentTool.collectAsStateWithLifecycle()
@@ -171,12 +182,9 @@ private fun DrawScreenBody(
     val dragState = remember { mutableStateOf(DragState()) }
 
     var menuOpen by remember { mutableStateOf(false) }
+    var showLayersSheet by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
-
-    val pxToDp: (Int) -> Dp = { px ->
-        with(density) { px.toDp() }
-    }
 
     var contentSize by remember { mutableStateOf(IntSize(0, 0)) }
 
@@ -190,9 +198,11 @@ private fun DrawScreenBody(
         else -> false
     }
 
-    Scaffold(
+    AnimatedScaffold(
+        themeManager = themeManager,
         modifier = modifier.fillMaxSize(),
-        containerColor = Color.Gray.copy(alpha = 0.1f),
+        animateBackground = false,
+        // containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 modifier = Modifier.fillMaxWidth().height(40.dp),
@@ -209,25 +219,40 @@ private fun DrawScreenBody(
                 },
                 title = {},
                 actions = {
-                    IconButton(onClick = {
-                        viewModel.undo()
-                    }) {
-                        Icon(
-                            Lucide.Undo2,
-                            contentDescription = stringResource(Res.string.undo),
-                            tint = if (canUndo) Color.Black else Color.Gray,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    if (!isMobile && !isTablet) {
+                        IconButton(onClick = {
+                            viewModel.undo()
+                        }) {
+                            Icon(
+                                Lucide.Undo2,
+                                contentDescription = stringResource(Res.string.undo),
+                                tint = if (canUndo) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        IconButton(onClick = {
+                            viewModel.redo()
+                        }) {
+                            Icon(
+                                Lucide.Redo2,
+                                contentDescription = stringResource(Res.string.redo),
+                                tint = if (canRedo) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
-                    IconButton(onClick = {
-                        viewModel.redo()
-                    }) {
-                        Icon(
-                            Lucide.Redo2,
-                            contentDescription = stringResource(Res.string.redo),
-                            tint = if (canRedo) Color.Black else Color.Gray,
-                            modifier = Modifier.size(18.dp)
-                        )
+
+                    if (isMobile || isTablet) {
+                        IconButton(onClick = {
+                            showLayersSheet = true
+                        }) {
+                            Icon(
+                                painter = painterResource(Res.drawable.layers),
+                                contentDescription = stringResource(Res.string.layers),
+                                tint = if (canRedo) Color.Black else Color.Gray,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
 
                     IconButton(
@@ -353,7 +378,9 @@ private fun DrawScreenBody(
                         brushSize = brushSize,
                         brush = currentBrush,
                         color = currentColor,
-                        isFloating = !isMobile,
+                        isFloating = true,
+                        showLayersSheet = showLayersSheet,
+                        onToggleLayersSheet = { showLayersSheet = !showLayersSheet },
                         onBrushSelected = {
                             viewModel.setBrush(it)
                         },
@@ -381,6 +408,58 @@ private fun DrawScreenBody(
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray.copy(alpha = 0.9f),
                         )
+                    }
+                }
+
+                if (isMobile || isTablet) {
+                    Row(
+                        modifier = Modifier.align(Alignment.TopEnd)
+                            .padding(top = 10.dp, end = 10.dp),
+                    ) {
+                        val undoButtonShape = RoundedCornerShape(
+                            topStart = 16.dp,
+                            bottomStart = 16.dp
+                        )
+                        val redoButtonShape = RoundedCornerShape(
+                            topEnd = 16.dp,
+                            bottomEnd = 16.dp
+                        )
+                        IconButton(
+                            onClick = {
+                                viewModel.undo()
+                            },
+                            modifier = Modifier
+                                .clip(undoButtonShape)
+                                .background(
+                                    MaterialTheme.colorScheme.surface,
+                                    undoButtonShape
+                                )
+                        ) {
+                            Icon(
+                                Lucide.Undo2,
+                                contentDescription = stringResource(Res.string.undo),
+                                tint = if (canUndo) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                viewModel.redo()
+                            },
+                            modifier = Modifier
+                                .clip(redoButtonShape)
+                                .background(
+                                    MaterialTheme.colorScheme.surface,
+                                    redoButtonShape
+                                )
+                        ) {
+                            Icon(
+                                Lucide.Redo2,
+                                contentDescription = stringResource(Res.string.redo),
+                                tint = if (canRedo) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
 
@@ -452,10 +531,12 @@ private fun DrawScreenBody(
                         modifier = Modifier.weight(1f),
                     )
                     HorizontalDivider()
-                    ColorPalettePanel(
-                        currentColor = currentColor,
-                        onColorSelected = { color ->
-                            viewModel.setColor(color)
+                    ToolPanel(
+                        selectedTool = currentTool,
+                        selectedColor = currentColor,
+                        selectedBrush = currentBrush,
+                        onBrushSelected = { brush ->
+                            viewModel.setBrush(brush)
                         },
                         modifier = Modifier.weight(1f),
                     )
@@ -478,6 +559,8 @@ fun DrawControlsWithAIPalette(
     color: Color,
     isFloating: Boolean = false,
     isTablet: Boolean = false,
+    showLayersSheet: Boolean = false,
+    onToggleLayersSheet: () -> Unit = {},
     onBrushSelected: (BrushData) -> Unit = {},
     onColorSelected: (Color) -> Unit = {},
     onSizeSelected: (Float) -> Unit = {},
@@ -529,30 +612,13 @@ fun DrawControlsWithAIPalette(
         brush = brush,
         color = color,
         isFloating = isFloating,
+        showLayersSheet = showLayersSheet,
+        onToggleLayersSheet = onToggleLayersSheet,
         onBrushSelected = onBrushSelected,
         onColorSelected = onColorSelected,
         onSizeSelected = onSizeSelected,
         onToolSelected = onToolSelected,
     )
-}
-
-/**
- * A single color swatch for palette display
- */
-@Composable
-private fun ColorSwatch(
-    color: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    androidx.compose.foundation.Canvas(
-        modifier = modifier
-            .padding(4.dp)
-            .width(24.dp)
-            .clickable(onClick = onClick)
-    ) {
-        drawCircle(color = color, radius = size.minDimension / 2)
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
@@ -564,6 +630,8 @@ fun DrawControls(
     tool: Tool,
     color: Color = Color(0xFF333333),
     isFloating: Boolean = false,
+    showLayersSheet: Boolean = false,
+    onToggleLayersSheet: () -> Unit = {},
     onBrushSelected: (BrushData) -> Unit = {},
     onColorSelected: (Color) -> Unit = {},
     onSizeSelected: (Float) -> Unit = {},
@@ -575,6 +643,10 @@ fun DrawControls(
 
     val isTablet = when (size.widthSizeClass) {
         WindowWidthSizeClass.Medium -> true
+        else -> false
+    }
+    val isMobile = when (size.widthSizeClass) {
+        WindowWidthSizeClass.Compact -> true
         else -> false
     }
 
@@ -598,7 +670,7 @@ fun DrawControls(
         skipPartiallyExpanded = true
     )
 
-    var showLayersSheet by remember { mutableStateOf(false) }
+    // var showLayersSheet by remember { mutableStateOf(false) }
     val layersSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
@@ -607,7 +679,7 @@ fun DrawControls(
         BrushPicker(
             bottomSheetState = brushPickerBottomSheetState,
             selectedBrush = brush,
-            onSelected = { brush ->
+            onBrushSelected = { brush ->
                 onBrushSelected(brush)
                 showBrushPicker = false
             },
@@ -684,7 +756,7 @@ fun DrawControls(
 
     if (showLayersSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showLayersSheet = false },
+            onDismissRequest = { onToggleLayersSheet() },
             sheetState = layersSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() },
         ) {
@@ -788,7 +860,7 @@ fun DrawControls(
                     )
                 }
                 IconButton(onClick = {
-                    showLayersSheet = true
+                    onToggleLayersSheet()
                 }) {
                     Icon(
                         Lucide.Layers,
@@ -806,12 +878,29 @@ fun DrawControls(
                 .fillMaxWidth()
                 .height(60.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f))
                 .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Drawing tools group
+            IconButton(
+                onClick = {
+                    showColorPicker = true
+                },
+                modifier = Modifier.padding(end = 4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .height(28.dp)
+                        .width(28.dp)
+                        .clip(CircleShape)
+                        .border(2.dp, Brush.radialGradient(
+                            colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer)
+                        ), CircleShape)
+                        .background(color),
+                )
+            }
+
             Row(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -834,17 +923,19 @@ fun DrawControls(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    IconButton(
-                        onClick = { showBrushPicker = true },
-                        modifier = Modifier.size(20.dp)
-                    ) {
-                        Icon(
-                            Lucide.ChevronUp,
-                            contentDescription = null,
-                            tint = if (tool.isBrush) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(16.dp)
-                        )
+                    if (isMobile || isTablet) {
+                        IconButton(
+                            onClick = { showBrushPicker = true },
+                            modifier = Modifier.size(20.dp)
+                        ) {
+                            Icon(
+                                Lucide.ChevronUp,
+                                contentDescription = null,
+                                tint = if (tool.isBrush) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
 
@@ -886,7 +977,29 @@ fun DrawControls(
                 )
             }
 
-            // Additional tools group
+            IconButton(
+                onClick = {
+                    val selectBrush = if (brush.blendMode != BlendMode.Clear && !brush.isShape) {
+                        brush
+                    } else {
+                        BrushData.solid
+                    }
+                    onToolSelected(Tool.Curve(selectBrush))
+                },
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (tool.isCurve) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                    .size(36.dp)
+            ) {
+                Icon(
+                    Lucide.Spline,
+                    contentDescription = "Curve",
+                    tint = if (tool.isCurve) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -907,20 +1020,22 @@ fun DrawControls(
                     )
                 }
 
-                IconButton(
-                    onClick = { onToolSelected(Tool.Eyedropper) },
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (tool.isEyedropper) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
-                        .size(36.dp)
-                ) {
-                    Icon(
-                        Lucide.Pipette,
-                        contentDescription = stringResource(Res.string.eyedropper),
-                        tint = if (tool.isEyedropper) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
+                if (!isMobile) {
+                    IconButton(
+                        onClick = { onToolSelected(Tool.Eyedropper) },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (tool.isEyedropper) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                            .size(36.dp)
+                    ) {
+                        Icon(
+                            Lucide.Pipette,
+                            contentDescription = stringResource(Res.string.eyedropper),
+                            tint = if (tool.isEyedropper) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 
@@ -931,36 +1046,56 @@ fun DrawControls(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(
-                    onClick = { onToolSelected(Tool.Zoom) },
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (tool.isZoom) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
-                        .size(36.dp)
-                ) {
-                    Icon(
-                        Lucide.ZoomIn,
-                        contentDescription = stringResource(Res.string.zoom),
-                        tint = if (tool.isZoom) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
+                if (!isMobile && !isTablet) {
+                    IconButton(
+                        onClick = { onToolSelected(Tool.Zoom) },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (tool.isZoom) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                            .size(36.dp)
+                    ) {
+                        Icon(
+                            Lucide.ZoomIn,
+                            contentDescription = stringResource(Res.string.zoom),
+                            tint = if (tool.isZoom) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
 
-                IconButton(
-                    onClick = { onToolSelected(Tool.Drag) },
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (tool.isDrag) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
-                        .size(36.dp)
-                ) {
-                    Icon(
-                        Lucide.Move,
-                        contentDescription = stringResource(Res.string.move_tool),
-                        tint = if (tool.isDrag) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
+                if (!isMobile && !isTablet) {
+                    IconButton(
+                        onClick = { onToolSelected(Tool.Drag) },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (tool.isDrag) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                            .size(36.dp)
+                    ) {
+                        Icon(
+                            Lucide.Move,
+                            contentDescription = stringResource(Res.string.move_tool),
+                            tint = if (tool.isDrag) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                if (isMobile) {
+                    IconButton(
+                        onClick = { showSizeSelector = true },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .size(36.dp)
+                    ) {
+                        Icon(
+                            Lucide.SlidersHorizontal,
+                            contentDescription = stringResource(Res.string.brush_settings),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
 
                 IconButton(
@@ -978,33 +1113,6 @@ fun DrawControls(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-            }
-
-            if (isTablet) {
-                VerticalDivider()
-                IconButton(onClick = { showColorPicker = true }) {
-                    Icon(
-                        Lucide.Palette,
-                        contentDescription = stringResource(Res.string.color),
-                        tint = color
-                    )
-                }
-                IconButton(
-                    onClick = { showLayersSheet = true },
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (showLayersSheet) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
-                        .size(36.dp)
-                ) {
-                    Icon(
-                        Lucide.Layers,
-                        contentDescription = stringResource(Res.string.layers),
-                        tint = if (showLayersSheet) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
             }
         }
     }
@@ -1024,91 +1132,4 @@ private fun VerticalDivider(
                 RoundedCornerShape(1.dp)
             )
     )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ShapePickerSheet(
-    bottomSheetState: SheetState,
-    brush: BrushData? = null,
-    onSelected: (BrushData) -> Unit = {},
-    onDismiss: () -> Unit,
-) {
-    val shapes = remember { Shape.all }
-
-    ModalBottomSheet(
-        onDismissRequest = { onDismiss() },
-        sheetState = bottomSheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surface,
-        ) {
-            BrushGrid(
-                brushes = shapes,
-                selectedBrush = brush,
-                onSelected = onSelected,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SizeSelector(
-    bottomSheetState: SheetState,
-    initialSize: Float = 10f,
-    onSelected: (Float) -> Unit = {},
-    onDismiss: () -> Unit,
-) {
-    var value by remember { mutableStateOf(initialSize) }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            onSelected(value)
-            onDismiss()
-        }
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = { onDismiss() },
-        sheetState = bottomSheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surface,
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        Lucide.Brush,
-                        contentDescription = stringResource(Res.string.brush_size),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "${value.toInt()}px",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Slider(
-                        value = value,
-                        onValueChange = { values ->
-                            value = values
-                        },
-                        valueRange = 10f..80f,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-        }
-    }
 }

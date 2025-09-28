@@ -40,6 +40,7 @@ firebase-crashlytics-plugin = "3.0.2"
 google-play-services = "4.4.2"
 
 composeHotReload = "1.0.0-alpha09"
+jetbrainsKotlinJvm = "2.1.21"
 
 [libraries]
 cachemap = { module = "io.github.charlietap:cachemap", version.ref = "cachemap" }
@@ -94,3 +95,4 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
 
 composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "composeHotReload" }
+jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }

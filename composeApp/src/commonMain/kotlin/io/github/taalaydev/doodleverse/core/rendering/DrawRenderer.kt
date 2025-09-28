@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import io.github.taalaydev.doodleverse.core.copy
+import io.github.taalaydev.doodleverse.engine.copy
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import kotlin.math.PI
@@ -110,8 +110,7 @@ object DrawRenderer {
         val canvas = Canvas(bitmap)
 
         paths.forEach { drawingPath ->
-            val pathBitmap = renderPathToBitmap(drawingPath, size)
-            canvas.drawImage(pathBitmap, Offset.Zero, Paint())
+            val pathBitmap = renderPathCanvas(canvas, drawingPath, size)
         }
 
         return bitmap
@@ -130,8 +129,16 @@ object DrawRenderer {
         if (brush.customPainter != null) {
             brush.customPainter.invoke(canvas, canvasSize, drawingPath)
         } else if (brush.brush != null && brushImage != null) {
-            val bitmap = renderBrushStamps(drawingPath, canvasSize, brushImage, useSmoothing)
-            canvas.drawImage(bitmap, Offset.Zero, Paint())
+            // renderBrushStamps(canvas, drawingPath, canvasSize, brushImage, useSmoothing)
+            drawBrushStampsBetweenPoints(
+                canvas,
+                drawingPath.startPoint,
+                drawingPath.endPoint,
+                pathPaint(drawingPath),
+                drawingPath,
+                brushImage,
+                useSmoothing
+            )
         } else {
             val paint = if (useSmoothing && !brush.isShape) {
                 smoothCurvePaint(drawingPath)
@@ -147,54 +154,19 @@ object DrawRenderer {
         }
     }
 
-    fun renderPathToBitmap(
-        drawingPath: DrawingPath,
-        canvasSize: Size,
-        existingBitmap: ImageBitmap? = null,
-        useSmoothing: Boolean = true,
-        brushImage: ImageBitmap? = null
-    ): ImageBitmap {
-        val brush = drawingPath.brush
-
-        return if (brush.customPainter != null) {
-            val bitmap = ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
-            val canvas = Canvas(bitmap)
-            brush.customPainter.invoke(canvas, canvasSize, drawingPath)
-            bitmap
-        } else if (brush.brush != null && brushImage != null) {
-            renderBrushStamps(drawingPath, canvasSize, brushImage, useSmoothing)
-        } else {
-            val bitmap = ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
-            val canvas = Canvas(bitmap)
-
-            val paint = if (useSmoothing && !brush.isShape) {
-                smoothCurvePaint(drawingPath)
-            } else {
-                pathPaint(drawingPath)
-            }
-
-            if (useSmoothing && drawingPath.points.size > 2 && !brush.isShape) {
-                renderSmoothCurve(canvas, drawingPath, paint)
-            } else {
-                canvas.drawPath(drawingPath.path, paint)
-            }
-
-            bitmap
-        }
-    }
 
     private fun renderBrushStamps(
+        canvas: Canvas,
         drawingPath: DrawingPath,
         canvasSize: Size,
         brushImage: ImageBitmap,
         useSmoothing: Boolean = true
-    ): ImageBitmap {
-        val bitmap = ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
-        val canvas = Canvas(bitmap)
+    ) {
         val brush = drawingPath.brush
 
-        if (drawingPath.points.isEmpty()) return bitmap
+        if (drawingPath.points.isEmpty()) return
 
+        // Handle single point case
         if (drawingPath.points.size == 1) {
             val point = drawingPath.points[0].toOffset()
             drawSingleBrushStamp(
@@ -206,42 +178,144 @@ object DrawRenderer {
                 scale = 1f,
                 alpha = 1f
             )
-            return bitmap
+            return
         }
 
-        val baseSpacing = calculateStampSpacing(drawingPath, useSmoothing)
-        val pathMeasure = PathMeasure().apply { setPath(drawingPath.path, false) }
-        val pathLength = pathMeasure.length
+        val baseSpacing = calculateImprovedStampSpacing(drawingPath, useSmoothing, brushImage)
+        if (drawingPath.points.size >= 2) {
+            renderStampsAlongPath(
+                canvas = canvas,
+                drawingPath = drawingPath,
+                brushImage = brushImage,
+                spacing = baseSpacing,
+                useSmoothing = useSmoothing
+            )
+        }
+    }
 
-        if (pathLength <= 0) return bitmap
+    private fun calculateImprovedStampSpacing(
+        drawingPath: DrawingPath,
+        useSmoothing: Boolean,
+        brushImage: ImageBitmap,
+    ): Float {
+        val brush = drawingPath.brush
+        val brushSize = drawingPath.size
 
-        var currentDistance = 0f
-        var stampIndex = 0
+        val baseSpacing = if (useSmoothing) {
+            (brushSize * 0.2f).coerceAtMost(8f).coerceAtLeast(1f)
+        } else {
+            (brushSize * 0.15f).coerceAtMost(4f).coerceAtLeast(0.5f)
+        }
 
-        while (currentDistance <= pathLength) {
-            val position = pathMeasure.getPosition(currentDistance)
-            val tangent = pathMeasure.getTangent(currentDistance)
+        val densityOffset = if (brush.useBrushWidthDensity) {
+            brushImage.width
+        } else {
+            brush.densityOffset
+        }
+        val densityModifier = (densityOffset.toFloat() / 5f).coerceIn(0.5f, 2f)
+        return baseSpacing * densityModifier
+    }
 
-            val rotation = if (brush.rotationRandomness > 0) {
-                val baseRotation = atan2(tangent.y, tangent.x)
-                val randomRotation = (Random.nextFloat() - 0.5f) * 2f * brush.rotationRandomness
-                baseRotation + randomRotation
+    private fun renderStampsAlongPath(
+        canvas: Canvas,
+        drawingPath: DrawingPath,
+        brushImage: ImageBitmap,
+        spacing: Float,
+        useSmoothing: Boolean
+    ) {
+        val brush = drawingPath.brush
+        val points = drawingPath.points.map { it.toOffset() }
+
+        if (points.size < 2) return
+
+        // Always draw the first point
+        drawSingleBrushStamp(
+            canvas = canvas,
+            position = points.first(),
+            drawingPath = drawingPath,
+            brushImage = brushImage,
+            rotation = 0f,
+            scale = 1f,
+            alpha = 1f
+        )
+
+        // Interpolate between all consecutive points
+        for (i in 0 until points.size - 1) {
+            val start = points[i]
+            val end = points[i + 1]
+
+            drawBrushStampsBetweenPoints(
+                canvas = canvas,
+                start = start,
+                end = end,
+                drawingPath = drawingPath,
+                brushImage = brushImage,
+                paint = pathPaint(drawingPath)
+//                spacing = spacing,
+//                useSmoothing = useSmoothing
+            )
+        }
+
+        // Always draw the last point to ensure complete coverage
+        drawSingleBrushStamp(
+            canvas = canvas,
+            position = points.last(),
+            drawingPath = drawingPath,
+            brushImage = brushImage,
+            rotation = 0f,
+            scale = 1f,
+            alpha = 1f
+        )
+    }
+
+    private fun renderStampsBetweenPoints(
+        canvas: Canvas,
+        start: Offset,
+        end: Offset,
+        drawingPath: DrawingPath,
+        brushImage: ImageBitmap,
+        spacing: Float,
+        useSmoothing: Boolean
+    ) {
+        val distance = getDistance(start, end)
+        if (distance <= spacing) {
+            // If distance is small, just draw at the end point
+            drawSingleBrushStamp(
+                canvas = canvas,
+                position = end,
+                drawingPath = drawingPath,
+                brushImage = brushImage,
+                rotation = 0f,
+                scale = 1f,
+                alpha = 1f
+            )
+            return
+        }
+
+        // Calculate number of steps to ensure complete coverage
+        val steps = (distance / spacing).toInt().coerceAtLeast(1)
+        val actualSpacing = distance / steps
+
+        // Draw stamps along the line
+        for (step in 1..steps) {
+            val t = step.toFloat() / steps
+            val position = Offset(
+                start.x + (end.x - start.x) * t,
+                start.y + (end.y - start.y) * t
+            )
+
+            val rotation = if (drawingPath.brush.rotationRandomness > 0) {
+                val angle = atan2(end.y - start.y, end.x - start.x)
+                val randomRotation = (Random.nextFloat() - 0.5f) * 2f * drawingPath.brush.rotationRandomness
+                angle + randomRotation
             } else {
-                atan2(tangent.y, tangent.x)
+                atan2(end.y - start.y, end.x - start.x)
             }
 
-            val progress = if (pathLength > 0) currentDistance / pathLength else 0f
+            val progress = t
             val taperFactor = calculateTaperFactor(progress, useSmoothing)
-
-            val baseScale = taperFactor
-            val scale = if (brush.sizeRandom.isNotEmpty() && brush.sizeRandom[0] > 0) {
-                val randomFactor = (Random.nextFloat() - 0.5f) * 2f * (brush.sizeRandom[0] / 100f)
-                (baseScale * (1f + randomFactor)).coerceIn(0.1f, 2f)
-            } else {
-                baseScale
-            }
-
-            val alpha = calculateStampAlpha(progress, brush, taperFactor)
+            val scale = calculateStampScale(drawingPath.brush, taperFactor)
+            val alpha = calculateStampAlpha(progress, drawingPath.brush, taperFactor)
 
             drawSingleBrushStamp(
                 canvas = canvas,
@@ -252,17 +326,18 @@ object DrawRenderer {
                 scale = scale,
                 alpha = alpha
             )
-            val spacing = if (brush.useBrushWidthDensity) {
-                baseSpacing * (brush.densityOffset.toFloat() / 5f).coerceIn(0.5f, 2f)
-            } else {
-                baseSpacing
-            }
-
-            currentDistance += spacing
-            stampIndex++
         }
+    }
 
-        return bitmap
+    private fun calculateStampScale(brush: BrushData, taperFactor: Float): Float {
+        val baseScale = taperFactor
+
+        return if (brush.sizeRandom.isNotEmpty() && brush.sizeRandom[0] > 0) {
+            val randomFactor = (Random.nextFloat() - 0.5f) * 2f * (brush.sizeRandom[0] / 100f)
+            (baseScale * (1f + randomFactor)).coerceIn(0.1f, 2f)
+        } else {
+            baseScale
+        }
     }
 
     private fun drawSingleBrushStamp(
@@ -393,8 +468,7 @@ object DrawRenderer {
             brush.customPainter.invoke(brushCanvas, size, drawingPath)
             canvas.drawImage(bitmap, Offset.Zero, Paint())
         } else if (brush.brush != null && brushImage != null) {
-            val stampBitmap = renderBrushStamps(drawingPath, size, brushImage, useSmoothing)
-            canvas.drawImage(stampBitmap, Offset.Zero, Paint())
+            renderBrushStamps(canvas, drawingPath, size, brushImage, useSmoothing)
         } else {
             if (useSmoothing && drawingPath.points.size > 2 && !brush.isShape) {
                 val smoothPaint = smoothCurvePaint(drawingPath)
@@ -403,32 +477,6 @@ object DrawRenderer {
                 canvas.drawPath(drawingPath.path, paint)
             }
         }
-    }
-
-    fun createPreviewBitmap(
-        drawingPath: DrawingPath,
-        canvasSize: Size,
-        existingBitmap: ImageBitmap? = null,
-        useSmoothing: Boolean = true,
-        brushImage: ImageBitmap? = null
-    ): ImageBitmap {
-        val brush = drawingPath.brush
-
-        if (brush.blendMode == androidx.compose.ui.graphics.BlendMode.Clear) {
-            return renderPathToBitmap(drawingPath, canvasSize, existingBitmap, useSmoothing, brushImage)
-        }
-
-        val bitmap = ImageBitmap(canvasSize.width.toInt(), canvasSize.height.toInt())
-        val canvas = Canvas(bitmap)
-
-        existingBitmap?.let { existing ->
-            canvas.drawImage(existing, Offset.Zero, Paint())
-        }
-
-        val pathBitmap = renderPathToBitmap(drawingPath, canvasSize, null, useSmoothing, brushImage)
-        canvas.drawImage(pathBitmap, Offset.Zero, Paint())
-
-        return bitmap
     }
 
     internal fun drawBrushStampsBetweenPoints(
@@ -447,40 +495,25 @@ object DrawRenderer {
         val path = drawingPath.path
         val measure = PathMeasure().apply { setPath(path, false) }
         val length = measure.length
+        val delta = Offset(end.x - start.x, end.y - start.y)
 
-        if (length <= 0) return
-
-        val spacing = if (useSmoothing) {
-            (brushSize / 6f).coerceAtMost(8f).coerceAtLeast(1f)
-        } else {
-            brushSize / 8f
-        }
-
-        val halfSize = brushSize / 2f
+        val halfSize = brushSize / 8
         var i = 0f
+        var currentPoint = start
 
         while (i < length) {
             val point = measure.getPosition(i)
-            val progress = if (length > 0) i / length else 0f
-            val taperFactor = calculateTaperFactor(progress, useSmoothing)
-            val currentBrushSize = (brushSize * taperFactor).coerceAtLeast(1f)
-            val currentHalfSize = currentBrushSize / 2f
-
-            val stampPaint = paint.copy().apply {
-                alpha = paint.alpha * (0.7f + 0.3f * taperFactor) // Vary alpha with taper
-            }
-
             canvas.drawImageRect(
                 brushImage,
                 dstOffset = IntOffset(
-                    (point.x - currentHalfSize).toInt(),
-                    (point.y - currentHalfSize).toInt()
+                    (point.x - halfSize).toInt(),
+                    (point.y - halfSize).toInt()
                 ),
-                dstSize = IntSize(currentBrushSize.toInt(), currentBrushSize.toInt()),
-                paint = stampPaint
+                dstSize = IntSize(brushSize.toInt(), brushSize.toInt()),
+                paint = paint
             )
-
-            i += spacing
+            currentPoint += delta
+            i += halfSize
         }
     }
 

@@ -26,6 +26,8 @@ import doodleverse.composeapp.generated.resources.project_name
 import doodleverse.composeapp.generated.resources.save
 import doodleverse.composeapp.generated.resources.template
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
+import io.github.taalaydev.doodleverse.ui.theme.ThemeManager
+import io.github.taalaydev.doodleverse.ui.theme.rememberThemeManager
 import org.jetbrains.compose.resources.stringResource
 
 data class ProjectTemplate(
@@ -38,26 +40,28 @@ data class ProjectTemplate(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewProjectDialog(
+    themeManager: ThemeManager = rememberThemeManager(),
     onDismissRequest: () -> Unit,
     onConfirm: (String, Float, Float) -> Unit,
     properties: DialogProperties = DialogProperties(),
     showCancelButton: Boolean = true
 ) {
+    val theme by themeManager.currentTheme.collectAsState()
     var projectName by remember { mutableStateOf("") }
-    var width by remember { mutableStateOf(1f) }
-    var height by remember { mutableStateOf(1f) }
+    var width by remember { mutableStateOf(1080f) }
+    var height by remember { mutableStateOf(1080f) }
     var selectedTemplateIndex by remember { mutableStateOf(0) }
 
     var templatesMenuExpanded by remember { mutableStateOf(false) }
 
     val templates = listOf(
-        ProjectTemplate("Square", 1f, 1f, "(1:1)"),
-        ProjectTemplate("16:9", 16f, 9f, "(16:9)"),
-        ProjectTemplate("4:3", 4f, 3f, "(4:3)"),
-        ProjectTemplate("A4", 210f, 297f, ""),
-        ProjectTemplate("A3", 297f, 420f, ""),
-        ProjectTemplate("A2", 420f, 594f, ""),
-        ProjectTemplate("A1", 594f, 841f, ""),
+        ProjectTemplate("Square", 1080f, 1080f, "(1:1)"),
+        ProjectTemplate("16:9", 1920f, 1080f, "(16:9)"),
+        ProjectTemplate("4:3", 1440f, 1080f, "(4:3)"),   // classic 4:3
+        ProjectTemplate("A4", 2480f, 3508f, "(A4)"),     // 210×297mm at 300dpi
+        ProjectTemplate("A3", 3508f, 4961f, "(A3)"),     // 297×420mm at 300dpi
+        ProjectTemplate("A2", 4961f, 7016f, "(A2)"),     // 420×594mm at 300dpi
+        ProjectTemplate("A1", 7016f, 9933f, "(A1)"),     // 594×841mm at 300dpi
         ProjectTemplate("Custom", 0f, 0f, ""),
     )
 
@@ -67,7 +71,7 @@ fun NewProjectDialog(
     ) {
         Surface(
             shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f),
         ) {
             Column(
                 modifier = Modifier

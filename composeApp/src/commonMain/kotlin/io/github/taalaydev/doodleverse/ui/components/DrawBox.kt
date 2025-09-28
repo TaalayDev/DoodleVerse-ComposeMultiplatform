@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -38,12 +39,12 @@ import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import io.github.taalaydev.doodleverse.core.DragState
 import io.github.taalaydev.doodleverse.core.DrawProvider
 import io.github.taalaydev.doodleverse.core.DrawingController
 import io.github.taalaydev.doodleverse.core.Tool
-import io.github.taalaydev.doodleverse.core.modDetectTransformGestures
 import io.github.taalaydev.doodleverse.data.models.BrushData
+import io.github.taalaydev.doodleverse.engine.DragState
+import io.github.taalaydev.doodleverse.engine.util.modDetectTransformGestures
 
 @Composable
 fun ColumnScope.DrawBox(
@@ -58,6 +59,7 @@ fun ColumnScope.DrawBox(
     aspectRatio: Float,
     background: Color = Color.White,
     referenceImage: ImageBitmap? = null,
+    referenceBlendMode: BlendMode = BlendMode.SrcOver,
 ) {
     val focusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
@@ -204,6 +206,7 @@ fun ColumnScope.DrawBox(
             },
             modifier = Modifier.aspectRatio(aspectRatio),
             referenceImage = referenceImage,
+            referenceBlendMode = referenceBlendMode
         )
     }
 }

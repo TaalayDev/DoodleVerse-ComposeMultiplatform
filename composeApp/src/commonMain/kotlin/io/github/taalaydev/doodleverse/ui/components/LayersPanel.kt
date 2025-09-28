@@ -83,17 +83,92 @@ import doodleverse.composeapp.generated.resources.rename_layer
 import doodleverse.composeapp.generated.resources.save
 import doodleverse.composeapp.generated.resources.toggle_visibility
 import io.github.taalaydev.doodleverse.data.models.LayerModel
+import io.github.taalaydev.doodleverse.engine.DrawingState
 import io.github.taalaydev.doodleverse.ui.screens.draw.DrawViewModel
+import kotlinx.coroutines.flow.StateFlow
 import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
 fun LayersPanel(
+    drawViewModel: io.github.taalaydev.doodleverse.ui.screens.canvas.DrawViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val drawController = drawViewModel.drawController
+    val state = drawController.state.collectAsStateWithLifecycle()
+
+    LayersPanel(
+        state = drawController.state,
+        addLayer = { drawController.addLayer("Layer ${state.value.layers.size + 1}") },
+        reorderLayers = { from, to -> drawController.reorderLayers(from, to) },
+        changeLayerOpacity = { layerIndex, opacity ->
+            drawController.changeLayerOpacity(layerIndex, opacity)
+        },
+        getLayerBitmap = { layerId -> drawController.getLayerBitmap(layerId) },
+        isLayerEmpty = { layerId -> drawController.isLayerEmpty(layerId) },
+        selectLayer = { layerIndex -> drawController.selectLayer(layerIndex) },
+        deleteLayer = { layerIndex -> drawController.deleteLayer(layerIndex) },
+        duplicateLayer = { layerIndex -> drawViewModel.duplicateLayer(layerIndex) },
+        updateLayerName = { layerIndex, newName ->
+            drawViewModel.updateLayerName(layerIndex, newName)
+        },
+        clearLayer = { layerIndex -> drawViewModel.clearLayer(layerIndex) },
+        layerVisibilityChanged = { layerIndex, isVisible ->
+            drawViewModel.layerVisibilityChanged(layerIndex, isVisible)
+        },
+        mergeLayerDown = { layerIndex -> drawViewModel.mergeLayerDown(layerIndex) },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun LayersPanel(
     drawViewModel: DrawViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val drawingState by drawViewModel.drawingController.state.collectAsStateWithLifecycle()
+    LayersPanel(
+        state = drawViewModel.drawingController.state,
+        addLayer = { drawViewModel.addLayer() },
+        reorderLayers = { from, to -> drawViewModel.reorderLayers(from, to) },
+        changeLayerOpacity = { layerIndex, opacity ->
+            drawViewModel.changeLayerOpacity(layerIndex, opacity)
+        },
+        getLayerBitmap = { layerId -> drawViewModel.drawingController.getLayerBitmap(layerId) },
+        isLayerEmpty = { layerId -> drawViewModel.drawingController.isLayerEmpty(layerId) },
+        selectLayer = { layerIndex -> drawViewModel.selectLayer(layerIndex) },
+        deleteLayer = { layerIndex -> drawViewModel.deleteLayer(layerIndex) },
+        duplicateLayer = { layerIndex -> drawViewModel.duplicateLayer(layerIndex) },
+        updateLayerName = { layerIndex, newName ->
+            drawViewModel.updateLayerName(layerIndex, newName)
+        },
+        clearLayer = { layerIndex -> drawViewModel.clearLayer(layerIndex) },
+        layerVisibilityChanged = { layerIndex, isVisible ->
+            drawViewModel.layerVisibilityChanged(layerIndex, isVisible)
+        },
+        mergeLayerDown = { layerIndex -> drawViewModel.mergeLayerDown(layerIndex) },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun LayersPanel(
+    state: StateFlow<DrawingState>,
+    addLayer: () -> Unit,
+    reorderLayers: (fromIndex: Int, toIndex: Int) -> Unit,
+    changeLayerOpacity: (layerIndex: Int, opacity: Float) -> Unit,
+    getLayerBitmap: (layerId: Long) -> ImageBitmap?,
+    isLayerEmpty: (layerId: Long) -> Boolean,
+    selectLayer: (layerIndex: Int) -> Unit,
+    deleteLayer: (layerIndex: Int) -> Unit,
+    duplicateLayer: (layerIndex: Int) -> Unit,
+    updateLayerName: (layerIndex: Int, newName: String) -> Unit,
+    clearLayer: (layerIndex: Int) -> Unit,
+    layerVisibilityChanged: (layerIndex: Int, isVisible: Boolean) -> Unit,
+    mergeLayerDown: (layerIndex: Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val drawingState by state.collectAsStateWithLifecycle()
     val layers = drawingState.currentFrame.layers
     val currentLayerIndex = drawingState.currentLayerIndex
 
@@ -103,7 +178,7 @@ fun LayersPanel(
         reorderableList = reorderableList.toMutableList().apply {
             add(to.index, removeAt(from.index))
         }
-        drawViewModel.reorderLayers(from.index, to.index)
+        reorderLayers(from.index, to.index)
     }
 
     LaunchedEffect(layers.size) {
@@ -116,10 +191,10 @@ fun LayersPanel(
         LayersPanelHeader(
             currentLayer = layers.getOrNull(currentLayerIndex),
             onOpacityChanged = { opacity ->
-                drawViewModel.changeLayerOpacity(currentLayerIndex, opacity)
+                changeLayerOpacity(currentLayerIndex, opacity)
             },
             onLayerAdded = {
-                drawViewModel.addLayer()
+                addLayer()
             }
         )
 
@@ -141,37 +216,40 @@ fun LayersPanel(
                     ) { isDragging ->
                         val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
 
-                        Surface(elevation = elevation) {
+                        Surface(
+                            elevation = elevation,
+                            color = Color.Transparent
+                        ) {
                             LayerTile(
                                 layer = layer,
-                                preview = drawViewModel.drawingController.getLayerBitmap(layer.id),
+                                preview = getLayerBitmap(layer.id),
                                 index = index,
                                 isActive = index == currentLayerIndex,
-                                isEmpty = drawViewModel.drawingController.isLayerEmpty(layer.id),
-                                onLayerSelected = { drawViewModel.selectLayer(it) },
+                                isEmpty = isLayerEmpty(layer.id),
+                                onLayerSelected = { selectLayer(it) },
                                 onLayerVisibilityChanged = { layerIndex ->
-                                    drawViewModel.layerVisibilityChanged(
+                                    layerVisibilityChanged(
                                         layerIndex,
                                         !layer.isVisible
                                     )
                                 },
                                 onLayerDeleted = { layerIndex ->
                                     if (layers.size > 1) {
-                                        drawViewModel.deleteLayer(layerIndex)
+                                        deleteLayer(layerIndex)
                                     }
                                 },
                                 onLayerDuplicated = { layerIndex ->
-                                    drawViewModel.duplicateLayer(layerIndex)
+                                    duplicateLayer(layerIndex)
                                 },
                                 onLayerRenamed = { layerIndex, newName ->
-                                    drawViewModel.updateLayerName(layerIndex, newName)
+                                    updateLayerName(layerIndex, newName)
                                 },
                                 onLayerCleared = { layerIndex ->
-                                    drawViewModel.clearLayer(layerIndex)
+                                    clearLayer(layerIndex)
                                 },
                                 onMergeDown = { layerIndex ->
                                     if (layerIndex > 0) {
-                                        drawViewModel.mergeLayerDown(layerIndex)
+                                        mergeLayerDown(layerIndex)
                                     }
                                 },
                                 dragHandle = {
@@ -298,7 +376,8 @@ fun LayersPanelHeader(
             Icon(
                 Lucide.Plus,
                 contentDescription = stringResource(Res.string.add_new_layer),
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -525,6 +604,7 @@ fun LayerContextMenu(
     onMergeDown: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val contentColor = MaterialTheme.colorScheme.onSurface
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss
@@ -548,8 +628,8 @@ fun LayerContextMenu(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Lucide.Copy, null, modifier = Modifier.size(16.dp))
-                    Text(stringResource(Res.string.copy_layer))
+                    Icon(Lucide.Copy, null, modifier = Modifier.size(16.dp), tint = contentColor)
+                    Text(stringResource(Res.string.copy_layer), color = contentColor)
                 }
             },
             onClick = onDuplicate
@@ -561,8 +641,8 @@ fun LayerContextMenu(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Lucide.X, null, modifier = Modifier.size(16.dp))
-                    Text(stringResource(Res.string.clear_layer))
+                    Icon(Lucide.X, null, modifier = Modifier.size(16.dp), tint = contentColor)
+                    Text(stringResource(Res.string.clear_layer), color = contentColor)
                 }
             },
             onClick = onClear
@@ -575,8 +655,8 @@ fun LayerContextMenu(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Lucide.Merge, null, modifier = Modifier.size(16.dp))
-                        Text(stringResource(Res.string.merge_down))
+                        Icon(Lucide.Merge, null, modifier = Modifier.size(16.dp), tint = contentColor)
+                        Text(stringResource(Res.string.merge_down), color = contentColor)
                     }
                 },
                 onClick = onMergeDown

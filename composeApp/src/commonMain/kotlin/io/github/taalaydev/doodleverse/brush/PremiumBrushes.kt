@@ -9,7 +9,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.ui.util.lerp
-import io.github.taalaydev.doodleverse.core.distanceTo
+import io.github.taalaydev.doodleverse.engine.util.distanceTo
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.max

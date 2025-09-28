@@ -5,17 +5,46 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,7 +55,19 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.composables.icons.lucide.*
+import com.composables.icons.lucide.ArrowLeft
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.ChevronLeft
+import com.composables.icons.lucide.ChevronRight
+import com.composables.icons.lucide.Eraser
+import com.composables.icons.lucide.Info
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Pen
+import com.composables.icons.lucide.Redo2
+import com.composables.icons.lucide.Shapes
+import com.composables.icons.lucide.Spline
+import com.composables.icons.lucide.Undo2
+import com.composables.icons.lucide.X
 import doodleverse.composeapp.generated.resources.Res
 import doodleverse.composeapp.generated.resources.back
 import doodleverse.composeapp.generated.resources.completed
@@ -45,15 +86,18 @@ import doodleverse.composeapp.generated.resources.step_count
 import doodleverse.composeapp.generated.resources.step_count_of
 import doodleverse.composeapp.generated.resources.undo
 import io.github.taalaydev.doodleverse.Platform
-import io.github.taalaydev.doodleverse.core.DragState
-import io.github.taalaydev.doodleverse.core.Tool
-import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.LessonModel
 import io.github.taalaydev.doodleverse.data.models.LessonPartModel
+import io.github.taalaydev.doodleverse.engine.DragState
+import io.github.taalaydev.doodleverse.engine.DrawTool
+import io.github.taalaydev.doodleverse.engine.brush.BrushFactory
+import io.github.taalaydev.doodleverse.engine.brush.PenBrush
 import io.github.taalaydev.doodleverse.navigation.Destination
+import io.github.taalaydev.doodleverse.purchase.PurchaseViewModel
 import io.github.taalaydev.doodleverse.ui.components.BrushPicker
-import io.github.taalaydev.doodleverse.ui.components.DrawBox
-import io.github.taalaydev.doodleverse.ui.screens.draw.ShapePickerSheet
+import io.github.taalaydev.doodleverse.ui.components.ShapePickerSheet
+import io.github.taalaydev.doodleverse.ui.theme.AnimatedScaffold
+import io.github.taalaydev.doodleverse.ui.theme.ThemeManager
 import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -63,15 +107,18 @@ fun LessonDetailScreen(
     platform: Platform,
     lesson: LessonModel,
     navController: NavController,
+    themeManager: ThemeManager,
     modifier: Modifier = Modifier,
     viewModel: LessonDrawViewModel = viewModel {
         LessonDrawViewModel(
             platform.projectRepo,
             platform.dispatcherIO
         )
-    }
+    },
+    purchaseViewModel: PurchaseViewModel,
 ) {
     val scope = rememberCoroutineScope()
+    val drawController = viewModel.drawController
     var showStartDrawing by remember { mutableStateOf(false) }
     var currentPage by remember { mutableStateOf(0) }
     var showDescription by remember { mutableStateOf(true) }
@@ -80,10 +127,8 @@ fun LessonDetailScreen(
         // showDescription = true
     }
 
-    val brushSize by viewModel.brushSize.collectAsStateWithLifecycle()
-    val currentColor by viewModel.currentColor.collectAsStateWithLifecycle()
-    val currentTool by viewModel.currentTool.collectAsStateWithLifecycle()
-    val currentBrush by viewModel.currentBrush.collectAsStateWithLifecycle(BrushData.solid)
+    val currentTool by drawController.currentTool.collectAsStateWithLifecycle()
+    val currentBrush by drawController.currentBrush.collectAsStateWithLifecycle(PenBrush())
     var dragState = remember { mutableStateOf(DragState()) }
 
     val windowSize = calculateWindowSizeClass()
@@ -91,8 +136,8 @@ fun LessonDetailScreen(
     val isMediumWidth = windowSize.widthSizeClass == WindowWidthSizeClass.Medium
     val isExpandedWidth = windowSize.widthSizeClass == WindowWidthSizeClass.Expanded
 
-    val canUndo by viewModel.canUndo.collectAsStateWithLifecycle()
-    val canRedo by viewModel.canRedo.collectAsStateWithLifecycle()
+    val canUndo by drawController.canUndo.collectAsStateWithLifecycle()
+    val canRedo by drawController.canRedo.collectAsStateWithLifecycle()
 
     val brushPickerBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBrushPicker by remember { mutableStateOf(false) }
@@ -118,9 +163,10 @@ fun LessonDetailScreen(
     if (showBrushPicker) {
         BrushPicker(
             bottomSheetState = brushPickerBottomSheetState,
+            brushes = BrushFactory.allBrushes(),
             selectedBrush = currentBrush,
-            onSelected = { brush ->
-                viewModel.setBrush(brush)
+            onBrushSelected = { brush ->
+                drawController.setTool(DrawTool.BrushTool(brush))
                 showBrushPicker = false
             },
             onDismiss = { showBrushPicker = false }
@@ -138,9 +184,9 @@ fun LessonDetailScreen(
     if (showShapePicker) {
         ShapePickerSheet(
             bottomSheetState = shapePickerBottomSheetState,
-            brush = currentBrush,
-            onSelected = { brush ->
-                viewModel.setBrush(brush)
+            shape = if (currentTool is DrawTool.Shape) (currentTool as DrawTool.Shape).shape else null,
+            onSelected = { shape ->
+                drawController.setTool(DrawTool.Shape(shape, currentBrush))
                 showShapePicker = false
             },
             onDismiss = { showShapePicker = false }
@@ -164,7 +210,7 @@ fun LessonDetailScreen(
                 canMoveNext = canUndo,
                 onPageSelected = {
                     currentPage = it
-                    viewModel.drawingController.clearUndoRedoStack()
+                    viewModel.drawController.clearUndoRedoStack()
                 },
                 onStartDrawing = { showStartDrawing = true },
                 modifier = Modifier
@@ -200,7 +246,7 @@ fun LessonDetailScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        viewModel.setTool(Tool.Eraser(BrushData.eraser))
+                        drawController.setTool(DrawTool.Eraser(BrushFactory.eraser))
                     }) {
                         Icon(
                             Lucide.Eraser,
@@ -216,13 +262,35 @@ fun LessonDetailScreen(
                         showShapePicker = true
                     }) {
                         Icon(
-                            Lucide.Circle,
+                            Lucide.Shapes,
                             contentDescription = stringResource(Res.string.shapes),
                             tint = if (currentTool.isShape)
                                 MaterialTheme.colorScheme.primary
                             else
                                 MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            val selectBrush = if (!currentTool.isEraser) {
+                                currentBrush
+                            } else {
+                                PenBrush()
+                            }
+                            drawController.setTool(DrawTool.Curve(selectBrush))
+                        },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (currentTool.isCurve) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                            .size(36.dp)
+                    ) {
+                        Icon(
+                            Lucide.Spline,
+                            contentDescription = "Curve",
+                            tint = if (currentTool.isCurve) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                     IconButton(onClick = {
@@ -242,144 +310,148 @@ fun LessonDetailScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(8.dp),
-                contentAlignment = Alignment.Center
+            AnimatedScaffold(
+                themeManager = themeManager,
+                animateBackground = false,
+                modifier = Modifier.fillMaxSize().weight(1f),
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxSize().clipToBounds()
-                ) {
-                    DrawBox(
-                        drawProvider = viewModel,
-                        drawController = viewModel.drawingController,
-                        currentBrush = currentBrush,
-                        currentColor = currentColor,
-                        brushSize = brushSize,
-                        currentTool = currentTool,
-                        isMobile = !isExpandedWidth,
-                        dragState = dragState,
-                        aspectRatio = 1f,
-                        referenceImage = if (currentPage != lesson.parts.size - 1) {
-                            imageResource(lesson.parts[currentPage].image)
-                        } else {
-                            null
-                        },
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.align(Alignment.TopStart),
-                ) {
-                    val undoButtonShape = RoundedCornerShape(
-                        topStart = 16.dp,
-                        bottomStart = 16.dp
-                    )
-                    val redoButtonShape = RoundedCornerShape(
-                        topEnd = 16.dp,
-                        bottomEnd = 16.dp
-                    )
-                    IconButton(
-                        onClick = {
-                            viewModel.undo()
-                        },
-                        modifier = Modifier
-                            .clip(undoButtonShape)
-                            .background(
-                                MaterialTheme.colorScheme.surface,
-                                undoButtonShape
-                            )
-                    ) {
-                        Icon(
-                            Lucide.Undo2,
-                            contentDescription = stringResource(Res.string.undo),
-                            tint = if (canUndo) Color.Black else Color.Gray,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            viewModel.redo()
-                        },
-                        modifier = Modifier
-                            .clip(redoButtonShape)
-                            .background(
-                                MaterialTheme.colorScheme.surface,
-                                redoButtonShape
-                            )
-                    ) {
-                        Icon(
-                            Lucide.Redo2,
-                            contentDescription = stringResource(Res.string.redo),
-                            tint = if (canRedo) Color.Black else Color.Gray,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                // Step description overlay
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = showDescription,
-                    enter = fadeIn() + slideInVertically { it },
-                    exit = fadeOut() + slideOutVertically { it },
+                Box(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 16.dp),
+                        .fillMaxSize()
+                        .weight(1f)
+                        .padding(8.dp),
+                        // .background(MaterialTheme.colorScheme.surfaceVariant) ,
+                    contentAlignment = Alignment.Center
                 ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        shape = RoundedCornerShape(12.dp),
-                        tonalElevation = 2.dp
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxSize().clipToBounds()
                     ) {
-                        Box(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Text(
-                                text = stringResource(lesson.parts[currentPage].description),
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(end = 24.dp)
-                            )
+                        io.github.taalaydev.doodleverse.engine.components.DrawBox(
+                            controller = viewModel.drawController,
+                            dragState = dragState,
+                            referenceImage = if (currentPage != lesson.parts.size - 1) {
+                                imageResource(lesson.parts[currentPage].image)
+                            } else {
+                                null
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxSize(),
+                        )
+                    }
 
-                            IconButton(
-                                onClick = { showDescription = false },
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .align(Alignment.TopEnd)
-                            ) {
-                                Icon(
-                                    Lucide.X,
-                                    contentDescription = "Close description",
-                                    modifier = Modifier.size(16.dp)
+                    Row(
+                        modifier = Modifier.align(Alignment.TopStart),
+                    ) {
+                        val undoButtonShape = RoundedCornerShape(
+                            topStart = 16.dp,
+                            bottomStart = 16.dp
+                        )
+                        val redoButtonShape = RoundedCornerShape(
+                            topEnd = 16.dp,
+                            bottomEnd = 16.dp
+                        )
+                        IconButton(
+                            onClick = {
+                                drawController.undo()
+                            },
+                            modifier = Modifier
+                                .clip(undoButtonShape)
+                                .background(
+                                    MaterialTheme.colorScheme.surface,
+                                    undoButtonShape
                                 )
+                        ) {
+                            Icon(
+                                Lucide.Undo2,
+                                contentDescription = stringResource(Res.string.undo),
+                                tint = if (canUndo) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                drawController.redo()
+                            },
+                            modifier = Modifier
+                                .clip(redoButtonShape)
+                                .background(
+                                    MaterialTheme.colorScheme.surface,
+                                    redoButtonShape
+                                )
+                        ) {
+                            Icon(
+                                Lucide.Redo2,
+                                contentDescription = stringResource(Res.string.redo),
+                                tint = if (canRedo) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    // Step description overlay
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showDescription,
+                        enter = fadeIn() + slideInVertically { it },
+                        exit = fadeOut() + slideOutVertically { it },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 16.dp),
+                    ) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                            shape = RoundedCornerShape(12.dp),
+                            tonalElevation = 2.dp
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(lesson.parts[currentPage].description),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(end = 24.dp)
+                                )
+
+                                IconButton(
+                                    onClick = { showDescription = false },
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .align(Alignment.TopEnd)
+                                ) {
+                                    Icon(
+                                        Lucide.X,
+                                        contentDescription = "Close description",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
-                // Button to show description again if it's hidden
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = !showDescription,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp)
-                ) {
-                    FloatingActionButton(
-                        onClick = { showDescription = true },
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(40.dp)
+                    // Button to show description again if it's hidden
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !showDescription,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp)
                     ) {
-                        Icon(
-                            Lucide.Info,
-                            contentDescription = "Show description",
-                            modifier = Modifier.size(20.dp)
-                        )
+                        FloatingActionButton(
+                            onClick = { showDescription = true },
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                Lucide.Info,
+                                contentDescription = "Show description",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -429,7 +501,7 @@ fun LessonDetailScreen(
                                 } else {
                                     currentPage = minOf(lesson.parts.size - 1, currentPage + 1)
                                 }
-                                viewModel.drawingController.clearUndoRedoStack()
+                                drawController.clearUndoRedoStack()
                             },
                             modifier = Modifier.width(100.dp)
                         ) {

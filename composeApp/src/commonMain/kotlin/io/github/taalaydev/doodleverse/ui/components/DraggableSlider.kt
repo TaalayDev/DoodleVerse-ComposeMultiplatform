@@ -91,7 +91,7 @@ fun BoxScope.DraggableSlider(
             VerticalSlider(
                 value = value,
                 onValueChange = onValueChange,
-                valueRange = 5f..80f,
+                valueRange = 1f..120f,
                 modifier = Modifier.height(20.dp).width(200.dp),
             )
             content()

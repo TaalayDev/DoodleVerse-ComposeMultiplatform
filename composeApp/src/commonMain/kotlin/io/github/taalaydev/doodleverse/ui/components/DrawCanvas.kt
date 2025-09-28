@@ -1,6 +1,7 @@
 package io.github.taalaydev.doodleverse.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,31 +28,34 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.withSave
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.taalaydev.doodleverse.core.DrawProvider
 import io.github.taalaydev.doodleverse.core.rendering.DrawRenderer
 import io.github.taalaydev.doodleverse.core.DrawingController
 import io.github.taalaydev.doodleverse.core.Tool
-import io.github.taalaydev.doodleverse.core.copy
-import io.github.taalaydev.doodleverse.core.handleDrawing
+import io.github.taalaydev.doodleverse.engine.copy
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.PointModel
 import io.github.taalaydev.doodleverse.getColorFromBitmap
 import io.github.taalaydev.doodleverse.getPlatformType
 import org.jetbrains.compose.resources.imageResource
-import io.github.taalaydev.doodleverse.core.CanvasDrawState
-import io.github.taalaydev.doodleverse.core.CanvasDrawingState
-import io.github.taalaydev.doodleverse.core.DrawingBitmapState
-import io.github.taalaydev.doodleverse.core.VelocityTracker
-import io.github.taalaydev.doodleverse.core.distanceTo
-import kotlin.math.sqrt
+import io.github.taalaydev.doodleverse.engine.CanvasDrawState
+import io.github.taalaydev.doodleverse.engine.CanvasDrawingState
+import io.github.taalaydev.doodleverse.engine.DrawingBitmapState
+import io.github.taalaydev.doodleverse.engine.components.SelectionOverlay
+import io.github.taalaydev.doodleverse.engine.controller.VelocityTracker
+import io.github.taalaydev.doodleverse.engine.controller.SelectionState
+import io.github.taalaydev.doodleverse.engine.floodFillFast
+import io.github.taalaydev.doodleverse.engine.util.distanceTo
+import io.github.taalaydev.doodleverse.engine.util.handleDrawing
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -67,9 +71,9 @@ fun DrawCanvas(
     controller: DrawingController,
     onColorPicked: (Color) -> Unit = {},
     referenceImage: ImageBitmap? = null,
+    referenceBlendMode: BlendMode = BlendMode.SrcOver,
     modifier: Modifier = Modifier,
 ) {
-
     val drawingState by controller.state.collectAsStateWithLifecycle()
     val layers = drawingState.currentFrame.layers
     val currentLayer = drawingState.currentLayer
@@ -83,7 +87,10 @@ fun DrawCanvas(
     var drawingBitmapState by remember { mutableStateOf<DrawingBitmapState?>(null) }
     var canvasSize by remember { mutableStateOf(Size.Zero) }
 
-    var velocityTracker by remember { mutableStateOf(VelocityTracker()) }
+    val velocityTracker by remember { mutableStateOf(VelocityTracker()) }
+
+    var curvePoints by remember { mutableStateOf<List<Offset>>(emptyList()) }
+    var livePreviewPosition by remember { mutableStateOf<Offset?>(null) }
 
     val brushImage = if (currentBrush.brush != null) {
         imageResource(currentBrush.brush)
@@ -94,6 +101,13 @@ fun DrawCanvas(
     LaunchedEffect(canvasSize) {
         if (canvasSize != Size.Zero) {
             controller.canvasSize = canvasSize
+        }
+    }
+
+    LaunchedEffect(tool) {
+        if (tool !is Tool.Curve) {
+            curvePoints = emptyList()
+            livePreviewPosition = null
         }
     }
 
@@ -112,6 +126,15 @@ fun DrawCanvas(
             modifier = Modifier
                 .fillMaxSize()
                 .clipToBounds()
+                .pointerInput(tool, curvePoints.size) {
+                    if (tool !is Tool.Curve || curvePoints.size != 2) return@pointerInput
+                    awaitEachGesture {
+                        while (true) {
+                            val event = awaitPointerEvent(pass = PointerEventPass.Main)
+                            livePreviewPosition = event.changes.first().position
+                        }
+                    }
+                }
                 .pointerInput(currentBrush, gestureEnabled, tool, currentColor, brushSize) {
                     if (!gestureEnabled) return@pointerInput
 
@@ -131,10 +154,49 @@ fun DrawCanvas(
                                 onDrag = { _, new, _ ->
                                     provider.updateSelection(new)
                                 },
-                                onEnd = {
+                                onEnd = { _, _ ->
                                     provider.endSelection()
                                 }
                             )
+                        }
+
+                        tool.isCurve -> {
+                            detectTapGestures { offset ->
+                                if (curvePoints.size < 2) {
+                                    curvePoints = curvePoints + offset
+                                } else {
+                                    // Finalize the curve with the third tap
+                                    val p0 = curvePoints[0]
+                                    val p2 = curvePoints[1]
+                                    val p1 = offset // Control point
+
+                                    val finalPath = Path().apply {
+                                        moveTo(p0.x, p0.y)
+                                        quadraticBezierTo(p1.x, p1.y, p2.x, p2.y)
+                                    }
+
+                                    val drawingPath = DrawingPath(
+                                        brush = currentBrush,
+                                        color = currentColor,
+                                        size = brushSize,
+                                        path = finalPath,
+                                        startPoint = p0,
+                                        endPoint = p2
+                                    )
+
+                                    val pathBitmap = ImageBitmap(size.width, size.height)
+                                    val pathCanvas = Canvas(pathBitmap)
+                                    drawPathToCanvas(pathCanvas, drawingPath, Size(size.width.toFloat(), size.height.toFloat()), brushImage)
+
+                                    val layerBitmap = controller.getLayerBitmap(currentLayer.id) ?: ImageBitmap(size.width, size.height)
+                                    val finalBitmap = combineDrawingWithLayer(pathBitmap, layerBitmap, currentBrush)
+                                    controller.updateLayerBitmap(finalBitmap)
+
+                                    // Reset for the next curve
+                                    curvePoints = emptyList()
+                                    livePreviewPosition = null
+                                }
+                            }
                         }
 
                         else -> {
@@ -163,7 +225,7 @@ fun DrawCanvas(
                                 onDrag = { _, new, pressure ->
                                     val currentTime = Clock.System.now().toEpochMilliseconds()
                                     velocityTracker.updateVelocity(new, currentTime)
-                                    val dynamicDistance = velocityTracker.calculateDynamicDistance(brushImage, currentBrush.isShape)
+                                    val dynamicDistance = velocityTracker.calculateDynamicDistance(currentBrush.isShape)
 
                                     if (currentPosition.distanceTo(new) < dynamicDistance) return@handleDrawing
 
@@ -183,7 +245,7 @@ fun DrawCanvas(
                                         )
                                     }
                                 },
-                                onEnd = {
+                                onEnd = { _, _ ->
                                     if (tool.isEyedropper) {
                                         eyedropperColor?.let { color ->
                                             onColorPicked(color)
@@ -221,6 +283,7 @@ fun DrawCanvas(
                     handleFloodFill(
                         position = currentPosition,
                         color = currentColor,
+                        layerBitmap = controller.getLayerBitmap(currentLayer.id) ?: ImageBitmap(size.width.toInt(), size.height.toInt()),
                         controller = controller
                     )
                     canvasDrawState = CanvasDrawState.Idle
@@ -247,6 +310,38 @@ fun DrawCanvas(
                 drawingBitmapState = drawingBitmapState,
             )
 
+            if (tool is Tool.Curve) {
+                // Draw circles for the anchor points
+                curvePoints.forEach { point ->
+                    drawCircle(Color.Black.copy(alpha = 0.5f), radius = 10f, center = point)
+                    drawCircle(Color.White, radius = 8f, center = point)
+                }
+
+                // Draw the live preview curve
+                if (curvePoints.size == 2 && livePreviewPosition != null) {
+                    val p0 = curvePoints[0]
+                    val p2 = curvePoints[1]
+                    val p1 = livePreviewPosition!!
+
+                    val previewPath = Path().apply {
+                        moveTo(p0.x, p0.y)
+                        quadraticBezierTo(p1.x, p1.y, p2.x, p2.y)
+                    }
+
+                    drawPath(
+                        path = previewPath,
+                        color = currentColor,
+                        style = Stroke(
+                            width = brushSize,
+                            cap = currentBrush.strokeCap,
+                            join = currentBrush.strokeJoin,
+                            pathEffect = currentBrush.pathEffect?.invoke(brushSize)
+                        ),
+                        alpha = 0.7f
+                    )
+                }
+            }
+
             renderSelectionOverlay(
                 provider = provider,
                 drawContext = this
@@ -256,7 +351,7 @@ fun DrawCanvas(
                 renderReferenceImage(
                     image = refImage,
                     canvasSize = size,
-                    drawContext = this
+                    blendMode = referenceBlendMode
                 )
             }
 
@@ -264,7 +359,6 @@ fun DrawCanvas(
                 renderEyedropperFeedback(
                     position = currentPosition,
                     color = color,
-                    drawContext = this
                 )
             }
         }
@@ -279,9 +373,10 @@ fun DrawCanvas(
                     provider.updateSelectionTransform(offset)
                 },
                 onTransformEnd = {
+                    provider.applySelection()
                 },
                 onTapOutside = {
-                    provider.applySelection()
+                    controller.clearSelection()
                 },
                 modifier = Modifier.fillMaxSize(),
                 isMobile = getPlatformType().isAndroid || getPlatformType().isIos
@@ -410,7 +505,7 @@ private fun finishDrawing(
             state.bitmap
         }
 
-        controller.addDrawingPath(finalPath, finalBitmap)
+        controller.updateLayerBitmap(finalBitmap)
 
         onComplete()
     }
@@ -461,11 +556,14 @@ private fun combineDrawingWithLayer(
 private fun handleFloodFill(
     position: Offset,
     color: Color,
+    layerBitmap: ImageBitmap,
     controller: DrawingController
 ) {
     val x = position.x.toInt()
     val y = position.y.toInt()
-    controller.floodFill(x, y, color)
+    // controller.floodFill(x, y, color)
+    floodFillFast(layerBitmap, x, y, color.toArgb())
+    // controller.upda(layerBitmap)
 }
 
 private fun handleEyedropper(
@@ -553,10 +651,10 @@ private fun DrawScope.renderSelectionOverlay(
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderReferenceImage(
+private fun DrawScope.renderReferenceImage(
     image: ImageBitmap,
     canvasSize: Size,
-    drawContext: androidx.compose.ui.graphics.drawscope.DrawScope
+    blendMode: BlendMode = BlendMode.SrcOver
 ) {
     drawImage(
         image = image,
@@ -564,14 +662,14 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderReferenceImag
         srcSize = IntSize(image.width, image.height),
         dstSize = IntSize(canvasSize.width.toInt(), canvasSize.height.toInt()),
         colorFilter = ColorFilter.tint(Color(0x40FF0000)),
-        alpha = 0.5f
+        alpha = 0.5f,
+        blendMode = blendMode,
     )
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderEyedropperFeedback(
+private fun DrawScope.renderEyedropperFeedback(
     position: Offset,
     color: Color,
-    drawContext: androidx.compose.ui.graphics.drawscope.DrawScope
 ) {
     val crosshairSize = 15f
     val previewSize = 40f
@@ -605,7 +703,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderEyedropperFee
     )
 }
 
-private fun io.github.taalaydev.doodleverse.core.SelectionState.getTransformedBounds(): androidx.compose.ui.geometry.Rect {
+private fun SelectionState.getTransformedBounds(): androidx.compose.ui.geometry.Rect {
     val matrix = androidx.compose.ui.graphics.Matrix()
     val center = bounds.center
 

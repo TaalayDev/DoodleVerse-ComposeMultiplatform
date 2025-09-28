@@ -1,6 +1,8 @@
 package io.github.taalaydev.doodleverse
 
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Shader
+import io.github.taalaydev.doodleverse.purchase.InAppPurchaseManager
 import io.github.taalaydev.doodleverse.shared.ProjectRepository
 import io.github.taalaydev.doodleverse.shared.storage.DataStorage
 import kotlinx.coroutines.CoroutineDispatcher
@@ -52,9 +54,7 @@ enum class ImageFormat {
 }
 
 expect fun imageBitmapByteArray(bitmap: ImageBitmap, format: ImageFormat): ByteArray
-
 expect fun imageBitmapFromByteArray(bytes: ByteArray, width: Int, height: Int): ImageBitmap
-
 expect fun getColorFromBitmap(bitmap: ImageBitmap, x: Int, y: Int): Int?
 
 /**
@@ -71,5 +71,36 @@ object DataStorageFactory {
     }
 }
 
-
 expect fun createDataStorage(): DataStorage
+
+/**
+ * Expect/Actual fast pixel access for flood fill & sampling without toPixelMap()
+ * Implement actuals with Skia on each platform for speed.
+ */
+expect class PixelBuffer(bitmap: ImageBitmap) {
+    val width: Int
+    val height: Int
+    fun get(x: Int, y: Int): Int
+    fun set(x: Int, y: Int, argb: Int)
+    fun flushTo(bitmap: ImageBitmap)
+}
+
+expect fun createInAppPurchaseManager(): InAppPurchaseManager
+
+/**
+ * Platform-specific shader implementation
+ */
+expect class PlatformShader private constructor() {
+    fun setUniform(name: String, value: Float)
+    fun setUniform(name: String, x: Float, y: Float)
+    fun setUniform(name: String, x: Float, y: Float, z: Float, w: Float)
+    fun toShader(): Shader?
+}
+
+/**
+ * Factory for creating platform-specific shaders
+ */
+expect object ShaderFactory {
+    fun create(source: String): PlatformShader?
+    fun isSupported(): Boolean
+}

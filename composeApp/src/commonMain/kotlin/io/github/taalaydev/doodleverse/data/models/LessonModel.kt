@@ -47,6 +47,7 @@ data class LessonModel(
     val description: StringResource,
     val difficulty: LessonDifficulty,
     val category: LessonCategory,
+    val isPremium: Boolean = false,
     val parts: List<LessonPartModel>,
 )
 

@@ -182,4 +182,88 @@
     <string name="anime_eyes_lesson_5_description">Add eyelashes by drawing short diagonal lines extending from the upper eyelid. Make them thicker at the base and thinner at the tips for a natural look.</string>
     <string name="anime_eyes_lesson_6_description">Draw the eyebrow by creating a curved line above the eye. Make it slightly thicker than the top eyelid line and position it at a comfortable distance above the eye to create a natural expression.</string>
     <string name="anime_eyes_lesson_7_description">Take a moment to review your drawing and make any necessary adjustments. Erase any unnecessary guidelines and ensure all lines are smooth and polished.</string>
+
+    <string name="cat_lesson_title">Cute Cat</string>
+    <string name="cat_lesson_description">Learn how to draw a simple and cute cat.</string>
+    <string name="cat_lesson_1_description">Start by drawing a circle for the head. On top of the circle, add two pointed, triangular shapes for the ears.</string>
+    <string name="cat_lesson_2_description">Below the head, draw the body and front legs. Sketch two lines curving downwards and inwards, ending in two small paws.</string>
+    <string name="cat_lesson_3_description">Add the back legs by drawing two curved lines on either side of the body. Complete each leg with a small, rounded paw at the bottom.</string>
+    <string name="cat_lesson_4_description">Draw a long, looping tail starting from the side of the cat's body.</string>
+    <string name="cat_lesson_5_description">Finally, add the facial features. Draw two oval eyes, a small nose, and a mouth. Don't forget to add whiskers and two small lines for eyebrows.</string>
+    <string name="cat_lesson_6_description">Review your drawing and erase any unnecessary lines. Your cute cat is complete!</string>
+
+    <string name="hair_lesson_title">How to Draw Anime Hair</string>
+    <string name="hair_lesson_description">Learn the basic steps to draw a common anime hairstyle.</string>
+    <string name="hair_lesson_1_description">First, lightly sketch a basic head shape. This will act as a guide to ensure the hair fits correctly.</string>
+    <string name="hair_lesson_2_description">Next, define the hairline. Draw two curved lines that meet at a central point to create the part for the bangs.</string>
+    <string name="hair_lesson_3_description">Draw the outer shape of the hair. Use large, curved lines that flow over the top of the head guideline to create volume.</string>
+    <string name="hair_lesson_4_description">Add detail by drawing smaller sections. Sketch pointed shapes to form the bangs and add longer, flowing locks on the sides.</string>
+    <string name="hair_lesson_5_description">Finally, erase the initial head guideline and refine your lines. You've successfully drawn a basic anime hairstyle!</string>
+
+    <string name="anime_girl_face_lesson_title">How to Draw an Anime Girl Face</string>
+    <string name="anime_girl_face_lesson_description">Follow these steps to draw a classic anime girl's face.</string>
+    <string name="anime_girl_face_lesson_1_description">Start with a circle and add horizontal and vertical guidelines. This will help you place the facial features correctly.</string>
+    <string name="anime_girl_face_lesson_2_description">Using the circle as a guide, draw the jawline, a pointed chin, and two curved lines for the neck.</string>
+    <string name="anime_girl_face_lesson_3_description">Lightly sketch the placement guides for the facial features. Use the horizontal line to position the eyes, and add marks for the eyebrows, nose, and mouth.</string>
+    <string name="anime_girl_face_lesson_4_description">Refine the eye shapes, adding pupils and highlights to make them expressive. Draw the final form of the nose.</string>
+    <string name="anime_girl_face_lesson_5_description">Begin drawing the hair. Sketch the bangs framing the forehead and add the curved outline for the top of the hair to create volume.</string>
+    <string name="anime_girl_face_lesson_6_description">Add long, flowing locks of hair on the sides of the face. Complete the expression by drawing the eyebrows above the eyes.</string>
+    <string name="anime_girl_face_lesson_7_description">Erase all the initial guidelines. Refine your lines and add any final details to complete your drawing.</string>
+
+    <string name="fox_lesson_title">Fox</string>
+    <string name="fox_lesson_description">Learn how to draw a simple, elegant fox.</string>
+    <string name="fox_lesson_1_description">Start by drawing the head in profile. Sketch a long, pointed snout, two triangular ears, and a small dot for the eye.</string>
+    <string name="fox_lesson_2_description">Next, draw the body. Use a long, curved line for the back and add a few short, simple lines underneath to suggest the legs.</string>
+    <string name="fox_lesson_3_description">Draw the large, bushy tail. Add a zigzag line near the end to show the iconic white tip of the fox's tail.</string>
+    <string name="fox_lesson_4_description">Connect all the parts and review your drawing. Erase any stray marks to complete your simple fox.</string>
+
+    <string name="penguin_lesson_title">Penguin</string>
+    <string name="penguin_lesson_description">Learn how to draw a cute and simple penguin.</string>
+    <string name="penguin_lesson_1_description">Start by drawing two overlapping circles, with the top circle slightly smaller than the bottom one.</string>
+    <string name="penguin_lesson_2_description">Connect the circles with smooth, curved lines to create the basic body shape of the penguin.</string>
+    <string name="penguin_lesson_3_description">Add a small triangular beak in the center of the top part of the body. Above the beak, draw two small dots for the eyes and simple curved lines for the wings extending from the sides.</string>
+    <string name="penguin_lesson_4_description">Draw two small, webbed feet at the bottom of the penguin's body. You can add a few short, curved lines on the body to suggest feathers.</string>
+    <string name="penguin_lesson_5_description">Review your drawing and erase any unnecessary lines. Your simple penguin is now complete!</string>
+
+    <string name="rose_lesson_title">Rose</string>
+    <string name="rose_lesson_description">Learn how to draw a simple rose starting with a heart shape.</string>
+    <string name="rose_lesson_1_description">Begin by drawing a heart shape. Below it, draw a single curved line for the stem.</string>
+    <string name="rose_lesson_2_description">Refine the heart into a rosebud shape by making the sides more elongated and adding a small curve at the top opening. Thicken the stem.</string>
+    <string name="rose_lesson_3_description">Draw a small spiral in the upper center of the bud. This creates the look of coiled inner petals.</string>
+    <string name="rose_lesson_4_description">Add details to the stem by drawing two pointed leaves. You can also add small sepals just below the flower.</string>
+    <string name="rose_lesson_5_description">Review your drawing, erase any initial guidelines, and refine the lines to complete your beautiful rose.</string>
+
+    <string name="turtle_lesson_title">Turtle</string>
+    <string name="turtle_lesson_description">Learn to draw a cute turtle by combining simple shapes.</string>
+    <string name="turtle_lesson_1_description">Start with the head. Draw a circle and add two dots for eyes and a simple curved line for a smile.</string>
+    <string name="turtle_lesson_2_description">Next, draw a large semicircle or a dome shape for the turtle's shell.</string>
+    <string name="turtle_lesson_3_description">Add a small, curved tail to one side of the shell.</string>
+    <string name="turtle_lesson_4_description">Draw four small, rounded U-shapes for the feet, placing them along the bottom edge of the shell.</string>
+    <string name="turtle_lesson_5_description">Give the shell some detail by drawing an interconnected pattern of lines on its surface.</string>
+    <string name="turtle_lesson_6_description">Finally, connect the head to the shell and review your drawing. Erase any extra lines to complete your cute turtle!</string>
+
+    <string name="nose_front_lesson_title">How to Draw a Nose</string>
+    <string name="nose_front_lesson_description">Learn to draw a nose from a front-facing perspective.</string>
+    <string name="nose_front_lesson_1_description">Begin by drawing a circle. This will serve as a guideline for the fleshy tip of the nose.</string>
+    <string name="nose_front_lesson_2_description">Next, draw an inverted triangle over the circle. The extended top line will represent the brow line, and the sides will guide the placement of the nose's bridge.</string>
+    <string name="nose_front_lesson_3_description">Inside the bottom of the triangle, sketch two small, dark, curved shapes to represent the nostrils.</string>
+    <string name="nose_front_lesson_4_description">Add two simple curved lines, similar to parentheses, on either side of the nostrils to define the wings of the nose.</string>
+    <string name="nose_front_lesson_5_description">Finally, erase the initial guidelines. Add shading around the wings and under the tip to give the nose dimension and form.</string>
+    <string name="nose_front_lesson_6_description">Review your drawing, refine the lines, and add any final details to complete your nose drawing.</string>
+
+    <string name="nose_lesson_title">How to Draw a Nose</string>
+    <string name="nose_lesson_description">Learn a simple method for drawing a nose from a 3/4 view.</string>
+    <string name="nose_lesson_1_description">Start by lightly sketching an oval. This will serve as the guideline for the ball at the tip of the nose.</string>
+    <string name="nose_lesson_2_description">Add construction lines. Draw a curved line for the bridge of the nose and intersecting lines to map out the placement of the nostrils.</string>
+    <string name="nose_lesson_3_description">Begin to define the final shape. Using your guidelines, draw the detailed curve of the nostril and the wing on one side.</string>
+    <string name="nose_lesson_4_description">Complete the nose by drawing the other nostril and the simple curve that suggests the other side of the nose.</string>
+    <string name="nose_lesson_5_description">Erase your initial guidelines. You can add shading and highlights to give the nose more dimension and a realistic look.</string>
+
+    <string name="hand_lesson_title">How to Draw a Simple Hand</string>
+    <string name="hand_lesson_description">Follow these easy steps to draw a basic hand.</string>
+    <string name="hand_lesson_1_description">Begin by drawing a shape that is slightly wider at the top, like a rounded trapezoid. This will form the palm of the hand.</string>
+    <string name="hand_lesson_2_description">Next, add a triangular shape to the side for the thumb. Sketch out the basic placement of the fingers by connecting them to the palm.</string>
+    <string name="hand_lesson_3_description">Draw the four fingers extending from the top of the palm. Keep them as simple rectangular shapes and add small curved lines at the tips.</string>
+    <string name="hand_lesson_4_description">Add small, short lines on the fingers and back of the hand to indicate where the knuckles and joints would be.</string>
+    <string name="hand_lesson_5_description">Finally, erase your initial guidelines. Refine the lines, especially around the base of the thumb, to create a more natural and finished look.</string>
 </resources>

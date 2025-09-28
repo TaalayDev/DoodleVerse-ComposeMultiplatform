@@ -34,6 +34,7 @@ sealed class Destination(val route: String) {
     data object ShapeRace : Destination(route = Routes.SHAPE_RACE)
     data object Bridge : Destination(route = Routes.BRIDGE)
     data object Animation : Destination(route = Routes.ANIMATION)
+    data object Purchase : Destination(route = Routes.PURCHASE)
 
     object Routes {
         const val HOME = "home"
@@ -45,6 +46,7 @@ sealed class Destination(val route: String) {
         const val SHAPE_RACE = "shape-race"
         const val BRIDGE = "bridge"
         const val ANIMATION = "animation"
+        const val PURCHASE = "purchase"
     }
 }
 

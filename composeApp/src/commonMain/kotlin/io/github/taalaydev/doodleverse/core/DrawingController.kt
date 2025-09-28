@@ -19,6 +19,18 @@ import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.FrameModel
 import io.github.taalaydev.doodleverse.data.models.LayerModel
+import io.github.taalaydev.doodleverse.engine.BitmapCache
+import io.github.taalaydev.doodleverse.engine.BitmapCacheSnapshot
+import io.github.taalaydev.doodleverse.engine.DrawingCanvasState
+import io.github.taalaydev.doodleverse.engine.DrawingState
+import io.github.taalaydev.doodleverse.engine.DrawingStateWithCache
+import io.github.taalaydev.doodleverse.engine.controller.DrawOperations
+import io.github.taalaydev.doodleverse.engine.controller.LayerManager
+import io.github.taalaydev.doodleverse.engine.controller.SelectionManager
+import io.github.taalaydev.doodleverse.engine.controller.SelectionState
+import io.github.taalaydev.doodleverse.engine.controller.SelectionTransform
+import io.github.taalaydev.doodleverse.engine.controller.UndoRedoManager
+import io.github.taalaydev.doodleverse.engine.copy
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,62 +39,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class DrawingState(
-    val currentFrame: FrameModel,
-    val currentLayerIndex: Int = 0,
-    val canvasSize: Size = Size.Zero,
-    val isModified: Boolean = false
-) {
-    val currentLayer: LayerModel
-        get() = currentFrame.layers.getOrNull(currentLayerIndex) ?: currentFrame.layers.first()
-
-    val layers: List<LayerModel>
-        get() = currentFrame.layers
-}
-
-data class BitmapCacheSnapshot(
-    val bitmaps: Map<Long, ImageBitmap>
-) {
-    companion object {
-        fun fromCache(cache: BitmapCache): BitmapCacheSnapshot {
-            return BitmapCacheSnapshot(cache.getAllBitmaps())
-        }
-    }
-
-    fun restoreToCache(cache: BitmapCache) {
-        cache.clear()
-        bitmaps.forEach { (layerId, bitmap) ->
-            cache.put(layerId, bitmap.copy())
-        }
-    }
-}
-
-data class DrawingStateWithCache(
-    val drawingState: DrawingState,
-    val bitmapCache: BitmapCacheSnapshot
-)
-
-data class DrawingCanvasState(
-    val bitmap: ImageBitmap,
-    val canvas: Canvas,
-    val isActive: Boolean = false
-) {
-    fun clear() {
-        canvas.drawRect(
-            left = 0f,
-            top = 0f,
-            right = bitmap.width.toFloat(),
-            bottom = bitmap.height.toFloat(),
-            paint = Paint().apply {
-                color = Color.Transparent
-                blendMode = BlendMode.Clear
-            }
-        )
-    }
-}
 
 class DrawingController(
-    private val operations: DrawingOperations,
+    private val operations: DrawOperations,
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
@@ -134,6 +93,7 @@ class DrawingController(
     val selectionState: SelectionState get() = selectionManager.selectionState
 
     fun getOrCreateDrawingCanvas(): DrawingCanvasState {
+
         val currentState = drawingCanvasState
         return if (currentState != null &&
             currentState.bitmap.width == canvasSize.width.toInt() &&
@@ -168,16 +128,15 @@ class DrawingController(
         return resultBitmap
     }
 
-    fun addDrawingPath(path: DrawingPath, finalBitmap: ImageBitmap) {
+    fun updateLayerBitmap(finalBitmap: ImageBitmap) {
         val currentState = _state.value
         saveStateToHistory(currentState)
 
         bitmapCache.put(currentState.currentLayer.id, finalBitmap)
 
-        val newFrame = layerManager.addPathToLayer(
+        val newFrame = layerManager.updateLayerBitmap(
             currentState.currentFrame,
             currentState.currentLayerIndex,
-            path,
             finalBitmap
         )
 
@@ -204,10 +163,9 @@ class DrawingController(
 
         bitmapCache.put(currentState.currentLayer.id, finalBitmap)
 
-        val newFrame = layerManager.addPathToLayer(
+        val newFrame = layerManager.updateLayerBitmap(
             currentState.currentFrame,
             currentState.currentLayerIndex,
-            drawingPath,
             finalBitmap
         )
 
@@ -240,11 +198,6 @@ class DrawingController(
             canvasSize.width.toInt().coerceAtLeast(1),
             canvasSize.height.toInt().coerceAtLeast(1)
         )
-    }
-
-    fun renderPathToBitmap(path: DrawingPath): ImageBitmap {
-        val existingBitmap = bitmapCache.get(_state.value.currentLayer.id)
-        return DrawRenderer.renderPathToBitmap(path, canvasSize, existingBitmap)
     }
 
     fun addLayer(name: String) {
@@ -411,7 +364,7 @@ class DrawingController(
         _state.value = DrawingState(
             currentFrame = frame,
             currentLayerIndex = (frame.layers.size - 1).coerceAtLeast(0),
-            canvasSize = canvasSize
+            canvasSize = canvasSize.toIntSize()
         )
 
         layerBitmaps.forEach { (layerId, bitmap) ->
@@ -435,19 +388,9 @@ class DrawingController(
 
         bitmapCache.put(currentState.currentLayer.id, modifiedBitmap)
 
-        val fillPath = DrawingPath(
-            brush = BrushData.solid,
-            color = color,
-            size = 1f,
-            path = Path(),
-            startPoint = Offset(x.toFloat(), y.toFloat()),
-            endPoint = Offset(x.toFloat(), y.toFloat())
-        )
-
-        val newFrame = layerManager.addPathToLayer(
+        val newFrame = layerManager.updateLayerBitmap(
             currentState.currentFrame,
             currentState.currentLayerIndex,
-            fillPath,
             modifiedBitmap
         )
 
@@ -519,19 +462,9 @@ class DrawingController(
 
         bitmapCache.put(currentState.currentLayer.id, layerBitmap)
 
-        val selectionPath = DrawingPath(
-            brush = BrushData.solid,
-            color = Color.Black,
-            size = 1f,
-            path = Path(),
-            startPoint = bounds.topLeft,
-            endPoint = bounds.bottomRight
-        )
-
-        val newFrame = layerManager.addPathToLayer(
+        val newFrame = layerManager.updateLayerBitmap(
             currentState.currentFrame,
             currentState.currentLayerIndex,
-            selectionPath,
             layerBitmap
         )
 
@@ -549,4 +482,4 @@ fun DrawingState.withLayerIndex(index: Int): DrawingState =
     copy(currentLayerIndex = index.coerceIn(0, currentFrame.layers.size - 1))
 
 fun DrawingState.withCanvasSize(size: Size): DrawingState =
-    copy(canvasSize = size)
+    copy(canvasSize = size.toIntSize())

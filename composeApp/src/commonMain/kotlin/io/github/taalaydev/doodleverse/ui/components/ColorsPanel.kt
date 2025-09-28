@@ -77,11 +77,6 @@ fun ColorPalettePanel(
     }
 
     Column(modifier = modifier.padding(8.dp)) {
-        Text(
-            text = stringResource(Res.string.color_palette),
-            style = MaterialTheme.typography.titleMedium
-        )
-        Spacer(modifier = Modifier.height(8.dp))
         HsvColorPicker(
             modifier = Modifier
                 .fillMaxWidth()

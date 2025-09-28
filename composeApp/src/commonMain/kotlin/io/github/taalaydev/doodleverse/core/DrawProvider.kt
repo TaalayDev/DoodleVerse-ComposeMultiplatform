@@ -2,8 +2,9 @@ package io.github.taalaydev.doodleverse.core
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import io.github.taalaydev.doodleverse.data.models.LayerModel
+import io.github.taalaydev.doodleverse.engine.controller.SelectionState
+import io.github.taalaydev.doodleverse.engine.controller.SelectionTransform
 
 interface DrawProvider {
     val selectionState: SelectionState

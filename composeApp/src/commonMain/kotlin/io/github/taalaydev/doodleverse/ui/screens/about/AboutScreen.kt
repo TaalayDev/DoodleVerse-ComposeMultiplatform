@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -34,7 +35,10 @@ import doodleverse.composeapp.generated.resources.logo
 import doodleverse.composeapp.generated.resources.version_number
 import doodleverse.composeapp.generated.resources.visit_website
 import io.github.taalaydev.doodleverse.Platform
+import io.github.taalaydev.doodleverse.ui.theme.AnimatedScaffold
 import io.github.taalaydev.doodleverse.ui.theme.DoodleVerseCardDefaults
+import io.github.taalaydev.doodleverse.ui.theme.ThemeManager
+import io.github.taalaydev.doodleverse.ui.theme.rememberThemeManager
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringArrayResource
@@ -45,6 +49,7 @@ import org.jetbrains.compose.resources.stringResource
 fun AboutScreen(
     platform: Platform,
     navController: NavController,
+    themeManager: ThemeManager = rememberThemeManager(),
     modifier: Modifier = Modifier
 ) {
     val animatedProgress = remember { Animatable(0f) }
@@ -59,7 +64,8 @@ fun AboutScreen(
         )
     }
 
-    Scaffold(
+    AnimatedScaffold(
+        themeManager = themeManager,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.about_app_title)) },
@@ -70,7 +76,8 @@ fun AboutScreen(
                             contentDescription = stringResource(Res.string.back)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
         modifier = modifier

@@ -8,12 +8,10 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import io.github.charlietap.cachemap.CacheMap
 import io.github.charlietap.cachemap.cacheMapOf
-import io.github.taalaydev.doodleverse.core.copy
 import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +23,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.Clock
-import kotlin.math.max
 import kotlin.math.min
 
 data class TileCoordinate(val x: Int, val y: Int) {

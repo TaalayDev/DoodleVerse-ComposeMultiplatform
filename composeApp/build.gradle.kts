@@ -67,6 +67,9 @@ kotlin {
             implementation(libs.firebase.crashlyticsKtx)
 
             implementation(project(":database"))
+
+            implementation("com.android.billingclient:billing-ktx:8.0.0")
+            implementation("androidx.lifecycle:lifecycle-process:2.7.0")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -105,6 +108,10 @@ kotlin {
         iosMain.dependencies {
             implementation(project(":database"))
         }
+    }
+
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 }
 
