@@ -57,6 +57,8 @@ class DrawEngineController(
     private var _currentTool: MutableStateFlow<DrawTool> = MutableStateFlow(DrawTool.BrushTool(PenBrush()))
     val currentTool: StateFlow<DrawTool> = _currentTool.asStateFlow()
 
+    var viewport by mutableStateOf(Viewport(scale = 1f, offset = Offset.Zero))
+
     val brushParams = MutableStateFlow(BrushParams(color = Color(0xFF333333), size = initialBrushSize))
 
     val currentBrush: Flow<Brush> = currentTool.map { tool ->
@@ -293,7 +295,7 @@ class DrawEngineController(
         selectionManager.updateSelectionState(state)
     }
 
-    fun endSelection(viewport: Viewport): Rect? {
+    fun endSelection(): Rect? {
         val bounds = selectionManager.endSelection()
         if (bounds != null && bounds.width > 1 && bounds.height > 1) {
             captureSelection(bounds, viewport)
@@ -302,11 +304,13 @@ class DrawEngineController(
     }
 
     fun applySelection() {
-        if (selectionState.isActive && selectionState.transformedBitmap != null) {
+        if (selectionState.isActive && selectionState.originalBitmap != null) {
             saveStateToHistory(_state.value)
             applySelectionToLayer(selectionState)
             selectionManager.clearSelection()
             updateUndoRedoState()
+        } else if (selectionState.isActive) {
+            selectionManager.clearSelection()
         }
     }
 
@@ -314,11 +318,11 @@ class DrawEngineController(
         val currentState = state.value
         val layerBitmap = getLayerBitmap(currentState.currentLayer.id) ?: return
 
-        val imageTopLeft = viewToImage(bounds.topLeft, viewport, imageSize.width, imageSize.height)
-        val imageBottomRight = viewToImage(bounds.bottomRight, viewport, imageSize.width, imageSize.height)
+        val imageTopLeft = viewport.viewToImage(bounds.topLeft, imageSize)
+        val imageBottomRight = viewport.viewToImage(bounds.bottomRight, imageSize)
         val imageBounds = Rect(imageTopLeft, imageBottomRight)
 
-        if (imageBounds.width <= 0 || imageBounds.height <= 0) {
+        if (imageBounds.width <= 1 || imageBounds.height <= 1) {
             clearSelection()
             return
         }
@@ -331,7 +335,7 @@ class DrawEngineController(
             srcOffset = imageBounds.topLeft.toIntOffset(),
             srcSize = imageBounds.size.toIntSize(),
             dstOffset = IntOffset.Zero,
-            dstSize = bounds.size.toIntSize(),
+            dstSize = imageBounds.size.toIntSize(),
             paint = Paint()
         )
 
@@ -340,16 +344,52 @@ class DrawEngineController(
             imageBounds,
             Paint().apply { blendMode = BlendMode.Clear }
         )
+        updateLayerBitmap(layerBitmap) // Update layer with cleared section
 
         updateSelectionState(
             SelectionState(
                 bounds = bounds,
                 imageBounds = imageBounds,
                 originalBitmap = selectionBitmap,
-                transformedBitmap = selectionBitmap,
                 isActive = true
             )
         )
+    }
+
+    private fun applySelectionToLayer(selectionState: SelectionState) {
+        val currentState = _state.value
+        val imageBounds = selectionState.imageBounds
+        val originalBitmap = selectionState.originalBitmap ?: return
+
+        val layerBitmap = getOrCreateLayerBitmap(currentState.currentLayer.id).copy()
+        val canvas = Canvas(layerBitmap)
+
+        canvas.withSave {
+            // Convert view-space transformations to image-space
+            val imageOffset = selectionState.offset / viewport.scale
+            val imageCenter = imageBounds.center
+
+            // Translate canvas to the final position for the top-left corner
+            canvas.translate(imageBounds.topLeft.x + imageOffset.x, imageBounds.topLeft.y + imageOffset.y)
+
+            // Translate to the bitmap's center, scale/rotate, and translate back
+            val bitmapCenter = Offset(originalBitmap.width / 2f, originalBitmap.height / 2f)
+            canvas.translate(bitmapCenter.x, bitmapCenter.y)
+            canvas.rotate(selectionState.rotation)
+            canvas.scale(selectionState.scale)
+            canvas.translate(-bitmapCenter.x, -bitmapCenter.y)
+
+            // Draw the original bitmap at the new origin (0,0) of the transformed canvas
+            canvas.drawImage(originalBitmap, Offset.Zero, Paint())
+        }
+
+        updateLayerBitmap(layerBitmap)
+    }
+
+    fun getImageBoundsInView(bounds: Rect): Rect {
+        val topLeft = bounds.topLeft * viewport.scale + viewport.offset
+        val bottomRight = bounds.bottomRight * viewport.scale + viewport.offset
+        return Rect(topLeft, bottomRight)
     }
 
     fun updateSelectionTransform(pan: Offset) {
@@ -358,6 +398,14 @@ class DrawEngineController(
 
     fun clearSelection() {
         selectionManager.clearSelection()
+    }
+
+    fun startTransform(transform: SelectionTransform) {
+        selectionManager.startTransform(transform)
+    }
+
+    fun updateTransform(pan: Offset) {
+        selectionManager.updateTransform(pan)
     }
 
     fun loadFrame(frame: FrameModel, layerBitmaps: Map<Long, ImageBitmap>) {
@@ -402,14 +450,6 @@ class DrawEngineController(
         updateUndoRedoState()
     }
 
-    fun startTransform(transform: SelectionTransform) {
-        selectionManager.startTransform(transform)
-    }
-
-    fun updateTransform(pan: Offset) {
-        selectionManager.updateTransform(pan)
-    }
-
     fun cleanup() {
         bitmapCache.clear()
         undoRedoManager.clear()
@@ -438,40 +478,6 @@ class DrawEngineController(
     private fun updateUndoRedoState() {
         _canUndo.value = undoRedoManager.canUndo
         _canRedo.value = undoRedoManager.canRedo
-    }
-
-    private fun applySelectionToLayer(selectionState: SelectionState) {
-        val currentState = _state.value
-        val bounds = selectionState.imageBounds
-        val bitmap = selectionState.transformedBitmap ?: return
-
-        val layerBitmap = bitmapCache.get(currentState.currentLayer.id)?.copy()
-            ?: createEmptyBitmap()
-
-        val canvas = Canvas(layerBitmap)
-
-        canvas.withSave {
-            val offset = selectionState.offset
-            canvas.translate(offset.x + bounds.center.x, offset.y + bounds.center.y)
-            canvas.rotate(selectionState.rotation)
-            canvas.scale(selectionState.scale)
-            canvas.translate(-bounds.center.x, -bounds.center.y)
-
-            canvas.drawImage(bitmap, bounds.topLeft, Paint())
-        }
-
-        bitmapCache.put(currentState.currentLayer.id, layerBitmap)
-
-        val newFrame = layerManager.updateLayerBitmap(
-            currentState.currentFrame,
-            currentState.currentLayerIndex,
-            layerBitmap
-        )
-
-        _state.value = currentState.copy(
-            currentFrame = newFrame,
-            isModified = true
-        )
     }
 
     fun updateLayerBitmap(finalBitmap: ImageBitmap) {

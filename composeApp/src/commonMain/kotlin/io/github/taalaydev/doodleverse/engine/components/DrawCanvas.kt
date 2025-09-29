@@ -37,14 +37,16 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.taalaydev.doodleverse.core.toIntOffset
+import io.github.taalaydev.doodleverse.core.toIntSize
 import io.github.taalaydev.doodleverse.data.models.LayerModel
-import io.github.taalaydev.doodleverse.engine.CanvasDrawState
+import io.github.taalaydev.doodleverse.engine.controller.CanvasDrawState
 import io.github.taalaydev.doodleverse.engine.DrawTool
-import io.github.taalaydev.doodleverse.engine.DrawingBitmapState
+import io.github.taalaydev.doodleverse.engine.controller.DrawingBitmapState
 import io.github.taalaydev.doodleverse.engine.Viewport
 import io.github.taalaydev.doodleverse.engine.brush.PenBrush
 import io.github.taalaydev.doodleverse.engine.controller.DrawEngineController
 import io.github.taalaydev.doodleverse.engine.controller.VelocityTracker
+import io.github.taalaydev.doodleverse.engine.controller.getTransformedMatrix
 import io.github.taalaydev.doodleverse.engine.copy
 import io.github.taalaydev.doodleverse.engine.floodFillFast
 import io.github.taalaydev.doodleverse.engine.gesture.GestureEvent
@@ -154,6 +156,10 @@ fun DrawCanvas(
         }
     }
 
+    LaunchedEffect(viewport) {
+        controller.viewport = viewport
+    }
+
     Box(modifier = modifier) {
         Canvas(
             modifier = Modifier
@@ -205,7 +211,7 @@ fun DrawCanvas(
                                     controller.updateSelection(new)
                                 },
                                 onEnd = { _, _ ->
-                                    controller.endSelection(viewport)
+                                    controller.endSelection()
                                 }
                             )
                         }
@@ -236,12 +242,7 @@ fun DrawCanvas(
                         tool.isShape -> {
                             handleDrawing(
                                 onStart = { offset, pressure ->
-                                    val posImg = viewToImage(
-                                        offset,
-                                        viewport,
-                                        imageSize.width,
-                                        imageSize.height
-                                    )
+                                    val posImg = viewport.viewToImage(offset, imageSize)
 
                                     shapeTool.handleStart(GestureEvent(
                                         position = posImg,
@@ -253,12 +254,7 @@ fun DrawCanvas(
                                     canvasDrawState = CanvasDrawState.Start
                                 },
                                 onDrag = { _, new, pressure ->
-                                    val posImg = viewToImage(
-                                        new,
-                                        viewport,
-                                        imageSize.width,
-                                        imageSize.height
-                                    )
+                                    val posImg = viewport.viewToImage(new, imageSize)
 
                                     shapeTool.handleMove(GestureEvent(
                                         position = posImg,
@@ -270,12 +266,7 @@ fun DrawCanvas(
                                     canvasDrawState = CanvasDrawState.Drawing
                                 },
                                 onEnd = { point, pressure ->
-                                    val endImg = viewToImage(
-                                        point,
-                                        viewport,
-                                        imageSize.width,
-                                        imageSize.height
-                                    )
+                                    val endImg = viewport.viewToImage(point, imageSize)
 
                                     shapeTool.handleEnd(GestureEvent(
                                         position = endImg,
@@ -356,13 +347,7 @@ fun DrawCanvas(
                                         Clock.System.now().toEpochMilliseconds()
                                     )
 
-                                    val posImg = viewToImage(
-                                        offset,
-                                        viewport,
-                                        imageSize.width,
-                                        imageSize.height
-                                    )
-
+                                    val posImg = viewport.viewToImage(offset, imageSize)
                                     session = brush.startSession(targetCanvas, brushParams)
                                     session?.start(GestureEvent(
                                         position = posImg,
@@ -381,12 +366,7 @@ fun DrawCanvas(
                                     val dynamicDistance = velocityTracker.calculateDynamicDistance()
                                     if (lastPoint != null && lastPoint!!.distanceTo(new) < dynamicDistance) return@handleDrawing
 
-                                    val posImg = viewToImage(
-                                        new,
-                                        viewport,
-                                        imageSize.width,
-                                        imageSize.height
-                                    )
+                                    val posImg = viewport.viewToImage(new, imageSize)
 
                                     session?.move(GestureEvent(
                                         position = posImg,
@@ -400,12 +380,7 @@ fun DrawCanvas(
                                     canvasDrawState = CanvasDrawState.Drawing
                                 },
                                 onEnd = { point, pressure ->
-                                    val endImg = viewToImage(
-                                        lastPoint ?: point,
-                                        viewport,
-                                        imageSize.width,
-                                        imageSize.height
-                                    )
+                                    val endImg = viewport.viewToImage(lastPoint ?: point, imageSize)
 
                                     session?.end(GestureEvent(
                                         position = endImg,
@@ -485,10 +460,7 @@ fun DrawCanvas(
                 drawScaledImage(shapeTool.getPreviewImage(), viewport)
             }
 
-            renderSelectionOverlay(
-                controller = controller,
-                viewport = viewport,
-            )
+            renderSelectionOverlay(controller = controller)
 
             referenceImage?.let { refImage ->
                 renderReferenceImage(
@@ -605,38 +577,34 @@ private fun DrawScope.drawLayerBitmap(
 
 private fun DrawScope.renderSelectionOverlay(
     controller: DrawEngineController,
-    viewport: Viewport,
 ) {
-    if (controller.selectionState.isActive) {
-        val bounds = controller.selectionState.bounds
-        val transformedBounds = controller.selectionState.getTransformedBounds()
+    val selectionState = controller.selectionState
+    if (!selectionState.isActive) return
 
-        drawContext.canvas.withSave {
-            val offset = controller.selectionState.offset
-            val center = transformedBounds.center
+    val originalBitmap = selectionState.originalBitmap
+    val bounds = selectionState.bounds // Original view-space bounds
 
-            translate(offset.x + center.x, offset.y + center.y) {
-                rotate(controller.selectionState.rotation) {
-                    scale(controller.selectionState.scale, controller.selectionState.scale) {}
-                    translate(-center.x, -center.y) {}
-                }
-            }
+    drawContext.canvas.withSave {
+        val matrix = selectionState.getTransformedMatrix()
+        drawContext.transform.transform(matrix)
 
-            drawRect(
-                topLeft = transformedBounds.topLeft,
-                size = transformedBounds.size,
-                color = Color.Blue.copy(alpha = 0.3f),
-                style = Stroke(width = 2.dp.toPx())
+        if (originalBitmap != null) {
+            drawImage(
+                image = originalBitmap,
+                dstOffset = bounds.topLeft.toIntOffset(),
+                dstSize = bounds.size.toIntSize(),
+                alpha = 0.8f // make it slightly transparent during transform
             )
-
-            controller.selectionState.transformedBitmap?.let { bitmap ->
-                drawImage(
-                    image = bitmap,
-                    topLeft = transformedBounds.topLeft,
-                    alpha = 0.8f
-                )
-            }
         }
+
+        // Draw the selection border, adjusting stroke width for scale
+        val strokeWidth = 1.dp.toPx() / selectionState.scale.coerceAtLeast(0.1f)
+        drawRect(
+            color = Color.Blue.copy(alpha = 0.7f),
+            topLeft = bounds.topLeft,
+            size = bounds.size,
+            style = Stroke(strokeWidth)
+        )
     }
 }
 

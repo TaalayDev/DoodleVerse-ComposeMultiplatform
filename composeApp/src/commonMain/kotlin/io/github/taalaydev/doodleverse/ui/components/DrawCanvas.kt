@@ -47,9 +47,9 @@ import io.github.taalaydev.doodleverse.data.models.PointModel
 import io.github.taalaydev.doodleverse.getColorFromBitmap
 import io.github.taalaydev.doodleverse.getPlatformType
 import org.jetbrains.compose.resources.imageResource
-import io.github.taalaydev.doodleverse.engine.CanvasDrawState
-import io.github.taalaydev.doodleverse.engine.CanvasDrawingState
-import io.github.taalaydev.doodleverse.engine.DrawingBitmapState
+import io.github.taalaydev.doodleverse.engine.controller.CanvasDrawState
+import io.github.taalaydev.doodleverse.engine.controller.CanvasDrawingState
+import io.github.taalaydev.doodleverse.engine.controller.DrawingBitmapState
 import io.github.taalaydev.doodleverse.engine.components.SelectionOverlay
 import io.github.taalaydev.doodleverse.engine.controller.VelocityTracker
 import io.github.taalaydev.doodleverse.engine.controller.SelectionState
@@ -703,19 +703,5 @@ private fun DrawScope.renderEyedropperFeedback(
     )
 }
 
-private fun SelectionState.getTransformedBounds(): androidx.compose.ui.geometry.Rect {
-    val matrix = androidx.compose.ui.graphics.Matrix()
-    val center = bounds.center
 
-    matrix.translate(offset.x + center.x, offset.y + center.y)
-    matrix.rotateZ(rotation)
-    matrix.scale(scale, scale)
-    matrix.translate(-center.x, -center.y)
-
-    val path = Path().apply {
-        addRect(bounds)
-        transform(matrix)
-    }
-
-    return path.getBounds()
-}
+   

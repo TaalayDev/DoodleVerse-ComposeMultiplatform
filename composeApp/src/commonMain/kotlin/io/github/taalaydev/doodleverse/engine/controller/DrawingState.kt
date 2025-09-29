@@ -1,4 +1,4 @@
-package io.github.taalaydev.doodleverse.engine
+package io.github.taalaydev.doodleverse.engine.controller
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas

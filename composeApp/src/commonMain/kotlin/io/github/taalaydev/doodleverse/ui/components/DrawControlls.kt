@@ -554,21 +554,21 @@ fun DrawControls(
                     }
                 }
 
-//                IconButton(
-//                    onClick = { onToolSelected(DrawTool.Selection) },
-//                    modifier = Modifier
-//                        .clip(RoundedCornerShape(6.dp))
-//                        .background(if (tool.isSelection) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
-//                        .size(36.dp)
-//                ) {
-//                    Icon(
-//                        Lucide.BoxSelect,
-//                        contentDescription = stringResource(Res.string.selection_tool),
-//                        tint = if (tool.isSelection) MaterialTheme.colorScheme.primary
-//                        else MaterialTheme.colorScheme.onSurface,
-//                        modifier = Modifier.size(20.dp)
-//                    )
-//                }
+                IconButton(
+                    onClick = { onToolSelected(DrawTool.Selection) },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (tool.isSelection) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        Lucide.BoxSelect,
+                        contentDescription = stringResource(Res.string.selection_tool),
+                        tint = if (tool.isSelection) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

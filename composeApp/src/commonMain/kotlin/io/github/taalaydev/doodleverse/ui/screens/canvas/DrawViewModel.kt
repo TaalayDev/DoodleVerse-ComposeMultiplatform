@@ -214,8 +214,8 @@ class DrawViewModel(
         drawController.updateSelectionState(state)
     }
 
-    fun endSelection(viewport: Viewport) {
-        val bounds = drawController.endSelection(viewport)
+    fun endSelection() {
+        val bounds = drawController.endSelection()
         if (bounds != null && bounds.width > 1 && bounds.height > 1) {
             captureSelection(bounds)
         }
@@ -600,11 +600,13 @@ class DrawViewModel(
 
             delay(100)
 
+            val bounds = Rect(Offset.Zero, Size(width.toFloat(), height.toFloat()))
+            val imageBounds = drawController.getImageBoundsInView(bounds)
             drawController.updateSelectionState(
                 SelectionState(
-                    bounds = Rect(Offset.Zero, Size(width.toFloat(), height.toFloat())),
+                    bounds = bounds,
+                    imageBounds = bounds,
                     originalBitmap = bitmap,
-                    transformedBitmap = bitmap,
                     isActive = true
                 )
             )

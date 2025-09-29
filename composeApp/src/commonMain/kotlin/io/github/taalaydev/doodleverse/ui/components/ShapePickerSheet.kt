@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -36,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import io.github.taalaydev.doodleverse.data.models.BrushData
 import io.github.taalaydev.doodleverse.data.models.Shape
+import io.github.taalaydev.doodleverse.engine.components.ShapePreview
 import io.github.taalaydev.doodleverse.engine.tool.shape.ShapeConstraints
 import io.github.taalaydev.doodleverse.engine.tool.shape.ShapeType
 
@@ -153,6 +155,18 @@ private fun ShapeItem(
             .clickable(onClick = onClick)
             .padding(12.dp)
     ) {
+        ShapePreview(
+            shape = shape,
+            modifier = Modifier
+                .width(56.dp)
+                .height(56.dp),
+            backgroundColor = MaterialTheme.colorScheme.surface,
+            strokeColor = if (isSelected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
