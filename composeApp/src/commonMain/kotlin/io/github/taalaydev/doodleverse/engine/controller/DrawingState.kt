@@ -5,7 +5,6 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.util.lerp
-import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.engine.util.getDistance
 
 enum class CanvasDrawState {
@@ -66,19 +65,9 @@ data class CanvasDrawingState(
 data class DrawingBitmapState(
     val bitmap: ImageBitmap,
     val canvas: Canvas,
-    val currentPath: DrawingPath? = null,
     val drawingState: CanvasDrawingState = CanvasDrawingState(),
     val lastPoint: Offset? = null
 ) {
-    fun updatePath(newPath: DrawingPath): DrawingBitmapState {
-        return copy(currentPath = newPath)
-    }
-
-    fun addPoint(point: Offset): DrawingBitmapState {
-        drawingState.addPoint(point)
-        return copy(lastPoint = point)
-    }
-
     fun reset() {
         drawingState.reset()
     }

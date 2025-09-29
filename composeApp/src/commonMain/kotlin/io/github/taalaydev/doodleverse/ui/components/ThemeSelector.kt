@@ -445,7 +445,7 @@ fun ThemeSelectorSheet(
         val premiumStatus by purchaseViewModel.premiumStatus.collectAsStateWithLifecycle()
         val uiState by purchaseViewModel.uiState.collectAsStateWithLifecycle()
         var showPremiumDialog by remember { mutableStateOf(false) }
-        val isPremium = !premiumStatus.isPremium
+        val isPremium = premiumStatus.isPremium
 
         if (showPremiumDialog) {
             PremiumUpgradeDialog(

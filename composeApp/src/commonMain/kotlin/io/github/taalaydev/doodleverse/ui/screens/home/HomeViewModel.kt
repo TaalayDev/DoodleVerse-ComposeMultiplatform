@@ -62,7 +62,6 @@ class HomeViewModel(
             isLocked = false,
             isBackground = false,
             opacity = 1.0,
-            paths = emptyList(),
         )
 
         val projectId = repository.insertProject(project.toEntity())

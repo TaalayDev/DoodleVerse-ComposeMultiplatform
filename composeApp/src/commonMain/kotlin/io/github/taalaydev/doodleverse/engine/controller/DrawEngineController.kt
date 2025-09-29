@@ -20,7 +20,6 @@ import io.github.taalaydev.doodleverse.core.toIntOffset
 import io.github.taalaydev.doodleverse.core.toIntSize
 import io.github.taalaydev.doodleverse.data.models.FrameModel
 import io.github.taalaydev.doodleverse.data.models.LayerModel
-import io.github.taalaydev.doodleverse.data.models.ToolsData
 import io.github.taalaydev.doodleverse.engine.BitmapCache
 import io.github.taalaydev.doodleverse.engine.BitmapCacheSnapshot
 import io.github.taalaydev.doodleverse.engine.DrawTool
@@ -31,7 +30,6 @@ import io.github.taalaydev.doodleverse.engine.Viewport
 import io.github.taalaydev.doodleverse.engine.tool.Brush
 import io.github.taalaydev.doodleverse.engine.tool.BrushParams
 import io.github.taalaydev.doodleverse.engine.brush.PenBrush
-import io.github.taalaydev.doodleverse.engine.tool.ShapeBrush
 import io.github.taalaydev.doodleverse.engine.copy
 import io.github.taalaydev.doodleverse.engine.viewToImage
 import kotlinx.coroutines.CoroutineDispatcher
@@ -51,9 +49,6 @@ class DrawEngineController(
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
-    private val _tools = MutableStateFlow<ToolsData?>(null)
-    val tools: StateFlow<ToolsData?> = _tools.asStateFlow()
-
     private var _currentTool: MutableStateFlow<DrawTool> = MutableStateFlow(DrawTool.BrushTool(PenBrush()))
     val currentTool: StateFlow<DrawTool> = _currentTool.asStateFlow()
 
@@ -95,7 +90,6 @@ class DrawEngineController(
                         id = 1L,
                         frameId = 1L,
                         name = "Layer 1",
-                        paths = emptyList()
                     )
                 )
             )
@@ -160,7 +154,6 @@ class DrawEngineController(
                 id = 0,
                 frameId = currentState.currentFrame.id,
                 name = name,
-                paths = emptyList()
             )
 
             val layerId = operations.addLayer(newLayer)

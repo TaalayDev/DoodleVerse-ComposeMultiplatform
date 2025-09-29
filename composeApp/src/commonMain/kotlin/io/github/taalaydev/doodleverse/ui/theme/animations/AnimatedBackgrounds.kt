@@ -84,9 +84,9 @@ private fun CosmicBackground(
     val meteorShower by if (animate) {
         infiniteTransition.animateFloat(
             initialValue = 0f,
-            targetValue = 1f,
+            targetValue = 10f,
             animationSpec = infiniteRepeatable(
-                animation = tween(8000 / speedMultiplier.toInt(), easing = FastOutSlowInEasing),
+                animation = tween(18000 / speedMultiplier.toInt(), easing = FastOutSlowInEasing),
                 repeatMode = RepeatMode.Restart
             ),
             label = "meteor_shower"

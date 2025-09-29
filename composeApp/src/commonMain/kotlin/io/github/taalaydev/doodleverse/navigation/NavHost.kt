@@ -12,12 +12,10 @@ import doodleverse.composeapp.generated.resources.Res
 import doodleverse.composeapp.generated.resources.heart
 import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.core.lessons
-import io.github.taalaydev.doodleverse.features.animation.AnimationStudioScreen
 import io.github.taalaydev.doodleverse.purchase.PurchaseViewModel
 import io.github.taalaydev.doodleverse.ui.screens.about.AboutScreen
 import io.github.taalaydev.doodleverse.ui.screens.bridge.BridgeGame
 import io.github.taalaydev.doodleverse.ui.screens.canvas.DrawingCanvasScreen
-import io.github.taalaydev.doodleverse.ui.screens.draw.DrawingScreen
 import io.github.taalaydev.doodleverse.ui.screens.home.HomeScreen
 import io.github.taalaydev.doodleverse.ui.screens.lesson.LessonDetailScreen
 import io.github.taalaydev.doodleverse.ui.screens.lesson.LessonsScreen
@@ -106,13 +104,6 @@ fun MainNavHost(
         }
         composable(Destination.Bridge.route) {
             BridgeGame(referenceImageRes = Res.drawable.heart)
-        }
-        composable(Destination.Animation.route) {
-            AnimationStudioScreen(
-                navController = navController,
-                platform = platform,
-                onClose = { navController.popBackStack() }
-            )
         }
         composable(Destination.Purchase.route) {
             PurchaseScreen(purchaseViewModel, navController)

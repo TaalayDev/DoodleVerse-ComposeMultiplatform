@@ -84,7 +84,6 @@ import doodleverse.composeapp.generated.resources.save
 import doodleverse.composeapp.generated.resources.toggle_visibility
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.engine.DrawingState
-import io.github.taalaydev.doodleverse.ui.screens.draw.DrawViewModel
 import kotlinx.coroutines.flow.StateFlow
 import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableItem
@@ -109,35 +108,6 @@ fun LayersPanel(
         isLayerEmpty = { layerId -> drawController.isLayerEmpty(layerId) },
         selectLayer = { layerIndex -> drawController.selectLayer(layerIndex) },
         deleteLayer = { layerIndex -> drawController.deleteLayer(layerIndex) },
-        duplicateLayer = { layerIndex -> drawViewModel.duplicateLayer(layerIndex) },
-        updateLayerName = { layerIndex, newName ->
-            drawViewModel.updateLayerName(layerIndex, newName)
-        },
-        clearLayer = { layerIndex -> drawViewModel.clearLayer(layerIndex) },
-        layerVisibilityChanged = { layerIndex, isVisible ->
-            drawViewModel.layerVisibilityChanged(layerIndex, isVisible)
-        },
-        mergeLayerDown = { layerIndex -> drawViewModel.mergeLayerDown(layerIndex) },
-        modifier = modifier
-    )
-}
-
-@Composable
-fun LayersPanel(
-    drawViewModel: DrawViewModel,
-    modifier: Modifier = Modifier,
-) {
-    LayersPanel(
-        state = drawViewModel.drawingController.state,
-        addLayer = { drawViewModel.addLayer() },
-        reorderLayers = { from, to -> drawViewModel.reorderLayers(from, to) },
-        changeLayerOpacity = { layerIndex, opacity ->
-            drawViewModel.changeLayerOpacity(layerIndex, opacity)
-        },
-        getLayerBitmap = { layerId -> drawViewModel.drawingController.getLayerBitmap(layerId) },
-        isLayerEmpty = { layerId -> drawViewModel.drawingController.isLayerEmpty(layerId) },
-        selectLayer = { layerIndex -> drawViewModel.selectLayer(layerIndex) },
-        deleteLayer = { layerIndex -> drawViewModel.deleteLayer(layerIndex) },
         duplicateLayer = { layerIndex -> drawViewModel.duplicateLayer(layerIndex) },
         updateLayerName = { layerIndex, newName ->
             drawViewModel.updateLayerName(layerIndex, newName)

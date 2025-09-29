@@ -98,7 +98,7 @@ private fun PurchaseScreenContent(
                 },
                 title = {
                     Text(
-                        "DoodleVerse Premium",
+                        "Premium",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )

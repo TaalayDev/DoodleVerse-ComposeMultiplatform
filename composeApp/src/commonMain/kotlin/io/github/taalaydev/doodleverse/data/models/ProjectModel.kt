@@ -56,7 +56,6 @@ data class LayerModel(
     val isLocked: Boolean = false,
     val isBackground: Boolean = false,
     val opacity: Double = 1.0,
-    val paths: List<DrawingPath> = emptyList(),
 )
 
 fun ProjectModel.toEntity(): ProjectData {
@@ -156,43 +155,5 @@ fun LayerData.toModel(): LayerModel {
         isLocked = isLocked,
         isBackground = isBackground,
         opacity = opacity,
-        paths = emptyList(),
     )
-}
-
-fun DrawingPathData.toModel(): DrawingPath {
-    return DrawingPath(
-        color = Color(color),
-        size = strokeWidth,
-        path = DrawingPath.pathFromOffsets(points.map { it.toModel() }),
-        brush = BrushData.all().first { it.id == brushId },
-        points = points.map { it.toModel() }.toMutableList(),
-        startPoint = Offset(startPointX, startPointY),
-        endPoint = Offset(endPointX, endPointY),
-        randoms = randomsList().toMutableMap(),
-    )
-}
-
-fun DrawingPath.toEntity(): DrawingPathData {
-    return DrawingPathData(
-        id = 0,
-        layerId = 0,
-        brushId = brush.id,
-        color = color.toArgb(),
-        strokeWidth = size,
-        startPointX = startPoint.x,
-        startPointY = startPoint.y,
-        endPointX = endPoint.x,
-        endPointY = endPoint.y,
-        points = points.map { it.toEntity() },
-        randoms = randomsString(),
-    )
-}
-
-fun PointData.toModel(): PointModel {
-    return PointModel(x, y)
-}
-
-fun PointModel.toEntity(): PointData {
-    return PointData(0L,0, x, y)
 }

@@ -35,39 +35,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import io.github.taalaydev.doodleverse.data.models.BrushData
-import io.github.taalaydev.doodleverse.data.models.Shape
 import io.github.taalaydev.doodleverse.engine.components.ShapePreview
 import io.github.taalaydev.doodleverse.engine.tool.shape.ShapeConstraints
 import io.github.taalaydev.doodleverse.engine.tool.shape.ShapeType
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ShapePickerSheet(
-    bottomSheetState: SheetState,
-    brush: BrushData? = null,
-    onSelected: (BrushData) -> Unit = {},
-    onDismiss: () -> Unit,
-) {
-    val shapes = remember { Shape.all }
-
-    ModalBottomSheet(
-        onDismissRequest = { onDismiss() },
-        sheetState = bottomSheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surface,
-        ) {
-            BrushGrid(
-                brushes = shapes,
-                selectedBrush = brush,
-                onSelected = onSelected,
-            )
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

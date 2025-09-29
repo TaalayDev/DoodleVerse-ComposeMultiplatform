@@ -17,7 +17,6 @@ class LayerManager(
             id = generateLayerId(),
             frameId = frame.id,
             name = name,
-            paths = emptyList()
         )
 
         return frame.copy(layers = frame.layers + newLayer)

@@ -304,7 +304,7 @@ private fun SKProduct.toProduct(): Product {
         id = productIdentifier,
         title = localizedTitle,
         description = localizedDescription,
-        price = formatter.stringFromNumber(price) ?: "$${price}",
+        price = formatter.stringFromNumber(price) ?: "${price}",
         priceAmountMicros = (price.doubleValue * 1_000_000).toLong(),
         priceCurrencyCode = priceLocale.currencyCode ?: "USD",
         type = ProductType.NON_CONSUMABLE // You might want to determine this based on your product configuration

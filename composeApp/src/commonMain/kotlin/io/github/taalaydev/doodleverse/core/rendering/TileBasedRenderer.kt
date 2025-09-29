@@ -12,7 +12,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import io.github.charlietap.cachemap.CacheMap
 import io.github.charlietap.cachemap.cacheMapOf
-import io.github.taalaydev.doodleverse.data.models.DrawingPath
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -192,14 +191,6 @@ class TileRenderer(
     }
 
     /**
-     * Mark tiles dirty based on drawing path bounds
-     */
-    fun markPathDirty(layerId: Long, path: DrawingPath) {
-        val pathBounds = calculatePathBounds(path)
-        markAreaDirty(layerId, pathBounds)
-    }
-
-    /**
      * Mark tiles dirty for a specific area
      */
     fun markAreaDirty(layerId: Long, bounds: Rect) {
@@ -217,17 +208,6 @@ class TileRenderer(
             compositeTiles[coordinate]?.markDirty()
             dirtyCompositeTiles.add(coordinate)
         }
-    }
-
-    private fun calculatePathBounds(path: DrawingPath): Rect {
-        val pathBounds = path.path.getBounds()
-        val strokeWidth = path.size
-        return Rect(
-            left = pathBounds.left - strokeWidth,
-            top = pathBounds.top - strokeWidth,
-            right = pathBounds.right + strokeWidth,
-            bottom = pathBounds.bottom + strokeWidth
-        )
     }
 
     private fun getTilesInBounds(bounds: Rect): List<TileCoordinate> {

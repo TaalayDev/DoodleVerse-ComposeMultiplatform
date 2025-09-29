@@ -17,12 +17,10 @@ import io.github.taalaydev.doodleverse.core.toIntOffset
 import io.github.taalaydev.doodleverse.core.toIntSize
 import io.github.taalaydev.doodleverse.data.models.LayerModel
 import io.github.taalaydev.doodleverse.data.models.ProjectModel
-import io.github.taalaydev.doodleverse.data.models.ToolsData
 import io.github.taalaydev.doodleverse.data.models.toEntity
 import io.github.taalaydev.doodleverse.data.models.toModel
 import io.github.taalaydev.doodleverse.engine.DrawTool
 import io.github.taalaydev.doodleverse.engine.DrawingState
-import io.github.taalaydev.doodleverse.engine.Viewport
 import io.github.taalaydev.doodleverse.engine.tool.Brush
 import io.github.taalaydev.doodleverse.engine.controller.DrawEngineController
 import io.github.taalaydev.doodleverse.engine.controller.DrawOperations
@@ -38,6 +36,7 @@ import io.github.vinceglb.filekit.core.FileKit
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,8 +52,6 @@ class DrawViewModel(
     private val _project = MutableStateFlow<ProjectModel?>(null)
     val project: StateFlow<ProjectModel?> = _project.asStateFlow()
 
-    private val _tools = MutableStateFlow<ToolsData?>(null)
-    val tools: StateFlow<ToolsData?> = _tools.asStateFlow()
 
     private var _projectSize = mutableStateOf(IntSize(1080, 1080))
 
@@ -70,12 +67,15 @@ class DrawViewModel(
         override suspend fun updateLayer(layer: LayerModel, bitmap: ImageBitmap?) {
             if (bitmap == null) return
 
-            val layerEntity = layer.toEntity().copy(
-                pixels = imageBitmapByteArray(bitmap, ImageFormat.PNG),
-                width = bitmap.width,
-                height = bitmap.height
-            )
-            projectRepo.updateLayer(layerEntity)
+            viewModelScope.launch(dispatcher) {
+                val layerEntity = layer.toEntity().copy(
+                    pixels = imageBitmapByteArray(bitmap, ImageFormat.PNG),
+                    width = bitmap.width,
+                    height = bitmap.height
+                )
+                projectRepo.updateLayer(layerEntity)
+                // saveProject()
+            }
         }
 
         override suspend fun saveProject() {
@@ -92,17 +92,11 @@ class DrawViewModel(
         )
     }
 
-    val currentTool: StateFlow<DrawTool> get() = drawController.currentTool
-    val currentBrush: Flow<Brush> get() = drawController.currentBrush
-
     val state: StateFlow<DrawingState> get() = drawController.state
     val canUndo: StateFlow<Boolean> get() = drawController.canUndo
     val canRedo: StateFlow<Boolean> get() = drawController.canRedo
 
     val selectionState: SelectionState get() = drawController.selectionState
-
-    // Movement state
-    private var moveStartPoint = Offset.Zero
 
     fun loadProject(id: Long) {
         viewModelScope.launch {
@@ -520,7 +514,7 @@ class DrawViewModel(
         viewModelScope.launch {
             try {
                 val currentLayer = currentState.layers[index]
-                val clearedLayer = currentLayer.copy(paths = emptyList())
+                val clearedLayer = currentLayer.copy()
 
                 val emptyBitmap = ImageBitmap(
                     drawController.imageSize.width,

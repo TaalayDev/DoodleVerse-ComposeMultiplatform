@@ -1,12 +1,10 @@
 package io.github.taalaydev.doodleverse.ui.screens.canvas
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,8 +14,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -36,6 +32,7 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,14 +41,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.composables.icons.lucide.Album
 import com.composables.icons.lucide.ArrowLeft
 import com.composables.icons.lucide.ImagePlus
 import com.composables.icons.lucide.Lucide
@@ -62,37 +56,24 @@ import doodleverse.composeapp.generated.resources.Res
 import doodleverse.composeapp.generated.resources.back
 import doodleverse.composeapp.generated.resources.import_image
 import doodleverse.composeapp.generated.resources.layers
-import doodleverse.composeapp.generated.resources.paper_texture
-import doodleverse.composeapp.generated.resources.paper_texture_1
 import doodleverse.composeapp.generated.resources.redo
 import doodleverse.composeapp.generated.resources.save
 import doodleverse.composeapp.generated.resources.save_image
-import doodleverse.composeapp.generated.resources.stamp_pencil
-import doodleverse.composeapp.generated.resources.texture_1
-import doodleverse.composeapp.generated.resources.texture_2
-import doodleverse.composeapp.generated.resources.texture_asfalt_dark
-import doodleverse.composeapp.generated.resources.texture_asfalt_light
-import doodleverse.composeapp.generated.resources.texture_basketball
-import doodleverse.composeapp.generated.resources.texture_fabric_light
 import doodleverse.composeapp.generated.resources.undo
 import io.github.taalaydev.doodleverse.Platform
 import io.github.taalaydev.doodleverse.engine.DragState
 import io.github.taalaydev.doodleverse.engine.DrawTool
-import io.github.taalaydev.doodleverse.engine.tool.Brush
 import io.github.taalaydev.doodleverse.engine.brush.BrushFactory
 import io.github.taalaydev.doodleverse.engine.brush.PenBrush
-import io.github.taalaydev.doodleverse.engine.brush.ShaderBrushFactory
-import io.github.taalaydev.doodleverse.engine.brush.TextureStampBrushFactory
-import io.github.taalaydev.doodleverse.engine.brush.shader.ShaderBrushPresets
-import io.github.taalaydev.doodleverse.engine.components.BrushPreview
 import io.github.taalaydev.doodleverse.engine.components.DrawBox
+import io.github.taalaydev.doodleverse.engine.tool.Brush
+import io.github.taalaydev.doodleverse.ui.components.BrushList
 import io.github.taalaydev.doodleverse.ui.components.DraggableSlider
 import io.github.taalaydev.doodleverse.ui.components.DrawControls
 import io.github.taalaydev.doodleverse.ui.components.LayersPanel
-import io.github.taalaydev.doodleverse.ui.components.BrushList
+import io.github.taalaydev.doodleverse.ui.theme.AnimatedScaffold
 import io.github.taalaydev.doodleverse.ui.theme.ThemeManager
 import io.github.taalaydev.doodleverse.ui.theme.rememberThemeManager
-import org.jetbrains.compose.resources.imageResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -138,8 +119,8 @@ fun DrawingCanvasScreen(
         }
     }
 
-    var menuOpen by remember { mutableStateOf(false) }
-    var showLayersSheet by remember { mutableStateOf(false) }
+    val menuOpen = remember { mutableStateOf(false) }
+    val showLayersSheet = remember { mutableStateOf(false) }
 
     val canUndo by viewModel.canUndo.collectAsStateWithLifecycle()
     val canRedo by viewModel.canRedo.collectAsStateWithLifecycle()
@@ -158,145 +139,20 @@ fun DrawingCanvasScreen(
 
     val brushes = BrushFactory.allBrushes()
 
-    Scaffold(
-        containerColor = Color.Gray.copy(alpha = 0.1f),
+    AnimatedScaffold(
+        themeManager = themeManager,
+        modifier = Modifier.fillMaxSize(),
+        animateBackground = false,
         topBar = {
-            TopAppBar(
-                modifier = Modifier.fillMaxWidth().height(40.dp),
-                navigationIcon = {
-                    IconButton(onClick = {
-                        navController.popBackStack()
-                    }) {
-                        Icon(
-                            Lucide.ArrowLeft,
-                            contentDescription = stringResource(Res.string.back),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                },
-                title = {},
-                actions = {
-                    if (!isMobile && !isTablet) {
-                        IconButton(onClick = {
-                            viewModel.undo()
-                        }) {
-                            Icon(
-                                Lucide.Undo2,
-                                contentDescription = stringResource(Res.string.undo),
-                                tint = if (canUndo) MaterialTheme.colorScheme.onSurface else Color.Gray,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        IconButton(onClick = {
-                            viewModel.redo()
-                        }) {
-                            Icon(
-                                Lucide.Redo2,
-                                contentDescription = stringResource(Res.string.redo),
-                                tint = if (canRedo) MaterialTheme.colorScheme.onSurface else Color.Gray,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    if (isMobile || isTablet) {
-                        IconButton(onClick = {
-                            showLayersSheet = true
-                        }) {
-                            Icon(
-                                painter = painterResource(Res.drawable.layers),
-                                contentDescription = stringResource(Res.string.layers),
-                                tint = if (canRedo) Color.Black else Color.Gray,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = {
-                            menuOpen = true
-                        }
-                    ) {
-                        Icon(
-                            Lucide.Save,
-                            contentDescription = stringResource(Res.string.save),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = menuOpen,
-                        onDismissRequest = {
-                            menuOpen = false
-                        },
-                        modifier = Modifier
-                            .width(IntrinsicSize.Max)
-                            .heightIn(max = 200.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surface,
-                                RoundedCornerShape(8.dp)
-                            )
-                    ) {
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Lucide.Save,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            stringResource(Res.string.save_image),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
-                            },
-                            onClick = {
-                                viewModel.saveAsPng()
-                                menuOpen = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Lucide.ImagePlus,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            stringResource(Res.string.import_image),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
-                            },
-                            onClick = {
-                                menuOpen = false
-                                viewModel.importImage()
-                            }
-                        )
-                    }
-                }
+            TopBar(
+                navController = navController,
+                viewModel = viewModel,
+                canUndo = canUndo,
+                canRedo = canRedo,
+                isMobile = isMobile,
+                isTablet = isTablet,
+                menuOpen = menuOpen,
+                showLayersSheet = showLayersSheet,
             )
         },
     ) { paddingValues ->
@@ -322,9 +178,7 @@ fun DrawingCanvasScreen(
                     DrawBox(
                         controller = viewModel.drawController,
                         dragState = dragState,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxSize()
+                        modifier = Modifier.weight(1f).fillMaxSize()
                     )
 
                     DrawControls(
@@ -335,8 +189,8 @@ fun DrawingCanvasScreen(
                         brushSize = brushParams.size,
                         tool = currentTool,
                         isFloating = true,
-                        showLayersSheet = showLayersSheet,
-                        onToggleLayersSheet = { showLayersSheet = !showLayersSheet },
+                        showLayersSheet = showLayersSheet.value,
+                        onToggleLayersSheet = { showLayersSheet.value = !showLayersSheet.value },
                         onBrushSelected = {
                             drawController.setBrush(it)
                         },
@@ -433,8 +287,6 @@ fun DrawingCanvasScreen(
                     )
                     HorizontalDivider()
                     ToolPanel(
-                        selectedTool = currentTool,
-                        selectedColor = brushParams.color,
                         selectedBrush = currentBrush,
                         onBrushSelected = { brush ->
                             drawController.setBrush(brush)
@@ -449,9 +301,7 @@ fun DrawingCanvasScreen(
 
 @Composable
 fun ToolPanel(
-    selectedTool: DrawTool,
     selectedBrush: Brush? = null,
-    selectedColor: Color = Color.Black,
     onBrushSelected: (Brush) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -472,4 +322,155 @@ fun ToolPanel(
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TopBar(
+    navController: NavController,
+    viewModel: DrawViewModel,
+    canUndo: Boolean,
+    canRedo: Boolean,
+    isMobile: Boolean,
+    isTablet: Boolean,
+    menuOpen: MutableState<Boolean>,
+    showLayersSheet: MutableState<Boolean>,
+) {
+    TopAppBar(
+        modifier = Modifier.fillMaxWidth().height(40.dp),
+        navigationIcon = {
+            IconButton(onClick = {
+                navController.popBackStack()
+            }) {
+                Icon(
+                    Lucide.ArrowLeft,
+                    contentDescription = stringResource(Res.string.back),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        },
+        title = {},
+        actions = {
+            if (!isMobile && !isTablet) {
+                IconButton(onClick = {
+                    viewModel.undo()
+                }) {
+                    Icon(
+                        Lucide.Undo2,
+                        contentDescription = stringResource(Res.string.undo),
+                        tint = if (canUndo) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                IconButton(onClick = {
+                    viewModel.redo()
+                }) {
+                    Icon(
+                        Lucide.Redo2,
+                        contentDescription = stringResource(Res.string.redo),
+                        tint = if (canRedo) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            if (isMobile || isTablet) {
+                IconButton(onClick = {
+                    showLayersSheet.value = true
+                }) {
+                    Icon(
+                        painter = painterResource(Res.drawable.layers),
+                        contentDescription = stringResource(Res.string.layers),
+                        tint = if (canRedo) Color.Black else Color.Gray,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = {
+                    menuOpen.value = true
+                }
+            ) {
+                Icon(
+                    Lucide.Save,
+                    contentDescription = stringResource(Res.string.save),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            DropdownMenu(
+                expanded = menuOpen.value,
+                onDismissRequest = {
+                    menuOpen.value = false
+                },
+                modifier = Modifier
+                    .width(IntrinsicSize.Max)
+                    .heightIn(max = 200.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surface,
+                        RoundedCornerShape(8.dp)
+                    )
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Lucide.Save,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    stringResource(Res.string.save_image),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        viewModel.saveAsPng()
+                        menuOpen.value = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Lucide.ImagePlus,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    stringResource(Res.string.import_image),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        menuOpen.value = false
+                        viewModel.importImage()
+                    }
+                )
+            }
+        }
+    )
 }
