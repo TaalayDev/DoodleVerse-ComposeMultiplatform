@@ -57,11 +57,11 @@ fun NewProjectDialog(
     val templates = listOf(
         ProjectTemplate("Square", 1080f, 1080f, "(1:1)"),
         ProjectTemplate("16:9", 1920f, 1080f, "(16:9)"),
-        ProjectTemplate("4:3", 1440f, 1080f, "(4:3)"),   // classic 4:3
-        ProjectTemplate("A4", 2480f, 3508f, "(A4)"),     // 210×297mm at 300dpi
-        ProjectTemplate("A3", 3508f, 4961f, "(A3)"),     // 297×420mm at 300dpi
-        ProjectTemplate("A2", 4961f, 7016f, "(A2)"),     // 420×594mm at 300dpi
-        ProjectTemplate("A1", 7016f, 9933f, "(A1)"),     // 594×841mm at 300dpi
+        ProjectTemplate("4:3", 1440f, 1080f, "(4:3)"),
+        ProjectTemplate("A4", 1358f, 1920f, "(A4)"),
+        ProjectTemplate("A3", 1358f, 1920f, "(A3)"),
+        ProjectTemplate("A2", 1358f, 1920f, "(A2)"),
+        ProjectTemplate("A1", 1358f, 1920f, "(A1)"),
         ProjectTemplate("Custom", 0f, 0f, ""),
     )
 

@@ -25,7 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material.TopAppBar
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -77,7 +77,7 @@ import io.github.taalaydev.doodleverse.ui.theme.rememberThemeManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun DrawingCanvasScreen(
     projectId: Long,
@@ -143,7 +143,10 @@ fun DrawingCanvasScreen(
         themeManager = themeManager,
         modifier = Modifier.fillMaxSize(),
         animateBackground = false,
-        topBar = {
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(paddingValues)
+        ) {
             TopBar(
                 navController = navController,
                 viewModel = viewModel,
@@ -154,145 +157,145 @@ fun DrawingCanvasScreen(
                 menuOpen = menuOpen,
                 showLayersSheet = showLayersSheet,
             )
-        },
-    ) { paddingValues ->
-        Row(
-            Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxSize()
-                    .align(Alignment.CenterVertically)
+
+            Row(
+                Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Column(
+                Box(
                     modifier = Modifier
+                        .weight(1f)
                         .fillMaxSize()
-                        .clipToBounds(),
-                    verticalArrangement = Arrangement.SpaceBetween,
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                        .align(Alignment.CenterVertically)
                 ) {
-                    DrawBox(
-                        controller = viewModel.drawController,
-                        dragState = dragState,
-                        modifier = Modifier.weight(1f).fillMaxSize()
-                    )
-
-                    DrawControls(
-                        viewModel = viewModel,
-                        brushes = brushes,
-                        brush = currentBrush,
-                        color = brushParams.color,
-                        brushSize = brushParams.size,
-                        tool = currentTool,
-                        isFloating = true,
-                        showLayersSheet = showLayersSheet.value,
-                        onToggleLayersSheet = { showLayersSheet.value = !showLayersSheet.value },
-                        onBrushSelected = {
-                            drawController.setBrush(it)
-                        },
-                        onColorSelected = {
-                            drawController.setColor(it)
-                        },
-                        onSizeSelected = {
-                            drawController.setBrushSize(it)
-                        },
-                        onToolSelected = {
-                            drawController.setTool(it)
-                        },
-                    )
-                }
-
-                if (!isMobile) {
-                    DraggableSlider(
-                        value = brushParams.size,
-                        onValueChange = {
-                            drawController.setBrushSize(it)
-                        },
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clipToBounds(),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(
-                            text = "${brushParams.size.toInt()}px",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray.copy(alpha = 0.9f),
+                        DrawBox(
+                            controller = viewModel.drawController,
+                            dragState = dragState,
+                            modifier = Modifier.weight(1f).fillMaxSize()
+                        )
+
+                        DrawControls(
+                            viewModel = viewModel,
+                            brushes = brushes,
+                            brush = currentBrush,
+                            color = brushParams.color,
+                            brushSize = brushParams.size,
+                            tool = currentTool,
+                            isFloating = true,
+                            showLayersSheet = showLayersSheet.value,
+                            onToggleLayersSheet = {
+                                showLayersSheet.value = !showLayersSheet.value
+                            },
+                            onBrushSelected = {
+                                drawController.setBrush(it)
+                            },
+                            onColorSelected = {
+                                drawController.setColor(it)
+                            },
+                            onSizeSelected = {
+                                drawController.setBrushSize(it)
+                            },
+                            onToolSelected = {
+                                drawController.setTool(it)
+                            },
                         )
                     }
-                }
 
-                if (isMobile || isTablet) {
-                    Row(
-                        modifier = Modifier.align(Alignment.TopEnd)
-                            .padding(top = 10.dp, end = 10.dp),
-                    ) {
-                        val undoButtonShape = RoundedCornerShape(
-                            topStart = 16.dp,
-                            bottomStart = 16.dp
-                        )
-                        val redoButtonShape = RoundedCornerShape(
-                            topEnd = 16.dp,
-                            bottomEnd = 16.dp
-                        )
-                        IconButton(
-                            onClick = {
-                                viewModel.undo()
+                    if (!isMobile) {
+                        DraggableSlider(
+                            value = brushParams.size,
+                            onValueChange = {
+                                drawController.setBrushSize(it)
                             },
-                            modifier = Modifier
-                                .clip(undoButtonShape)
-                                .background(
-                                    MaterialTheme.colorScheme.surface,
-                                    undoButtonShape
-                                )
                         ) {
-                            Icon(
-                                Lucide.Undo2,
-                                contentDescription = stringResource(Res.string.undo),
-                                tint = if (canUndo) MaterialTheme.colorScheme.onSurface else Color.Gray,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        IconButton(
-                            onClick = {
-                                viewModel.redo()
-                            },
-                            modifier = Modifier
-                                .clip(redoButtonShape)
-                                .background(
-                                    MaterialTheme.colorScheme.surface,
-                                    redoButtonShape
-                                )
-                        ) {
-                            Icon(
-                                Lucide.Redo2,
-                                contentDescription = stringResource(Res.string.redo),
-                                tint = if (canRedo) MaterialTheme.colorScheme.onSurface else Color.Gray,
-                                modifier = Modifier.size(18.dp)
+                            Text(
+                                text = "${brushParams.size.toInt()}px",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray.copy(alpha = 0.9f),
                             )
                         }
                     }
-                }
-            }
 
-            if (!isMobile && !isTablet) {
-                Column(
-                    modifier = Modifier.fillMaxHeight()
-                        .width(250.dp)
-                        .background(MaterialTheme.colorScheme.surface),
-                    verticalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    LayersPanel(
-                        drawViewModel = viewModel,
-                        modifier = Modifier.weight(1f),
-                    )
-                    HorizontalDivider()
-                    ToolPanel(
-                        selectedBrush = currentBrush,
-                        onBrushSelected = { brush ->
-                            drawController.setBrush(brush)
-                        },
-                        modifier = Modifier.weight(1f),
-                    )
+                    if (isMobile || isTablet) {
+                        Row(
+                            modifier = Modifier.align(Alignment.TopEnd)
+                                .padding(top = 10.dp, end = 10.dp),
+                        ) {
+                            val undoButtonShape = RoundedCornerShape(
+                                topStart = 16.dp,
+                                bottomStart = 16.dp
+                            )
+                            val redoButtonShape = RoundedCornerShape(
+                                topEnd = 16.dp,
+                                bottomEnd = 16.dp
+                            )
+                            IconButton(
+                                onClick = {
+                                    viewModel.undo()
+                                },
+                                modifier = Modifier
+                                    .clip(undoButtonShape)
+                                    .background(
+                                        MaterialTheme.colorScheme.surface,
+                                        undoButtonShape
+                                    )
+                            ) {
+                                Icon(
+                                    Lucide.Undo2,
+                                    contentDescription = stringResource(Res.string.undo),
+                                    tint = if (canUndo) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    viewModel.redo()
+                                },
+                                modifier = Modifier
+                                    .clip(redoButtonShape)
+                                    .background(
+                                        MaterialTheme.colorScheme.surface,
+                                        redoButtonShape
+                                    )
+                            ) {
+                                Icon(
+                                    Lucide.Redo2,
+                                    contentDescription = stringResource(Res.string.redo),
+                                    tint = if (canRedo) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (!isMobile && !isTablet) {
+                    Column(
+                        modifier = Modifier.fillMaxHeight()
+                            .width(250.dp)
+                            .background(MaterialTheme.colorScheme.surface),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        LayersPanel(
+                            drawViewModel = viewModel,
+                            modifier = Modifier.weight(1f),
+                        )
+                        HorizontalDivider()
+                        ToolPanel(
+                            selectedBrush = currentBrush,
+                            onBrushSelected = { brush ->
+                                drawController.setBrush(brush)
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
         }
@@ -336,8 +339,11 @@ fun TopBar(
     menuOpen: MutableState<Boolean>,
     showLayersSheet: MutableState<Boolean>,
 ) {
+    val project by viewModel.project.collectAsStateWithLifecycle()
     TopAppBar(
         modifier = Modifier.fillMaxWidth().height(40.dp),
+        backgroundColor = MaterialTheme.colorScheme.surface,
+        elevation = 0.dp,
         navigationIcon = {
             IconButton(onClick = {
                 navController.popBackStack()
@@ -345,11 +351,12 @@ fun TopBar(
                 Icon(
                     Lucide.ArrowLeft,
                     contentDescription = stringResource(Res.string.back),
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
         },
-        title = {},
+        title = { Text( "") },
         actions = {
             if (!isMobile && !isTablet) {
                 IconButton(onClick = {
@@ -395,7 +402,8 @@ fun TopBar(
                 Icon(
                     Lucide.Save,
                     contentDescription = stringResource(Res.string.save),
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
 

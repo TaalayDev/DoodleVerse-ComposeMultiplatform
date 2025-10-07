@@ -78,6 +78,8 @@ fun DrawCanvas(
     val brush by controller.currentBrush.collectAsStateWithLifecycle(PenBrush())
     val tool by controller.currentTool.collectAsStateWithLifecycle()
     val brushParams by controller.brushParams.collectAsStateWithLifecycle()
+    val canUndo by controller.canUndo.collectAsStateWithLifecycle()
+    val canRedo by controller.canRedo.collectAsStateWithLifecycle()
 
     val currentColor = remember(brushParams) { brushParams.color }
     val brushSize = remember(brushParams) { brushParams.size }
@@ -92,7 +94,7 @@ fun DrawCanvas(
 
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     val imageSize = controller.imageSize
-    var drawingBitmapState by remember {
+    val drawingBitmapState by remember {
         val bitmap = ImageBitmap(
             width = imageSize.width.coerceAtLeast(1),
             height = imageSize.height.coerceAtLeast(1)
@@ -158,6 +160,10 @@ fun DrawCanvas(
 
     LaunchedEffect(viewport) {
         controller.viewport = viewport
+    }
+
+    LaunchedEffect(canUndo, canRedo) {
+        invalidationCounter++
     }
 
     Box(modifier = modifier) {
