@@ -368,6 +368,10 @@ object BrushFactory {
 
         return listOf(
             PenBrush(),
+            TiltPencilBrush(),
+            RoughSketchBrush(),
+            GestureCharcoalBrush(),
+            GesturePencilBrush(),
             TextureSoftPencilBrush(
                 pencilTexture,
                 id = ToolId("texture_soft_pencil"),
